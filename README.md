@@ -20,3 +20,9 @@ GitHub repository:
 - `https://github.com/dcyber-lab/macos-smart-ime`
 
 OpenSpec is installed in this repository. For any new feature, create or update an OpenSpec change before implementation.
+
+For IME build/install validation:
+
+- `scripts/ime/build-host.sh`
+- `sudo scripts/ime/install-host.sh`
+- `docs/ime-manual-validation.md`

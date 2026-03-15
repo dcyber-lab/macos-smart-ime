@@ -24,6 +24,9 @@
 - Replaced placeholder Chinese composition handling in `IMEHostCore` with bridge-backed updates and commit routing.
 - Documented the local `librime` data dependency used by the first bridge milestone.
 - Moved the minimal runtime Rime data into `third_party/librime-data/minimal` so the repository no longer depends on an untracked `third_party/librime-src` checkout.
+- Added repository-owned IME build/install/uninstall scripts and a manual validation checklist for the current Chinese input path.
+- Verified `scripts/ime/build-host.sh` produces `build/ime-host/SmartIMEHost.app` and `scripts/ime/install-host.sh` installs the app into `~/Library/Input Methods/SmartIMEHost.app`.
+- The remaining manual validation step is enabling `SmartIMEHost` in System Settings and checking live Chinese input in a GUI text client.
 
 ### Expected Usage
 

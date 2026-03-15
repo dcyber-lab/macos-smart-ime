@@ -27,6 +27,7 @@ To validate the IME host as a real macOS input method, the machine needs:
 - `librime` installed through Homebrew: `brew install librime`
 - The generated `macos-smart-ime.xcodeproj`
 - Bundle metadata and an installation flow for enabling the input method in macOS
+- The repository install scripts under `scripts/ime`
 
 ## Generate The Xcode Project
 
@@ -37,24 +38,30 @@ xcodegen generate
 ## Build The IME Host App
 
 ```bash
-xcodebuild -project macos-smart-ime.xcodeproj -scheme SmartIMEHost -configuration Debug build
+scripts/ime/build-host.sh
 ```
 
-The generated app is placed under Xcode DerivedData, for example:
+The generated app is placed at:
 
 ```text
-~/Library/Developer/Xcode/DerivedData/.../Build/Products/Debug/SmartIMEHost.app
+build/ime-host/SmartIMEHost.app
 ```
 
 ## Install For Manual Testing
 
-For manual testing as an input method, copy the built app into:
+For manual testing as an input method, run:
 
-```text
-/Library/Input Methods/
+```bash
+sudo scripts/ime/install-host.sh
 ```
 
-After copying, re-log in or refresh input sources in macOS before trying to enable it.
+To remove the installed app later, run:
+
+```bash
+sudo scripts/ime/uninstall-host.sh
+```
+
+For the full checklist, see [`docs/ime-manual-validation.md`](/Users/hengdu/go/src/github.com/dcyber-lab/macos-smart-ime/docs/ime-manual-validation.md).
 
 ## Current Validation Status
 
@@ -65,5 +72,6 @@ The repository now includes:
 - InputMethodKit bundle metadata and host wiring
 - A project-owned `rime-bridge` package wired into the host
 - Local `librime` shared data configured through the Xcode build settings
+- A scripted install and uninstall workflow for manual validation
 
-The next practical validation step is installing the built app into `/Library/Input Methods/` and confirming it appears as an input source in macOS.
+The next practical validation step is running the manual checklist in [`docs/ime-manual-validation.md`](/Users/hengdu/go/src/github.com/dcyber-lab/macos-smart-ime/docs/ime-manual-validation.md) after installation.
