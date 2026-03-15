@@ -26,6 +26,8 @@ The change remains inside the current `IMEHostCore` and `rime-bridge` boundaries
 
 Candidate acceptance should continue to flow through `librime` key processing where possible. The IME host should not create a parallel candidate-selection implementation that bypasses the bridge state model.
 
+For this milestone, this means the host forwards raw key events for `Space` and digit keys into the Chinese engine and relies on `librime` to decide whether those keys commit a candidate. The host does not call a separate candidate-selection API and does not maintain its own candidate cursor.
+
 ### Add only minimal host-side behavior
 
 The host should only add behavior needed to:
@@ -38,14 +40,16 @@ The host should only add behavior needed to:
 
 Paging is intentionally deferred. The first usability milestone is simply selecting from the current visible candidates.
 
+For this change, "visible candidates" means the current ordered candidate list surfaced through `CompositionState.candidates`. The host does not attempt to infer or control a separate pagination state.
+
 ## Proposed Implementation
 
 ### IME host behavior
 
 Update `IMEInputController` so that:
 
-- `Space` is forwarded into the Chinese engine when composition is active
-- digit keys are forwarded into the engine for candidate selection when composition is active
+- `Space` is forwarded into the Chinese engine when composition is active and any commit remains engine-driven
+- digit keys are forwarded into the engine for candidate selection when composition is active and any commit remains engine-driven
 - `Escape` clears the engine session and local composition state when composition exists
 
 ### Session state behavior
@@ -63,6 +67,7 @@ Manual verification for this milestone should confirm:
 2. pressing `Space` commits the first candidate
 3. pressing `1` or another visible candidate number commits that candidate
 4. pressing `Escape` clears composition without committing text
+5. the host does not leak raw `Space`, digit, or `Escape` keystrokes into the client when the IME consumes them
 
 ## Risks
 
