@@ -152,11 +152,11 @@ let properties: [CFString: Any] = [kTISPropertyBundleID: bundleID]
 let filter = properties as CFDictionary
 let list = TISCreateInputSourceList(filter, false).takeRetainedValue() as NSArray
 
-guard let source = list.firstObject as? TISInputSource else {
+guard let source = list.firstObject else {
     fatalError("SmartIMEHost input source not found after registration")
 }
 
-let status = TISEnableInputSource(source)
+let status = TISEnableInputSource((source as! TISInputSource))
 if status != noErr {
     fatalError("TISEnableInputSource failed with status \\(status)")
 }
