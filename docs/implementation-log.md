@@ -23,6 +23,7 @@
 - Installed local Homebrew `librime` and added the first `packages/rime-bridge` wrapper around the minimum runtime and session APIs.
 - Replaced placeholder Chinese composition handling in `IMEHostCore` with bridge-backed updates and commit routing.
 - Documented the local `librime` data dependency used by the first bridge milestone.
+- Moved the minimal runtime Rime data into `third_party/librime-data/minimal` so the repository no longer depends on an untracked `third_party/librime-src` checkout.
 
 ### Expected Usage
 

@@ -26,4 +26,3 @@ local/
 
 # Third-party source checkouts can be large and may be managed explicitly
 third_party/librime/build/
-

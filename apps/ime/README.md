@@ -17,7 +17,7 @@ The current milestone proves the intended boundary:
 - InputMethodKit host-side entrypoints live in `apps/ime`
 - Session and candidate state are represented explicitly
 - Chinese composition is delegated through `packages/rime-bridge`
-- The first bridge milestone uses `third_party/librime-src/data/minimal` as local shared data
+- The first bridge milestone uses `third_party/librime-data/minimal` as local shared data
 
 ## Local Validation Assumptions
 
