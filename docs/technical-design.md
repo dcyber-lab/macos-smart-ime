@@ -142,3 +142,8 @@ protocol ClipboardTransforming {
 5. Basic English correction works at word boundaries.
 6. Companion can read clipboard text and write back transformed text.
 
+## Planning Workflow
+
+- OpenSpec is the required planning workflow for new features.
+- New features should be defined under `openspec/changes/<change-name>/`.
+- Implementation should begin only after the change has proposal, design, and tasks artifacts ready.

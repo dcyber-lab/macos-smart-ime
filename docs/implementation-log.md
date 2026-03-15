@@ -11,6 +11,8 @@
 - Initialized the local Git repository on `main`.
 - Added project Git workflow rules and agent entry files.
 - Created the GitHub repository and pushed `main` to `origin`.
+- Installed OpenSpec in the repository and enabled multi-agent workflow files.
+- Added a project rule that new features must go through OpenSpec before implementation.
 
 ### Expected Usage
 
