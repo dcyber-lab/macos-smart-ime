@@ -26,6 +26,7 @@ public final class IMEInputController: IMKInputController {
     private let sessionStore = IMEHostSessionStore()
     private let chineseEngine: ChineseInputEngine?
     private var candidateWindow: IMKCandidates?
+    private var isSyncingCandidateSelection = false
 
     public override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         do {
@@ -146,6 +147,10 @@ public final class IMEInputController: IMKInputController {
     }
 
     public override func candidateSelectionChanged(_ candidateString: NSAttributedString!) {
+        if isSyncingCandidateSelection {
+            return
+        }
+
         guard let candidateString else {
             return
         }
@@ -221,10 +226,14 @@ public final class IMEInputController: IMKInputController {
                 let selectedCandidate = candidates[selectedCandidateIndex]
                 let identifier = candidateWindow.candidateStringIdentifier(selectedCandidate)
                 if identifier != NSNotFound {
+                    isSyncingCandidateSelection = true
                     _ = candidateWindow.selectCandidate(withIdentifier: identifier)
+                    isSyncingCandidateSelection = false
                 }
             } else {
+                isSyncingCandidateSelection = true
                 candidateWindow.clearSelection()
+                isSyncingCandidateSelection = false
             }
             if candidateWindow.isVisible() {
                 candidateWindow.update()
@@ -232,7 +241,9 @@ public final class IMEInputController: IMKInputController {
                 candidateWindow.show(kIMKLocateCandidatesBelowHint)
             }
         } else {
+            isSyncingCandidateSelection = true
             candidateWindow.clearSelection()
+            isSyncingCandidateSelection = false
             candidateWindow.hide()
         }
     }
