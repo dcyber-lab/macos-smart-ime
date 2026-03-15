@@ -14,3 +14,6 @@ The project is tracked in Notion:
 - Design doc: `https://www.notion.so/3247994831c681c0b91cd169c02f0e79`
 - Task database: `https://www.notion.so/1ed8bc1e01bf4c41905b028a915e2597`
 
+GitHub repository:
+
+- `https://github.com/dcyber-lab/macos-smart-ime`

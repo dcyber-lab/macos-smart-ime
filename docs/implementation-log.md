@@ -10,6 +10,7 @@
 - Linked the local workspace to the Notion project page, design document, and task database.
 - Initialized the local Git repository on `main`.
 - Added project Git workflow rules and agent entry files.
+- Created the GitHub repository and pushed `main` to `origin`.
 
 ### Expected Usage
 
