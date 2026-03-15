@@ -5,6 +5,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hostServer = IMEHostServer()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        _ = hostServer.start()
+        guard hostServer.start() != nil else {
+            NSLog("SmartIMEHost: IMKServer failed to start; exiting so the system can relaunch.")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                NSApplication.shared.terminate(nil)
+            }
+            return
+        }
     }
 }

@@ -36,6 +36,18 @@
 - Verified the final registered source is `lab.dcyber.inputmethod.smartime` with `ENABLED=1` and `SELECTABLE=1`, then removed the duplicate user-level install so only `/Library/Input Methods/SmartIMEHost.app` remains.
 - Started the next OpenSpec change, `add-basic-chinese-candidate-interactions`, and added the first host-side cancel behavior so `Escape` clears active Chinese composition cleanly.
 - Fixed the IME host event-return contract after review: `Escape` is now handled before sending the event to `librime`, and the host returns `true` whenever a composition update or commit is produced so raw keystrokes do not leak through to the client.
+- Added the `fix-ime-switcher-visibility` OpenSpec change after finding that `SmartIMEHost` could register in System Settings while still failing to appear in the menu bar switcher and keyboard-cycle path.
+- Tightened the IME bundle display metadata with `CFBundleDisplayName`, localized `InfoPlist.strings`, and explicit `tsInputMethodLanguageKey` so the installed bundle more closely matches a working third-party input method's UI-facing shape.
+- Extended the install workflow to repair malformed `AppleEnabledInputSources` keyboard-input-method entries for the logged-in user, de-duplicate the `SmartIMEHost` entry, and re-enable the source after registration.
+- Expanded the manual validation checklist so switcher visibility and keyboard-cycle visibility are validated separately from System Settings visibility.
+- Identified the root cause of the menu bar switcher visibility issue: the install script was replacing the app bundle on disk while a stale SmartIMEHost process was still running, leaving a zombie process with a broken IMKServer connection. The system could detect the input source but could not communicate with it, causing selection attempts to fail silently and fall back to another input method.
+- Fixed the install script to kill any running SmartIMEHost process before replacing the bundle, wait for clean exit, and also restart `TextInputSwitcher` alongside `TextInputMenuAgent` and `SystemUIServer`.
+- Added a post-install verification step that confirms SmartIMEHost is enabled and selectable via the TIS API.
+- Added resilience to `AppDelegate`: if `IMKServer` fails to start (returns nil), the process now exits after 1 second so the system can relaunch it cleanly instead of leaving a zombie.
+- Removed the redundant `InputMethodServerDelegateClass` from Info.plist (the controller class is sufficient).
+- Verified all 4 enabled keyboard input sources (ABC, Pinyin, hallelujah, SmartIMEHost) can be selected and round-tripped via `TISSelectInputSource` without fallback.
+- User confirmed the switcher-visibility issue is now resolved and no blocking issue remains for this milestone.
+- This session did not rerun `sudo scripts/ime/install-host.sh --system` because the command requires an interactive sudo password.
 
 ### Expected Usage
 
