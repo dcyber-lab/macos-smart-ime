@@ -17,6 +17,8 @@
 - Added initial IME host shell source files, shared session models, and bootstrap documentation.
 - Configured the machine to use the full Xcode toolchain and accepted the Xcode license.
 - Verified `swift build` now succeeds for the current Swift package targets after fixing the optional `IMKServer` return type in `IMEHostServer`.
+- Added a generated Xcode project and a real `SmartIMEHost` macOS app target wired to InputMethodKit.
+- Verified `xcodebuild -project macos-smart-ime.xcodeproj -scheme SmartIMEHost -configuration Debug build` succeeds.
 
 ### Expected Usage
 
