@@ -1,5 +1,5 @@
 import AppKit
-import InputMethodKit
+@preconcurrency import InputMethodKit
 import RimeBridge
 import SharedModels
 
@@ -8,8 +8,13 @@ public final class IMEInputController: IMKInputController {
         static let escape: UInt16 = 53
     }
 
+    private enum CandidatePanel {
+        static let selectionKeys: [NSNumber] = [18, 19, 20, 21, 23, 22, 26, 28, 25].map(NSNumber.init(value:))
+    }
+
     private let sessionStore = IMEHostSessionStore()
     private let chineseEngine: ChineseInputEngine?
+    private var candidateWindow: IMKCandidates?
 
     public override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         do {
@@ -31,6 +36,7 @@ public final class IMEInputController: IMKInputController {
         }
 
         super.init(server: server, delegate: delegate, client: inputClient)
+
     }
 
     public override func recognizedEvents(_ sender: Any!) -> Int {
@@ -47,9 +53,7 @@ public final class IMEInputController: IMKInputController {
         }
 
         if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
-            sessionStore.reset()
-            chineseEngine.reset()
-            updateComposition()
+            resetChineseSession(resetEngine: true)
             return true
         }
 
@@ -67,10 +71,11 @@ public final class IMEInputController: IMKInputController {
         }
 
         sessionStore.apply(update)
-        if let committedText = update.commitText {
+        if let committedText = update.commitText, !committedText.isEmpty {
             commit(committedText, using: sender)
+            sessionStore.reset(committedText: committedText)
         }
-        updateComposition()
+        syncPresentation()
         return true
     }
 
@@ -89,9 +94,30 @@ public final class IMEInputController: IMKInputController {
 
     public override func commitComposition(_ sender: Any!) {
         commit(sessionStore.state.compositionText, using: sender)
+        resetChineseSession(resetEngine: true)
+    }
+
+    public override func deactivateServer(_ sender: Any!) {
+        super.deactivateServer(sender)
+        resetChineseSession(resetEngine: true)
+    }
+
+    public override func inputControllerWillClose() {
+        super.inputControllerWillClose()
+        resetChineseSession(resetEngine: true)
+    }
+
+    public override func candidateSelected(_ candidateString: NSAttributedString!) {
+        let selectedText = candidateString?.string ?? ""
+        guard !selectedText.isEmpty else {
+            resetChineseSession(resetEngine: true)
+            return
+        }
+
+        commit(selectedText, using: client())
         chineseEngine?.reset()
-        sessionStore.reset()
-        updateComposition()
+        sessionStore.reset(committedText: selectedText)
+        syncPresentation()
     }
 
     private func commit(_ committedText: String, using sender: Any?) {
@@ -103,6 +129,48 @@ public final class IMEInputController: IMKInputController {
             client.insertText(committedText, replacementRange: NSRange(location: NSNotFound, length: 0))
         } else if let client = self.client() as? NSTextInputClient {
             client.insertText(committedText, replacementRange: NSRange(location: NSNotFound, length: 0))
+        }
+    }
+
+    private func resetChineseSession(resetEngine: Bool) {
+        if resetEngine {
+            chineseEngine?.reset()
+        }
+        sessionStore.reset()
+        syncPresentation()
+    }
+
+    private func syncPresentation() {
+        updateComposition()
+        syncCandidateWindow()
+    }
+
+    private func syncCandidateWindow() {
+        if candidateWindow == nil {
+            let candidateWindow = IMKCandidates(server: server(), panelType: kIMKSingleColumnScrollingCandidatePanel)
+            candidateWindow?.setSelectionKeys(CandidatePanel.selectionKeys)
+            candidateWindow?.setAttributes([IMKCandidatesSendServerKeyEventFirst: NSNumber(value: true)])
+            candidateWindow?.setDismissesAutomatically(true)
+            self.candidateWindow = candidateWindow
+        }
+
+        guard let candidateWindow else {
+            return
+        }
+
+        let candidates = sessionStore.state.candidates.map(\.text)
+        let shouldShowCandidates = !sessionStore.state.compositionText.isEmpty && !candidates.isEmpty
+
+        if shouldShowCandidates {
+            candidateWindow.setCandidateData(candidates)
+            if candidateWindow.isVisible() {
+                candidateWindow.update()
+            } else {
+                candidateWindow.show(kIMKLocateCandidatesBelowHint)
+            }
+        } else {
+            candidateWindow.clearSelection()
+            candidateWindow.hide()
         }
     }
 }

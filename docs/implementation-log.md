@@ -48,6 +48,10 @@
 - Verified all 4 enabled keyboard input sources (ABC, Pinyin, hallelujah, SmartIMEHost) can be selected and round-tripped via `TISSelectInputSource` without fallback.
 - User confirmed the switcher-visibility issue is now resolved and no blocking issue remains for this milestone.
 - This session did not rerun `sudo scripts/ime/install-host.sh --system` because the command requires an interactive sudo password.
+- Created the `complete-chinese-input-loop` OpenSpec change to close the remaining gap between registered input-source visibility and a real Chinese typing loop.
+- Updated `IMEInputController` to keep inline composition and an explicit `IMKCandidates` panel in sync, hide candidate UI on commit/cancel/deactivation, and commit candidate-panel selections back into the focused client.
+- Rebuilt `SmartIMEHost` successfully after the candidate-loop changes; importing `InputMethodKit` with `@preconcurrency` was required so the legacy IMK candidate APIs would compile cleanly under Swift 6.
+- The remaining milestone gap is now explicit: this repository state still needs a real GUI validation pass in TextEdit or another normal macOS text client to confirm `nihao` shows visible candidates and that `Space`, number-key selection, and `Escape` all behave correctly end to end.
 
 ### Expected Usage
 
