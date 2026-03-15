@@ -19,4 +19,8 @@ public final class IMEHostSessionStore {
     public func reset() {
         state = CompositionState(mode: state.mode, recentText: state.recentText)
     }
+
+    public func reset(committedText: String) {
+        state = CompositionState(mode: state.mode, recentText: committedText)
+    }
 }

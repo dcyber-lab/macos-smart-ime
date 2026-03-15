@@ -90,9 +90,12 @@ Use a normal editable text field such as TextEdit.
 10. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
 11. Confirm Chinese text is inserted only for the committed cases
 
+This milestone is not considered complete until steps 5 through 11 are verified in a real macOS text client with the visible candidate panel.
+
 ## Known Limits In This Milestone
 
 - This checklist validates the current Chinese `librime` path only
+- This session rebuilt the host after adding explicit `IMKCandidates` presentation, but did not re-run a full GUI validation pass for `nihao`-style candidate display and selection
 - Richer candidate controls are still a follow-up milestone
 - The app target is still using local-development settings, not a release distribution setup
 - In this session, the repository-owned scripts were updated to produce a Release-style ad-hoc-signed bundle because the earlier Debug-style build was not being registered by macOS as a text input source.
