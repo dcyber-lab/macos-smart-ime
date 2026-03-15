@@ -1,0 +1,29 @@
+.DS_Store
+.build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# Local tooling
+.idea/
+.vscode/
+
+# Logs and temp files
+*.log
+tmp/
+dist/
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+local/
+
+# Third-party source checkouts can be large and may be managed explicitly
+third_party/librime/build/
+
