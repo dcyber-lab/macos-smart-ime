@@ -42,6 +42,7 @@ public final class RimeBridgeRuntime {
         if !defaultSchemaID.isEmpty {
             _ = defaultSchemaID.withCString { api.pointee.select_schema(sessionID, $0) }
         }
+        configureDefaultOptions(for: sessionID)
         return session
     }
 
@@ -68,6 +69,13 @@ public final class RimeBridgeRuntime {
         if api.pointee.start_maintenance(True) != 0 {
             api.pointee.join_maintenance_thread()
         }
+    }
+
+    private func configureDefaultOptions(for sessionID: RimeSessionId) {
+        "zh_simp".withCString { api.pointee.set_option(sessionID, $0, True) }
+        "zh_trad".withCString { api.pointee.set_option(sessionID, $0, False) }
+        "zh_tw".withCString { api.pointee.set_option(sessionID, $0, False) }
+        "zh_hk".withCString { api.pointee.set_option(sessionID, $0, False) }
     }
 }
 
@@ -127,12 +135,27 @@ public final class RimeBridgeSession {
         if let preedit = context.composition.preedit {
             state.compositionText = String(cString: preedit)
         }
+        if context.menu.highlighted_candidate_index >= 0 {
+            state.selectedCandidateIndex = Int(context.menu.highlighted_candidate_index)
+        }
         state.candidates = mapCandidates(from: context.menu)
         return state
     }
 
     func reset() {
         api.pointee.clear_composition(sessionID)
+    }
+
+    func selectCandidateOnCurrentPage(index: Int) -> Bool {
+        api.pointee.select_candidate_on_current_page(sessionID, index) != 0
+    }
+
+    func highlightCandidateOnCurrentPage(index: Int) -> Bool {
+        guard let highlightCandidate = api.pointee.highlight_candidate_on_current_page else {
+            return false
+        }
+
+        return highlightCandidate(sessionID, index) != 0
     }
 
     public func destroy() {

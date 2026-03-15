@@ -5,7 +5,18 @@ import SharedModels
 
 public final class IMEInputController: IMKInputController {
     private enum KeyCode {
+        static let one: UInt16 = 18
+        static let two: UInt16 = 19
+        static let three: UInt16 = 20
+        static let four: UInt16 = 21
+        static let five: UInt16 = 23
+        static let six: UInt16 = 22
+        static let seven: UInt16 = 26
+        static let eight: UInt16 = 28
+        static let nine: UInt16 = 25
         static let escape: UInt16 = 53
+        static let downArrow: UInt16 = 125
+        static let upArrow: UInt16 = 126
     }
 
     private enum CandidatePanel {
@@ -55,6 +66,20 @@ public final class IMEInputController: IMKInputController {
         if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
             resetChineseSession(resetEngine: true)
             return true
+        }
+
+        if sessionStore.hasActiveComposition {
+            if let candidateIndex = candidateIndex(for: event.keyCode) {
+                return apply(chineseEngine.selectCandidate(at: candidateIndex), sender: sender)
+            }
+
+            if let highlightedIndex = highlightedCandidateIndexDelta(for: event.keyCode) {
+                let targetIndex = nextHighlightedCandidateIndex(offset: highlightedIndex)
+                guard let targetIndex else {
+                    return true
+                }
+                return apply(chineseEngine.highlightCandidate(at: targetIndex), sender: sender)
+            }
         }
 
         let update = chineseEngine.process(
@@ -120,6 +145,22 @@ public final class IMEInputController: IMKInputController {
         syncPresentation()
     }
 
+    public override func candidateSelectionChanged(_ candidateString: NSAttributedString!) {
+        guard let candidateString else {
+            return
+        }
+
+        let candidates = sessionStore.state.candidates.map(\.text)
+        guard let index = candidates.firstIndex(of: candidateString.string) else {
+            return
+        }
+
+        let update = chineseEngine?.highlightCandidate(at: index)
+        if let update {
+            _ = apply(update, sender: client())
+        }
+    }
+
     private func commit(_ committedText: String, using sender: Any?) {
         guard !committedText.isEmpty else {
             return
@@ -138,6 +179,17 @@ public final class IMEInputController: IMKInputController {
         }
         sessionStore.reset()
         syncPresentation()
+    }
+
+    @discardableResult
+    private func apply(_ update: InputSessionUpdate, sender: Any?) -> Bool {
+        sessionStore.apply(update)
+        if let committedText = update.commitText, !committedText.isEmpty {
+            commit(committedText, using: sender)
+            sessionStore.reset(committedText: committedText)
+        }
+        syncPresentation()
+        return update.handled || update.commitText != nil || sessionStore.hasActiveComposition
     }
 
     private func syncPresentation() {
@@ -163,6 +215,17 @@ public final class IMEInputController: IMKInputController {
 
         if shouldShowCandidates {
             candidateWindow.setCandidateData(candidates)
+            if let selectedCandidateIndex = sessionStore.state.selectedCandidateIndex,
+               candidates.indices.contains(selectedCandidateIndex)
+            {
+                let selectedCandidate = candidates[selectedCandidateIndex]
+                let identifier = candidateWindow.candidateStringIdentifier(selectedCandidate)
+                if identifier != NSNotFound {
+                    _ = candidateWindow.selectCandidate(withIdentifier: identifier)
+                }
+            } else {
+                candidateWindow.clearSelection()
+            }
             if candidateWindow.isVisible() {
                 candidateWindow.update()
             } else {
@@ -172,5 +235,52 @@ public final class IMEInputController: IMKInputController {
             candidateWindow.clearSelection()
             candidateWindow.hide()
         }
+    }
+
+    private func candidateIndex(for keyCode: UInt16) -> Int? {
+        switch keyCode {
+        case KeyCode.one:
+            return 0
+        case KeyCode.two:
+            return 1
+        case KeyCode.three:
+            return 2
+        case KeyCode.four:
+            return 3
+        case KeyCode.five:
+            return 4
+        case KeyCode.six:
+            return 5
+        case KeyCode.seven:
+            return 6
+        case KeyCode.eight:
+            return 7
+        case KeyCode.nine:
+            return 8
+        default:
+            return nil
+        }
+    }
+
+    private func highlightedCandidateIndexDelta(for keyCode: UInt16) -> Int? {
+        switch keyCode {
+        case KeyCode.upArrow:
+            return -1
+        case KeyCode.downArrow:
+            return 1
+        default:
+            return nil
+        }
+    }
+
+    private func nextHighlightedCandidateIndex(offset: Int) -> Int? {
+        let candidates = sessionStore.state.candidates
+        guard !candidates.isEmpty else {
+            return nil
+        }
+
+        let currentIndex = sessionStore.state.selectedCandidateIndex ?? 0
+        let targetIndex = min(max(currentIndex + offset, 0), candidates.count - 1)
+        return targetIndex
     }
 }

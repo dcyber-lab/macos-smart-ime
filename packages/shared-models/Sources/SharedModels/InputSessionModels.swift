@@ -47,6 +47,7 @@ public struct CompositionState: Equatable, Sendable {
     public var mode: InputMode
     public var compositionText: String
     public var candidates: [Candidate]
+    public var selectedCandidateIndex: Int?
     public var recentText: String
 
     public init(
@@ -54,12 +55,14 @@ public struct CompositionState: Equatable, Sendable {
         mode: InputMode = .chinese,
         compositionText: String = "",
         candidates: [Candidate] = [],
+        selectedCandidateIndex: Int? = nil,
         recentText: String = ""
     ) {
         self.rawInput = rawInput
         self.mode = mode
         self.compositionText = compositionText
         self.candidates = candidates
+        self.selectedCandidateIndex = selectedCandidateIndex
         self.recentText = recentText
     }
 }
@@ -78,5 +81,7 @@ public struct InputSessionUpdate: Equatable, Sendable {
 
 public protocol ChineseInputEngine: AnyObject {
     func process(_ event: InputKeyEvent) -> InputSessionUpdate
+    func selectCandidate(at index: Int) -> InputSessionUpdate
+    func highlightCandidate(at index: Int) -> InputSessionUpdate
     func reset()
 }
