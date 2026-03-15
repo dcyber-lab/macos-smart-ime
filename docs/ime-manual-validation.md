@@ -63,7 +63,9 @@ The exact labels can vary slightly by macOS version, but the flow should be:
 2. Go to `Keyboard`
 3. Open the `Input Sources` or `Text Input` management UI
 4. Add or enable `SmartIMEHost`
-5. Use the menu bar input source switcher to select it
+5. Confirm `SmartIMEHost` appears in the menu bar input source switcher
+6. Confirm the normal input-source keyboard shortcut can cycle to `SmartIMEHost`
+7. Use the menu bar input source switcher or the keyboard shortcut to select it
 
 If the input source does not appear immediately:
 
@@ -76,14 +78,17 @@ If the input source does not appear immediately:
 
 Use a normal editable text field such as TextEdit.
 
-1. Switch to `SmartIMEHost`
-2. Type a simple pinyin sequence such as `nihao`
-3. Confirm a composition string appears
-4. Confirm candidate items appear
-5. Press `Space` and confirm the first candidate commits
-6. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
-7. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
-8. Confirm Chinese text is inserted only for the committed cases
+1. Confirm `SmartIMEHost` appears in `System Settings` as a selectable input source
+2. Confirm `SmartIMEHost` appears in the menu bar input source switcher
+3. Confirm the input-source keyboard shortcut can reach `SmartIMEHost`
+4. Switch to `SmartIMEHost`
+5. Type a simple pinyin sequence such as `nihao`
+6. Confirm a composition string appears
+7. Confirm candidate items appear
+8. Press `Space` and confirm the first candidate commits
+9. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
+10. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
+11. Confirm Chinese text is inserted only for the committed cases
 
 ## Known Limits In This Milestone
 
