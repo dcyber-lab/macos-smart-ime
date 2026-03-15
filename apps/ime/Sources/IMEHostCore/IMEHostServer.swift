@@ -7,7 +7,7 @@ public final class IMEHostServer {
     public init() {}
 
     @discardableResult
-    public func start() -> IMKServer {
+    public func start() -> IMKServer? {
         let server = IMKServer(
             name: IMEHostConfiguration.connectionName,
             bundleIdentifier: IMEHostConfiguration.bundleIdentifier
