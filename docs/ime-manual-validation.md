@@ -20,6 +20,8 @@ scripts/ime/build-host.sh
 Expected result:
 
 - `build/ime-host/SmartIMEHost.app` exists
+- the built bundle is ad-hoc signed
+- the main executable is not a Debug `@rpath/...debug.dylib` wrapper
 
 ## Install
 
@@ -38,6 +40,8 @@ For a system-wide install instead:
 ```bash
 sudo scripts/ime/install-host.sh --system
 ```
+
+The system-wide install path should leave the bundle owned by `root:wheel`.
 
 To remove the install later:
 
@@ -66,6 +70,7 @@ If the input source does not appear immediately:
 - re-open the input source settings UI
 - log out and log back in
 - or remove and reinstall the app, then check again
+- prefer keeping only one install location at a time; for the current validated setup, keep `/Library/Input Methods/SmartIMEHost.app` and remove any duplicate copy from `~/Library/Input Methods/`
 
 ## Basic Chinese Input Checklist
 
@@ -83,4 +88,5 @@ Use a normal editable text field such as TextEdit.
 - This checklist validates the current Chinese `librime` path only
 - Richer candidate controls are still a follow-up milestone
 - The app target is still using local-development settings, not a release distribution setup
-- In this session, the repository-owned scripts were verified through build and user-local installation. The remaining manual step is enabling the input source in macOS and confirming the live typing loop in a GUI text client.
+- In this session, the repository-owned scripts were updated to produce a Release-style ad-hoc-signed bundle because the earlier Debug-style build was not being registered by macOS as a text input source.
+- The validated registration shape for `SmartIMEHost` is a selectable `TISTypeKeyboardInputMethodWithoutModes` source rather than a mode-driven input method bundle.

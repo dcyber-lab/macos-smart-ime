@@ -29,6 +29,11 @@
 - The remaining manual validation step is enabling `SmartIMEHost` in System Settings and checking live Chinese input in a GUI text client.
 - Updated the IME app bundle metadata to register as a visible macOS input source by adding `ComponentInputModeDict`, `TISIntendedLanguage`, and `LSUIElement`, and by removing the older background-only app configuration.
 - Rebuilt and reinstalled `SmartIMEHost`, then refreshed `TextInputMenuAgent` and `System Settings` so macOS can rescan the updated input source metadata.
+- Confirmed through `TISCreateInputSourceList` that macOS still was not recognizing the earlier bundle as a text input source.
+- Identified the deeper packaging issue: the previous build/install flow was copying a Debug-style app whose executable depended on `@rpath/SmartIMEHost.debug.dylib` and whose bundle resources were not properly sealed for installation.
+- Updated the build/install workflow to produce a Release-style bundle, ad-hoc sign it, and normalize ownership for system-wide installs.
+- Added a bundle icon and `tsInputMethodIconFileKey`, and changed the registration shape from a mode-based input method to a selectable `TISTypeKeyboardInputMethodWithoutModes` input source, which matched the working third-party reference input method on this machine.
+- Verified the final registered source is `lab.dcyber.inputmethod.smartime` with `ENABLED=1` and `SELECTABLE=1`, then removed the duplicate user-level install so only `/Library/Input Methods/SmartIMEHost.app` remains.
 
 ### Expected Usage
 
