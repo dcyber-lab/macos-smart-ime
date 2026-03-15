@@ -19,6 +19,10 @@
 - Verified `swift build` now succeeds for the current Swift package targets after fixing the optional `IMKServer` return type in `IMEHostServer`.
 - Added a generated Xcode project and a real `SmartIMEHost` macOS app target wired to InputMethodKit.
 - Verified `xcodebuild -project macos-smart-ime.xcodeproj -scheme SmartIMEHost -configuration Debug build` succeeds.
+- Added the `add-rime-bridge` OpenSpec change and completed its planning artifacts before implementation.
+- Installed local Homebrew `librime` and added the first `packages/rime-bridge` wrapper around the minimum runtime and session APIs.
+- Replaced placeholder Chinese composition handling in `IMEHostCore` with bridge-backed updates and commit routing.
+- Documented the local `librime` data dependency used by the first bridge milestone.
 
 ### Expected Usage
 

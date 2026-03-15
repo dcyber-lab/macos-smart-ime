@@ -1,9 +1,33 @@
 import AppKit
 import InputMethodKit
+import RimeBridge
 import SharedModels
 
 public final class IMEInputController: IMKInputController {
     private let sessionStore = IMEHostSessionStore()
+    private let chineseEngine: ChineseInputEngine?
+
+    public override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
+        do {
+            chineseEngine = try RimeBridgeEngine(
+                configuration: RimeBridgeConfiguration(
+                    sharedDataDirectory: IMEHostConfiguration.rimeSharedDataDirectory(),
+                    userDataDirectory: IMEHostConfiguration.rimeUserDataDirectory(),
+                    prebuiltDataDirectory: IMEHostConfiguration.rimeBuildDirectory(),
+                    stagingDirectory: IMEHostConfiguration.rimeBuildDirectory(),
+                    appName: "rime.smartime",
+                    distributionName: "SmartIME Host",
+                    distributionCodeName: "smart-ime",
+                    distributionVersion: "0.1.0",
+                    defaultSchemaID: IMEHostConfiguration.defaultSchemaID
+                )
+            )
+        } catch {
+            chineseEngine = nil
+        }
+
+        super.init(server: server, delegate: delegate, client: inputClient)
+    }
 
     public override func recognizedEvents(_ sender: Any!) -> Int {
         Int(NSEvent.EventTypeMask.keyDown.rawValue)
@@ -14,29 +38,29 @@ public final class IMEInputController: IMKInputController {
             return false
         }
 
-        switch event.keyCode {
-        case 36, 76:
-            commitCurrentComposition(using: sender)
-            return true
-        case 51:
-            sessionStore.deleteBackward()
-            updateComposition()
-            return true
-        default:
-            break
-        }
-
-        guard let characters = event.characters, !characters.isEmpty else {
+        guard let chineseEngine else {
             return false
         }
 
-        guard shouldHandle(characters: characters) else {
+        let update = chineseEngine.process(
+            InputKeyEvent(
+                keyCode: event.keyCode,
+                characters: event.characters ?? "",
+                charactersIgnoringModifiers: event.charactersIgnoringModifiers ?? "",
+                modifierFlags: event.modifierFlags.rawValue
+            )
+        )
+
+        guard update.handled || update.commitText != nil || !update.state.compositionText.isEmpty else {
             return false
         }
 
-        sessionStore.append(characters)
+        sessionStore.apply(update)
+        if let committedText = update.commitText {
+            commit(committedText, using: sender)
+        }
         updateComposition()
-        return true
+        return update.handled || update.commitText != nil
     }
 
     public override func composedString(_ sender: Any!) -> Any! {
@@ -53,11 +77,14 @@ public final class IMEInputController: IMKInputController {
     }
 
     public override func commitComposition(_ sender: Any!) {
-        commitCurrentComposition(using: sender)
+        commit(sessionStore.state.compositionText, using: sender)
+        chineseEngine?.reset()
+        sessionStore.reset()
+        updateComposition()
     }
 
-    private func commitCurrentComposition(using sender: Any?) {
-        guard let committedText = sessionStore.commitTextIfReady() else {
+    private func commit(_ committedText: String, using sender: Any?) {
+        guard !committedText.isEmpty else {
             return
         }
 
@@ -65,12 +92,6 @@ public final class IMEInputController: IMKInputController {
             client.insertText(committedText, replacementRange: NSRange(location: NSNotFound, length: 0))
         } else if let client = self.client() as? NSTextInputClient {
             client.insertText(committedText, replacementRange: NSRange(location: NSNotFound, length: 0))
-        }
-    }
-
-    private func shouldHandle(characters: String) -> Bool {
-        characters.unicodeScalars.allSatisfy { scalar in
-            CharacterSet.alphanumerics.contains(scalar)
         }
     }
 }
