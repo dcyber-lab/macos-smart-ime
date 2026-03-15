@@ -15,7 +15,8 @@
 - Added a project rule that new features must go through OpenSpec before implementation.
 - Created the first OpenSpec change, `init-ime-shell`, for the IME host bootstrap milestone.
 - Added initial IME host shell source files, shared session models, and bootstrap documentation.
-- Hit a local environment blocker for full IME validation because this machine does not currently have a usable full Xcode setup.
+- Configured the machine to use the full Xcode toolchain and accepted the Xcode license.
+- Verified `swift build` now succeeds for the current Swift package targets after fixing the optional `IMKServer` return type in `IMEHostServer`.
 
 ### Expected Usage
 
