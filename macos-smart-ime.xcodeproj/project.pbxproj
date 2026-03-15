@@ -10,11 +10,13 @@
 		6F7A507403742737AD2AEB32 /* IMEHostCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6BEF3EEC4AC0BACD138E31F /* IMEHostCore */; };
 		93F9FAD58C3303FDD65032DB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4877725FEE1CF1BF6882F463 /* AppDelegate.swift */; };
 		E77B3637F65EE536FE950E44 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF014FE5998AB87DD0CC626C /* main.swift */; };
+		E791DDC48F4245FC59C27EFE /* SmartIMEHost.icns in Resources */ = {isa = PBXBuildFile; fileRef = 6FB79FA97CF1B1AC83D149BD /* SmartIMEHost.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		03CD576684F40B7BC672D2D0 /* SmartIMEHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartIMEHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4877725FEE1CF1BF6882F463 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		6FB79FA97CF1B1AC83D149BD /* SmartIMEHost.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SmartIMEHost.icns; sourceTree = "<group>"; };
 		A404B13DA214C5090BC73993 /* macos-smart-ime */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "macos-smart-ime"; path = .; sourceTree = SOURCE_ROOT; };
 		DF014FE5998AB87DD0CC626C /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -43,6 +45,7 @@
 		699908A66CAA5AA9BD7BB32D /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				6FB79FA97CF1B1AC83D149BD /* SmartIMEHost.icns */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -97,6 +100,7 @@
 			buildConfigurationList = 4095C35B982E868EB1A0D868 /* Build configuration list for PBXNativeTarget "SmartIMEHost" */;
 			buildPhases = (
 				C9A70014924510CE1923BDFB /* Sources */,
+				F3DAA98A1242771F2E3E3314 /* Resources */,
 				D957489133F6C892C3740978 /* Frameworks */,
 			);
 			buildRules = (
@@ -143,6 +147,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F3DAA98A1242771F2E3E3314 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E791DDC48F4245FC59C27EFE /* SmartIMEHost.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C9A70014924510CE1923BDFB /* Sources */ = {

@@ -13,6 +13,7 @@ if [[ "${1:-}" == "--system" ]]; then
 fi
 
 TARGET_APP="$INSTALL_ROOT/SmartIMEHost.app"
+SYSTEM_INSTALL=false
 
 if [[ ! -d "$SOURCE_APP" ]]; then
   echo "Built app not found at: $SOURCE_APP" >&2
@@ -20,12 +21,33 @@ if [[ ! -d "$SOURCE_APP" ]]; then
   exit 1
 fi
 
+if [[ "${1:-}" == "--system" ]]; then
+  SYSTEM_INSTALL=true
+fi
+
 mkdir -p "$TARGET_APP"
 rsync -a --delete "$SOURCE_APP/" "$TARGET_APP/"
+
+if [[ "$SYSTEM_INSTALL" == true ]]; then
+  chown -R root:wheel "$TARGET_APP"
+fi
 
 if [[ -x "$LSREGISTER" ]]; then
   "$LSREGISTER" -f -R -trusted "$TARGET_APP" >/dev/null
 fi
+
+swift -e '
+import Carbon
+import Foundation
+
+let path = CommandLine.arguments[1]
+let url = URL(fileURLWithPath: path) as CFURL
+let status = TISRegisterInputSource(url)
+if status != noErr {
+  fputs("TISRegisterInputSource failed with status \\(status) for \\(path)\n", stderr)
+  exit(Int32(status))
+}
+' "$TARGET_APP"
 
 echo "Installed SmartIMEHost:"
 echo "  $TARGET_APP"
