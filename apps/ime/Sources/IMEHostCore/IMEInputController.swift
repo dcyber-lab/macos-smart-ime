@@ -4,6 +4,10 @@ import RimeBridge
 import SharedModels
 
 public final class IMEInputController: IMKInputController {
+    private enum KeyCode {
+        static let escape: UInt16 = 53
+    }
+
     private let sessionStore = IMEHostSessionStore()
     private let chineseEngine: ChineseInputEngine?
 
@@ -50,6 +54,13 @@ public final class IMEInputController: IMKInputController {
                 modifierFlags: event.modifierFlags.rawValue
             )
         )
+
+        if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
+            sessionStore.reset()
+            chineseEngine.reset()
+            updateComposition()
+            return true
+        }
 
         guard update.handled || update.commitText != nil || !update.state.compositionText.isEmpty else {
             return false

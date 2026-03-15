@@ -1,0 +1,6 @@
+change: add-basic-chinese-candidate-interactions
+status: proposed
+created: 2026-03-15
+owners:
+  - codex
+summary: Add basic candidate selection and composition clearing interactions for the current Chinese IME path.
