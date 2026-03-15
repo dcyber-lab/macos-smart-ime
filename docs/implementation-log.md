@@ -27,6 +27,8 @@
 - Added repository-owned IME build/install/uninstall scripts and a manual validation checklist for the current Chinese input path.
 - Verified `scripts/ime/build-host.sh` produces `build/ime-host/SmartIMEHost.app` and `scripts/ime/install-host.sh` installs the app into `~/Library/Input Methods/SmartIMEHost.app`.
 - The remaining manual validation step is enabling `SmartIMEHost` in System Settings and checking live Chinese input in a GUI text client.
+- Updated the IME app bundle metadata to register as a visible macOS input source by adding `ComponentInputModeDict`, `TISIntendedLanguage`, and `LSUIElement`, and by removing the older background-only app configuration.
+- Rebuilt and reinstalled `SmartIMEHost`, then refreshed `TextInputMenuAgent` and `System Settings` so macOS can rescan the updated input source metadata.
 
 ### Expected Usage
 
