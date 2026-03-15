@@ -80,8 +80,10 @@ Use a normal editable text field such as TextEdit.
 2. Type a simple pinyin sequence such as `nihao`
 3. Confirm a composition string appears
 4. Confirm candidate items appear
-5. Press `Space` or `Return` to commit the current candidate
-6. Confirm Chinese text is inserted into the text field
+5. Press `Space` and confirm the first candidate commits
+6. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
+7. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
+8. Confirm Chinese text is inserted only for the committed cases
 
 ## Known Limits In This Milestone
 
