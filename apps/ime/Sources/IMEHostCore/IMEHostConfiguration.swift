@@ -12,7 +12,7 @@ public enum IMEHostConfiguration {
         }
 
         return URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-            .appendingPathComponent("third_party/librime-src/data/minimal", isDirectory: true)
+            .appendingPathComponent("third_party/librime-data/minimal", isDirectory: true)
             .path
     }
 
