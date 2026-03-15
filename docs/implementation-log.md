@@ -13,6 +13,9 @@
 - Created the GitHub repository and pushed `main` to `origin`.
 - Installed OpenSpec in the repository and enabled multi-agent workflow files.
 - Added a project rule that new features must go through OpenSpec before implementation.
+- Created the first OpenSpec change, `init-ime-shell`, for the IME host bootstrap milestone.
+- Added initial IME host shell source files, shared session models, and bootstrap documentation.
+- Hit a local environment blocker for full IME validation because this machine does not currently have a usable full Xcode setup.
 
 ### Expected Usage
 
