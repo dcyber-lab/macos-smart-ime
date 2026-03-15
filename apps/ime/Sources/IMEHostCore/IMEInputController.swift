@@ -46,6 +46,13 @@ public final class IMEInputController: IMKInputController {
             return false
         }
 
+        if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
+            sessionStore.reset()
+            chineseEngine.reset()
+            updateComposition()
+            return true
+        }
+
         let update = chineseEngine.process(
             InputKeyEvent(
                 keyCode: event.keyCode,
@@ -54,13 +61,6 @@ public final class IMEInputController: IMKInputController {
                 modifierFlags: event.modifierFlags.rawValue
             )
         )
-
-        if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
-            sessionStore.reset()
-            chineseEngine.reset()
-            updateComposition()
-            return true
-        }
 
         guard update.handled || update.commitText != nil || !update.state.compositionText.isEmpty else {
             return false
@@ -71,7 +71,7 @@ public final class IMEInputController: IMKInputController {
             commit(committedText, using: sender)
         }
         updateComposition()
-        return update.handled || update.commitText != nil
+        return true
     }
 
     public override func composedString(_ sender: Any!) -> Any! {

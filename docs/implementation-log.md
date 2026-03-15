@@ -35,6 +35,7 @@
 - Added a bundle icon and `tsInputMethodIconFileKey`, and changed the registration shape from a mode-based input method to a selectable `TISTypeKeyboardInputMethodWithoutModes` input source, which matched the working third-party reference input method on this machine.
 - Verified the final registered source is `lab.dcyber.inputmethod.smartime` with `ENABLED=1` and `SELECTABLE=1`, then removed the duplicate user-level install so only `/Library/Input Methods/SmartIMEHost.app` remains.
 - Started the next OpenSpec change, `add-basic-chinese-candidate-interactions`, and added the first host-side cancel behavior so `Escape` clears active Chinese composition cleanly.
+- Fixed the IME host event-return contract after review: `Escape` is now handled before sending the event to `librime`, and the host returns `true` whenever a composition update or commit is produced so raw keystrokes do not leak through to the client.
 
 ### Expected Usage
 
