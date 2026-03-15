@@ -55,6 +55,8 @@
 - Updated the Rime session bootstrap to force simplified Chinese output by default for the bundled `luna_pinyin` schema instead of the schema's traditional-first default presentation.
 - Added explicit host-side candidate navigation and selection wiring so `Up Arrow`, `Down Arrow`, and number keys drive the current `librime` candidate selection state and keep the visible `IMKCandidates` highlight in sync.
 - Rebuilt `SmartIMEHost` successfully after the simplified-output and candidate-selection fixes; GUI validation is still required to confirm the fixes behave correctly in a real macOS text client.
+- Fixed a re-entrant candidate-panel synchronization bug: updating the visible `IMKCandidates` selection could call back into `candidateSelectionChanged(_:)` and recursively resync the panel, which could leave the input-source UI spinning or unresponsive during live typing.
+- Cleaned up the install script's `TISEnableInputSource` verification snippet so the post-install step no longer emits a misleading forced-cast warning.
 
 ### Expected Usage
 
