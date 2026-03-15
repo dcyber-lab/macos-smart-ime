@@ -32,6 +32,33 @@ public final class RimeBridgeEngine: ChineseInputEngine {
         return InputSessionUpdate(handled: handled, state: state, commitText: commitText)
     }
 
+    public func selectCandidate(at index: Int) -> InputSessionUpdate {
+        guard index >= 0 else {
+            return InputSessionUpdate(handled: false, state: session.currentState(recentText: recentText))
+        }
+
+        let handled = session.selectCandidateOnCurrentPage(index: index)
+        let commitText = session.readCommitText()
+        if let commitText, !commitText.isEmpty {
+            recentText = commitText
+        }
+
+        let state = session.currentState(recentText: recentText)
+        return InputSessionUpdate(handled: handled, state: state, commitText: commitText)
+    }
+
+    public func highlightCandidate(at index: Int) -> InputSessionUpdate {
+        guard index >= 0 else {
+            return InputSessionUpdate(handled: false, state: session.currentState(recentText: recentText))
+        }
+
+        let handled = session.highlightCandidateOnCurrentPage(index: index)
+        return InputSessionUpdate(
+            handled: handled,
+            state: session.currentState(recentText: recentText)
+        )
+    }
+
     public func reset() {
         session.reset()
     }

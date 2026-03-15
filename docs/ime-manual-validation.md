@@ -84,11 +84,12 @@ Use a normal editable text field such as TextEdit.
 4. Switch to `SmartIMEHost`
 5. Type a simple pinyin sequence such as `nihao`
 6. Confirm a composition string appears
-7. Confirm candidate items appear
+7. Confirm candidate items appear in simplified Chinese by default
 8. Press `Space` and confirm the first candidate commits
-9. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
-10. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
-11. Confirm Chinese text is inserted only for the committed cases
+9. Press `Down Arrow` and `Up Arrow` to confirm the visible candidate highlight moves with the current selection
+10. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
+11. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
+12. Confirm Chinese text is inserted only for the committed cases
 
 This milestone is not considered complete until steps 5 through 11 are verified in a real macOS text client with the visible candidate panel.
 

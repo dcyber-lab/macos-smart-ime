@@ -52,6 +52,9 @@
 - Updated `IMEInputController` to keep inline composition and an explicit `IMKCandidates` panel in sync, hide candidate UI on commit/cancel/deactivation, and commit candidate-panel selections back into the focused client.
 - Rebuilt `SmartIMEHost` successfully after the candidate-loop changes; importing `InputMethodKit` with `@preconcurrency` was required so the legacy IMK candidate APIs would compile cleanly under Swift 6.
 - The remaining milestone gap is now explicit: this repository state still needs a real GUI validation pass in TextEdit or another normal macOS text client to confirm `nihao` shows visible candidates and that `Space`, number-key selection, and `Escape` all behave correctly end to end.
+- Updated the Rime session bootstrap to force simplified Chinese output by default for the bundled `luna_pinyin` schema instead of the schema's traditional-first default presentation.
+- Added explicit host-side candidate navigation and selection wiring so `Up Arrow`, `Down Arrow`, and number keys drive the current `librime` candidate selection state and keep the visible `IMKCandidates` highlight in sync.
+- Rebuilt `SmartIMEHost` successfully after the simplified-output and candidate-selection fixes; GUI validation is still required to confirm the fixes behave correctly in a real macOS text client.
 
 ### Expected Usage
 
