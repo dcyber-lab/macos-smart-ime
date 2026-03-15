@@ -8,9 +8,14 @@ public final class IMEHostServer {
 
     @discardableResult
     public func start() -> IMKServer? {
+        let bundle = Bundle.main
+        let connectionName = bundle.object(forInfoDictionaryKey: "InputMethodConnectionName") as? String
+            ?? IMEHostConfiguration.connectionName
+        let bundleIdentifier = bundle.bundleIdentifier ?? IMEHostConfiguration.bundleIdentifier
+
         let server = IMKServer(
-            name: IMEHostConfiguration.connectionName,
-            bundleIdentifier: IMEHostConfiguration.bundleIdentifier
+            name: connectionName,
+            bundleIdentifier: bundleIdentifier
         )
         self.server = server
         return server

@@ -1,7 +1,7 @@
 ## 1. IME Host Bootstrap
 
 - [x] 1.1 Create the initial `apps/ime` project structure for the macOS input method host
-- [ ] 1.2 Add the minimum InputMethodKit host entrypoints and target wiring required to build the IME shell
+- [x] 1.2 Add the minimum InputMethodKit host entrypoints and target wiring required to build the IME shell
 - [x] 1.3 Document the local bootstrap assumptions needed to validate the host on macOS
 
 ## 2. Session Model

@@ -1,0 +1,38 @@
+name: macos-smart-ime
+options:
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    PRODUCT_NAME: SmartIMEHost
+    PRODUCT_BUNDLE_IDENTIFIER: lab.dcyber.inputmethod.smartime
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    MACOSX_DEPLOYMENT_TARGET: 13.0
+    SWIFT_VERSION: 6.0
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+packages:
+  LocalPackages:
+    path: .
+targets:
+  SmartIMEHost:
+    type: application
+    platform: macOS
+    sources:
+      - path: apps/ime/App
+      - path: apps/ime/Resources
+        excludes:
+          - Info.plist
+        buildPhase: resources
+    settings:
+      base:
+        INFOPLIST_FILE: apps/ime/Resources/Info.plist
+        PRODUCT_MODULE_NAME: SmartIMEHost
+        OTHER_LDFLAGS:
+          - $(inherited)
+        FRAMEWORK_SEARCH_PATHS:
+          - $(inherited)
+    dependencies:
+      - package: LocalPackages
+        product: IMEHostCore
