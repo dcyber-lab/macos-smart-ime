@@ -13,19 +13,40 @@ let package = Package(
             targets: ["SharedModels"]
         ),
         .library(
+            name: "RimeBridge",
+            targets: ["RimeBridge"]
+        ),
+        .library(
             name: "IMEHostCore",
             targets: ["IMEHostCore"]
         ),
     ],
     targets: [
+        .systemLibrary(
+            name: "CLibrime",
+            path: "packages/rime-bridge/Sources/CLibrime",
+            pkgConfig: "rime",
+            providers: [
+                .brew(["librime"]),
+            ]
+        ),
         .target(
             name: "SharedModels",
             path: "packages/shared-models/Sources/SharedModels"
         ),
         .target(
+            name: "RimeBridge",
+            dependencies: [
+                "CLibrime",
+                "SharedModels",
+            ],
+            path: "packages/rime-bridge/Sources/RimeBridge"
+        ),
+        .target(
             name: "IMEHostCore",
             dependencies: [
                 "SharedModels",
+                "RimeBridge",
             ],
             path: "apps/ime/Sources/IMEHostCore",
             linkerSettings: [

@@ -24,6 +24,8 @@
 	<string>IMEHostCore.IMEInputController</string>
 	<key>LSBackgroundOnly</key>
 	<true/>
+	<key>RimeSharedDataDirectory</key>
+	<string>$(RIME_SHARED_DATA_DIR)</string>
 	<key>NSPrincipalClass</key>
 	<string>$(PRODUCT_MODULE_NAME).NSManualApplication</string>
 </dict>
