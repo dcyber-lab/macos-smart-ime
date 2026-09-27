@@ -16,6 +16,8 @@
 
 - Implemented OpenSpec change `rebrand-as-linguatype`. The input method is shown as "LinguaType" (灵译输入法 on Chinese systems) through localized `CFBundleDisplayName` / `CFBundleName`; the Rime schema is named 灵译拼音. Bundle, executable, bundle identifier, defaults domain, and scripts keep `SmartIMEHost`, so the installed input source did not need to be re-added.
 - `scripts/branding/make-icons.swift` generates a vector template menu icon (`LinguaType.pdf`, rounded square with "中" and "A" cut out from real glyph outlines, `TISIconIsTemplate`) and a gradient app icon (`LinguaType.icns`) that replaces the green checkmark placeholder.
+- The first menu icon cut the glyphs out with an even-odd fill; it rendered correctly through `NSImage` previews, but the input menu showed a solid white square. The generator now subtracts the glyph outlines from the rounded square (`CGPath.subtracting`) and fills with the nonzero rule, so the holes no longer depend on how the menu fills the path.
+- Removed the stale user-level copy in `~/Library/Input Methods` (an unused 12:11 build still registered as "SmartIMEHost" with the old icon); only the system-level LinguaType source remains, enabled and selectable.
 - The localized `CFBundleName` also renamed the running process in window lists, so the smoke test's `kCGWindowOwnerName == "SmartIMEHost"` check stopped finding the candidate panel; it now matches windows by the input method's process id. Smoke test 15/15 after the change.
 
 ### Selection translation promoted to a feature
