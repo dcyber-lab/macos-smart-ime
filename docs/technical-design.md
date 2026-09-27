@@ -50,6 +50,7 @@ Owns explicit and async workflows:
 
 - `scripts/release/package.sh` builds the app, copies librime and its Homebrew dependencies into `Contents/Frameworks` with `@rpath` install names, raises `LSMinimumSystemVersion` to the newest `minos` among them (macOS 26.0 with current Homebrew bottles, arm64 only), signs ad hoc, and zips it with `install-host.sh`, `install.command`, and the third-party licenses.
 - A probe program links the bundled librime, deploys the bundled data into a scratch directory, and checks that `nihao` yields 你好 with no library loaded from outside the app. librime looks for plugins next to its own dylib, so the bundled copy never loads Homebrew's `rime-plugins`.
+- CI (`.github/workflows/build.yml`) runs `package.sh` on `macos-26` for pull requests to `main` (artifact kept 7 days) and with `--publish` for `v*` tags, after checking that the tag matches `MARKETING_VERSION`. The smoke test does not run in CI: it installs the input method and posts keystrokes, which needs Accessibility access a hosted runner cannot grant.
 - Installing needs neither Xcode nor Homebrew: `install-host.sh` copies the app, clears the quarantine attribute, and runs `SmartIMEHost --install`, which registers, enables, and verifies the input source (Squirrel uses the same pattern).
 
 ## Chinese-Mode English Candidates
