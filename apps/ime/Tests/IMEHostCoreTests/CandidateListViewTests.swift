@@ -36,6 +36,17 @@ final class CandidateListViewTests: XCTestCase {
         XCTAssertGreaterThan(view.fittingSize.width, short)
     }
 
+    func testShortListsHugTheirContentWidth() {
+        let view = CandidateListView()
+        view.rows = CandidatePanelModel.rows(for: state(["你"]))
+        let oneCharacter = view.fittingSize.width
+
+        view.rows = CandidatePanelModel.rows(for: state(["你好世界"]))
+
+        XCTAssertGreaterThan(view.fittingSize.width, oneCharacter, "no fixed minimum width")
+        XCTAssertLessThan(oneCharacter, 80, "a one-character list stays narrow")
+    }
+
     private func height(rowCount: Int) -> CGFloat {
         let view = CandidateListView()
         view.rows = rows(count: rowCount)

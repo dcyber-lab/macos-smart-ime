@@ -12,6 +12,10 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Candidate panel hugs its content
+
+- The panel still looked fixed-size: a 150 pt minimum width made almost every Chinese list the same width with empty space on the right. Removed the minimum so the width follows the longest row, and tightened paddings (row height 26 pt instead of 28 pt). Added `testShortListsHugTheirContentWidth`; 61 `swift test` cases pass.
+
 ### Candidate panel wired and verified in TextEdit
 
 - Re-wired the host-drawn `CandidatePanel` (OpenSpec `add-custom-candidate-panel`), replacing the fixed-height `IMKCandidates` panel that left empty rows under short lists. The panel height now fits its rows (3 new `CandidateListViewTests`; 60 `swift test` cases pass).

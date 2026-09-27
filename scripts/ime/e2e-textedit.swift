@@ -144,8 +144,8 @@ tapShift()
 type("shujuku")
 if let frame = panelFrame() {
     print("panel for shujuku: \(Int(frame.width))x\(Int(frame.height))")
-    // First row centre: 5pt outer padding + half of a ~28pt row, in global (top-left origin) coordinates.
-    let point = CGPoint(x: frame.midX, y: frame.minY + 5 + 14)
+    // First row centre: 4pt outer padding + half of a ~26pt row, in global (top-left origin) coordinates.
+    let point = CGPoint(x: frame.midX, y: frame.minY + 4 + 13)
     let originalMouse = CGEvent(source: nil)!.location
     for type in [CGEventType.leftMouseDown, .leftMouseUp] {
         CGEvent(mouseEventSource: eventSource, mouseType: type, mouseCursorPosition: point, mouseButton: .left)!.post(tap: .cghidEventTap)

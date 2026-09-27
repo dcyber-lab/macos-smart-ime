@@ -88,14 +88,13 @@ final class CandidatePanel {
 /// Draws candidate rows top to bottom and reports row clicks.
 final class CandidateListView: NSView {
     private enum Metrics {
-        static let outerPadding: CGFloat = 5
-        static let rowHorizontalPadding: CGFloat = 9
-        static let rowVerticalPadding: CGFloat = 4
-        static let columnGap: CGFloat = 9
-        static let tagGap: CGFloat = 16
-        static let separatorSpacing: CGFloat = 9
+        static let outerPadding: CGFloat = 4
+        static let rowHorizontalPadding: CGFloat = 8
+        static let rowVerticalPadding: CGFloat = 3
+        static let columnGap: CGFloat = 7
+        static let tagGap: CGFloat = 12
+        static let separatorSpacing: CGFloat = 7
         static let highlightRadius: CGFloat = 6
-        static let minimumWidth: CGFloat = 150
     }
 
     private let textFont = NSFont.systemFont(ofSize: 16)
@@ -131,7 +130,7 @@ final class CandidateListView: NSView {
 
         let separators = CGFloat(rows.filter(\.hasSeparatorBefore).count)
         let height = Metrics.outerPadding * 2 + CGFloat(rows.count) * rowHeight + separators * Metrics.separatorSpacing
-        return NSSize(width: max(ceil(width), Metrics.minimumWidth), height: ceil(height))
+        return NSSize(width: ceil(width), height: ceil(height))
     }
 
     override func draw(_ dirtyRect: NSRect) {
