@@ -2,9 +2,12 @@
 //
 // Usage: swift scripts/branding/make-icons.swift [preview-directory]
 //
-// Writes apps/ime/Resources/LinguaType.pdf (16 pt template menu icon: rounded square with
-// "中" and "A" cut out) and apps/ime/Resources/LinguaType.icns (gradient app icon with white
-// glyphs). With a preview directory, also writes PNG previews of both.
+// Writes apps/ime/Resources/LinguaType.tiff (16 pt template menu icon with 1x and 2x bitmaps:
+// rounded square with "中" and "A" cut out) and apps/ime/Resources/LinguaType.icns (gradient app
+// icon with white glyphs). With a preview directory, also writes PNG previews of both.
+//
+// The menu icon is a bitmap TIFF, like the system's own template input method icons (e.g. Ainu.tiff):
+// the input menu drew a PDF version as a solid square.
 
 import AppKit
 import CoreText
@@ -60,16 +63,30 @@ evenOddPath.addPath(glyphs(in: menuBox))
 // even-odd path solid. Subtract the glyphs instead so the holes survive any fill rule.
 let menuPath = menuBackground.subtracting(glyphs(in: menuBox), using: .evenOdd)
 
-var mediaBox = CGRect(x: 0, y: 0, width: menuSize, height: menuSize)
-let pdfURL = resources.appendingPathComponent("LinguaType.pdf")
-let pdf = CGContext(pdfURL as CFURL, mediaBox: &mediaBox, nil)!
-pdf.beginPDFPage(nil)
-pdf.addPath(menuPath)
-pdf.setFillColor(NSColor.black.cgColor)
-pdf.fillPath(using: .winding)
-pdf.endPDFPage()
-pdf.closePDF()
-print("wrote \(pdfURL.path)")
+func menuBitmap(scale: Int) -> NSBitmapImageRep {
+    let pixels = Int(menuSize) * scale
+    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8,
+                               samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                               bytesPerRow: 0, bitsPerPixel: 0)!
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+    let context = NSGraphicsContext.current!.cgContext
+    context.scaleBy(x: CGFloat(scale), y: CGFloat(scale))
+    context.addPath(menuPath)
+    context.setFillColor(NSColor.black.cgColor)
+    context.fillPath(using: .winding)
+    NSGraphicsContext.restoreGraphicsState()
+    // Set the point size only after drawing; a 32 px rep sized at 16 pt already draws at 2x.
+    rep.size = NSSize(width: menuSize, height: menuSize)
+    return rep
+}
+
+let menuImage = NSImage(size: NSSize(width: menuSize, height: menuSize))
+menuImage.addRepresentation(menuBitmap(scale: 1))
+menuImage.addRepresentation(menuBitmap(scale: 2))
+let tiffURL = resources.appendingPathComponent("LinguaType.tiff")
+try menuImage.tiffRepresentation(using: .lzw, factor: 0)!.write(to: tiffURL)
+print("wrote \(tiffURL.path)")
 
 // MARK: App icon
 
