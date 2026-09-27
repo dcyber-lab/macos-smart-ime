@@ -4,6 +4,7 @@ import SharedModels
 public final class RimeBridgeEngine: ChineseInputEngine {
     private let session: RimeBridgeSession
     private var recentText = ""
+    private var lastKnownState = CompositionState()
 
     public init(configuration: RimeBridgeConfiguration) throws {
         let runtime = try RimeBridgeRuntime.shared(configuration: configuration)
@@ -16,10 +17,7 @@ public final class RimeBridgeEngine: ChineseInputEngine {
 
     public func process(_ event: InputKeyEvent) -> InputSessionUpdate {
         guard let translatedKey = RimeKeyTranslator.translate(event) else {
-            return InputSessionUpdate(
-                handled: false,
-                state: session.currentState(recentText: recentText)
-            )
+            return InputSessionUpdate(handled: false, state: lastKnownState)
         }
 
         let handled = session.process(keyCode: translatedKey.keycode, mask: translatedKey.mask)
@@ -28,13 +26,13 @@ public final class RimeBridgeEngine: ChineseInputEngine {
             recentText = commitText
         }
 
-        let state = session.currentState(recentText: recentText)
-        return InputSessionUpdate(handled: handled, state: state, commitText: commitText)
+        lastKnownState = session.currentState(recentText: recentText)
+        return InputSessionUpdate(handled: handled, state: lastKnownState, commitText: commitText)
     }
 
     public func selectCandidate(at index: Int) -> InputSessionUpdate {
         guard index >= 0 else {
-            return InputSessionUpdate(handled: false, state: session.currentState(recentText: recentText))
+            return InputSessionUpdate(handled: false, state: lastKnownState)
         }
 
         let handled = session.selectCandidateOnCurrentPage(index: index)
@@ -43,24 +41,23 @@ public final class RimeBridgeEngine: ChineseInputEngine {
             recentText = commitText
         }
 
-        let state = session.currentState(recentText: recentText)
-        return InputSessionUpdate(handled: handled, state: state, commitText: commitText)
+        lastKnownState = session.currentState(recentText: recentText)
+        return InputSessionUpdate(handled: handled, state: lastKnownState, commitText: commitText)
     }
 
     public func highlightCandidate(at index: Int) -> InputSessionUpdate {
         guard index >= 0 else {
-            return InputSessionUpdate(handled: false, state: session.currentState(recentText: recentText))
+            return InputSessionUpdate(handled: false, state: lastKnownState)
         }
 
         let handled = session.highlightCandidateOnCurrentPage(index: index)
-        return InputSessionUpdate(
-            handled: handled,
-            state: session.currentState(recentText: recentText)
-        )
+        lastKnownState = session.currentState(recentText: recentText)
+        return InputSessionUpdate(handled: handled, state: lastKnownState)
     }
 
     public func reset() {
         session.reset()
+        lastKnownState = CompositionState()
     }
 }
 
@@ -133,6 +130,9 @@ private enum RimeKeyTranslator {
 
     private static func specialKeycode(for keyCode: UInt16) -> Int32? {
         switch keyCode {
+        // Space: IMK sometimes delivers keyDown with empty `characters`; map by keyCode so Rime still receives XK_space.
+        case 49:
+            return 0x20
         case 36, 76:
             return returnKey
         case 48:

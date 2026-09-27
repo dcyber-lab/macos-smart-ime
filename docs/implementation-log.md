@@ -1,5 +1,12 @@
 # Implementation Log
 
+## 2026-03-20
+
+### Space / Return not confirming candidates
+
+- Root cause: Under InputMethodKit, `NSEvent` for Space (keyCode 49) can arrive with empty `characters` / `charactersIgnoringModifiers`. `RimeKeyTranslator` then returned `nil`, so `process_key` was never called; `handle(_:client:)` still returned `true` because `lastKnownState` still had composition text, so the key was swallowed and Rime never saw Space (first candidate / confirm).
+- Fix: Map virtual key 49 explicitly to X11 keysym `0x20` (`XK_space`) in `RimeKeyTranslator.specialKeycode` so Space always reaches `librime`. Return was already mapped via keyCodes 36 and 76.
+
 ## 2026-03-15
 
 ### Bootstrap
