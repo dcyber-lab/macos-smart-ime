@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
-SOURCE_APP="$REPO_ROOT/build/ime-host/SmartIMEHost.app"
+SOURCE_APP="$REPO_ROOT/build/ime-host/Products.noindex/SmartIMEHost.app"
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
 INSTALL_ROOT="$HOME/Library/Input Methods"
 TARGET_USER="${SUDO_USER:-$USER}"
@@ -45,23 +45,6 @@ run_for_target_user() {
     "$@"
   fi
 }
-
-# Kill any running SmartIMEHost process BEFORE replacing the bundle on disk.
-# A stale process holding a broken IMKServer connection will prevent the
-# system from switching to the input method after reinstallation.
-if pgrep -x SmartIMEHost >/dev/null 2>&1; then
-  echo "Stopping existing SmartIMEHost process..."
-  killall SmartIMEHost >/dev/null 2>&1 || true
-  for i in 1 2 3 4 5; do
-    pgrep -x SmartIMEHost >/dev/null 2>&1 || break
-    sleep 1
-  done
-  if pgrep -x SmartIMEHost >/dev/null 2>&1; then
-    echo "Warning: SmartIMEHost did not exit cleanly; force killing." >&2
-    killall -9 SmartIMEHost >/dev/null 2>&1 || true
-    sleep 1
-  fi
-fi
 
 mkdir -p "$TARGET_APP"
 rsync -a --delete "$SOURCE_APP/" "$TARGET_APP/"
@@ -196,11 +179,28 @@ else
   killall SystemUIServer >/dev/null 2>&1 || true
 fi
 
-# imklaunchagent launches the input method by bundle ID and may pick a build copy, so only the installed copy
-# stays registered. Done here rather than in build-host.sh: LaunchServices re-registers fresh builds asynchronously.
+# imklaunchagent launches the input method by bundle ID and fails when LaunchServices resolves it to a build
+# copy (xcodebuild registers its product), so only the installed copy stays registered.
 if [[ -x "$LSREGISTER" ]]; then
   "$LSREGISTER" -u "$SOURCE_APP" >/dev/null 2>&1 || true
-  "$LSREGISTER" -u "$REPO_ROOT/build/ime-host/DerivedData/Build/Products/Release/SmartIMEHost.app" >/dev/null 2>&1 || true
+  "$LSREGISTER" -u "$REPO_ROOT/build/ime-host/DerivedData.noindex/Build/Products/Release/SmartIMEHost.app" >/dev/null 2>&1 || true
+fi
+
+# Stop the old instance only now that the new bundle is in place; imklaunchagent launches the new one on the
+# next keystroke. Never restart imklaunchagent itself: an agent restarted with killall keeps handing apps a dead
+# endpoint for about 40 seconds after the input method exits, and until the next login.
+if pgrep -x SmartIMEHost >/dev/null 2>&1; then
+  echo "Stopping the previous SmartIMEHost process..."
+  killall SmartIMEHost >/dev/null 2>&1 || true
+  for i in 1 2 3 4 5; do
+    pgrep -x SmartIMEHost >/dev/null 2>&1 || break
+    sleep 1
+  done
+  if pgrep -x SmartIMEHost >/dev/null 2>&1; then
+    echo "Warning: SmartIMEHost did not exit cleanly; force killing." >&2
+    killall -9 SmartIMEHost >/dev/null 2>&1 || true
+    sleep 1
+  fi
 fi
 
 sleep 2

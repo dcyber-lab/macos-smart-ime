@@ -3,7 +3,7 @@ import Carbon
 import Translation
 
 // End-to-end smoke test for SmartIMEHost, driven against the throwaway SmartIMETestClient app
-// (never against the user's apps or documents). Run through scripts/ime/dev-cycle.sh.
+// (never against the user's apps or documents). Run through ./install.sh --test.
 //
 // Usage: SmartIMEDriver <path to SmartIMETestClient.app>
 //
