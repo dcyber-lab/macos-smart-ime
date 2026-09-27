@@ -9,7 +9,8 @@ licensed under the GNU General Public License v3.0.
 - They are not stored in this repository. `scripts/rime/fetch-rime-ice.sh`
   downloads them at build time, verifies their SHA-256 checksums, and
   `scripts/rime/assemble-shared-data.sh` copies them (with rime-ice's `LICENSE`
-  as `cn_dicts/LICENSE.rime-ice`) into `build/rime-data/shared`.
+  as `cn_dicts/LICENSE.rime-ice`) into `build/rime-data/shared`, which the build
+  copies into the app (`Contents/Resources/RimeData`).
 - Distributing a build that includes these tables must comply with GPL-3.0.
 
 The files in this directory (`smartime_pinyin.schema.yaml`,

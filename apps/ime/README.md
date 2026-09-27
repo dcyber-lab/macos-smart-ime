@@ -17,7 +17,7 @@ The current milestone proves the intended boundary:
 - InputMethodKit host-side entrypoints live in `apps/ime`
 - Session and candidate state are represented explicitly
 - Chinese composition is delegated through `packages/rime-bridge`
-- Rime shared data is assembled from `third_party/librime-data/smartime` and the rime-ice tables into `build/rime-data/shared`
+- Rime shared data is assembled from `third_party/librime-data/smartime` and the rime-ice tables, precompiled, and bundled into the app as `Contents/Resources/RimeData`
 
 ## Local Validation Assumptions
 
