@@ -17,6 +17,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         static let eight: UInt16 = 28
         static let nine: UInt16 = 25
         static let escape: UInt16 = 53
+        static let t: UInt16 = 17
         static let downArrow: UInt16 = 125
         static let upArrow: UInt16 = 126
     }
@@ -25,6 +26,13 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     private let chineseEngine: ChineseInputEngine?
     private let englishEngine: EnglishInputEngine?
     private var shiftToggle = ShiftToggleDetector()
+    /// Where the selection-translation popup is anchored (first character of the selection).
+    private var translationAnchor = NSRect.zero
+    private lazy var selectionTranslation = MainActor.assumeIsolated {
+        SelectionTranslationController(translator: AppleSelectionTranslator()) { [weak self] state in
+            TranslationPopup.shared.show(state, caretRect: self?.translationAnchor ?? .zero)
+        }
+    }
 
     private var activeEngine: (any ChineseInputEngine)? {
         switch sessionStore.state.mode {
@@ -91,6 +99,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             return false
         }
         shiftToggle.keyDown()
+
+        if let handled = handleSelectionTranslationKey(event) {
+            return handled
+        }
 
         if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
             resetSession(resetEngine: true)
@@ -206,6 +218,49 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         englishEngine?.reset()
         sessionStore.reset()
         withCandidatePanel { $0.hide() }
+        MainActor.assumeIsolated { selectionTranslation.dismiss() }
+    }
+
+    // MARK: Selection translation (POC)
+
+    /// Returns nil when the key is not part of the selection-translation flow and should be handled normally.
+    private func handleSelectionTranslationKey(_ event: NSEvent) -> Bool? {
+        let keyCode = event.keyCode
+        let outcome = MainActor.assumeIsolated {
+            selectionTranslation.isActive ? selectionTranslation.handleKey(keyCode) : nil
+        }
+        switch outcome {
+        case .replace(let translation, let range)?:
+            client()?.insertText(translation, replacementRange: range)
+            return true
+        case .dismissed(consumed: true)?:
+            return true
+        case .dismissed(consumed: false)?, nil:
+            break
+        }
+
+        let modifiers = event.modifierFlags.intersection([.shift, .control, .option, .command])
+        guard keyCode == KeyCode.t, modifiers == [.control, .option], !sessionStore.hasActiveComposition else {
+            return nil
+        }
+        startSelectionTranslation()
+        return true
+    }
+
+    private func startSelectionTranslation() {
+        let client = self.client()
+        let range = client?.selectedRange() ?? NSRange(location: NSNotFound, length: 0)
+        var selectedText: String?
+        var anchor = NSRect.zero
+        if let client, range.location != NSNotFound {
+            selectedText = range.length > 0 ? client.attributedSubstring(from: range)?.string : ""
+            _ = client.attributes(forCharacterIndex: range.location, lineHeightRectangle: &anchor)
+        }
+        translationAnchor = anchor
+        let text = selectedText
+        MainActor.assumeIsolated {
+            selectionTranslation.start(selectedText: text, range: range)
+        }
     }
 
     @discardableResult

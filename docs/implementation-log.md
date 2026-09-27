@@ -12,6 +12,13 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Selection translation POC
+
+- Implemented OpenSpec change `add-selection-translation-poc` inside the IME at the user's request (the documented home is the Companion app): select English, press `⌃⌥T`, read the on-device Chinese translation in a popup, `Return` replaces the selection, `Escape` dismisses. Uses Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26, weak-linked so the host still loads on older systems).
+- `SelectionTranslationController` (7 tests with a fake translator: replace, escape, other keys, stale results, missing selection, missing model) drives `TranslationPopup`, a wrapping popup styled like the candidate panel.
+- Smoke test now selects all text in the test client, checks that `⌃⌥T` opens the popup and `Escape` keeps the text (12/12 pass). Its model check first deadlocked by blocking the main thread on a semaphore while `LanguageAvailability` replied on the main actor; it now spins the run loop instead. The real translation and replacement are skipped until the English → Simplified Chinese model is downloaded on this machine.
+- 100 `swift test` cases pass.
+
 ### Chinese glosses for English candidates
 
 - Implemented OpenSpec change `add-english-candidate-glosses`. English word candidates in both modes show a short Chinese gloss after the word (`deployed 部署`, `Kubernetes 容器编排`, `negotiate 商议，谈判`); translation candidates show none. `Candidate` gained an optional `annotation`, drawn by the panel in 12 pt secondary text and truncated to 12 characters.

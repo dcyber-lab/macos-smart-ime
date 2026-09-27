@@ -81,6 +81,13 @@ guard arguments.count > 1 else {
     exit(2)
 }
 let app = NSApplication.shared
+// Edit > Select All, so the driver can select text with Command-A.
+let mainMenu = NSMenu()
+let editItem = NSMenuItem()
+editItem.submenu = NSMenu(title: "Edit")
+editItem.submenu?.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+mainMenu.addItem(editItem)
+app.mainMenu = mainMenu
 let delegate = TestClientDelegate(stateDirectory: URL(fileURLWithPath: arguments[1], isDirectory: true))
 app.delegate = delegate
 app.setActivationPolicy(.regular)

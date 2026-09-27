@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import Translation
 
 // End-to-end smoke test for SmartIMEHost, driven against the throwaway SmartIMETestClient app
 // (never against the user's apps or documents). Run through scripts/ime/dev-cycle.sh.
@@ -39,6 +40,7 @@ func secondsSinceUserInput() -> Double {
     return types.map { CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: $0) }.min() ?? .infinity
 }
 
+setvbuf(stdout, nil, _IOLBF, 0)
 guard CommandLine.arguments.count > 1 else {
     print("usage: SmartIMEDriver <path to SmartIMETestClient.app>")
     exit(2)
@@ -151,6 +153,27 @@ func panelFrame() -> CGRect? {
     }
     return nil
 }
+func imeWindowVisible() -> Bool {
+    let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+    return windows.contains { ($0[kCGWindowOwnerName as String] as? String) == "SmartIMEHost" }
+}
+func translationModelInstalled() -> Bool {
+    guard #available(macOS 26.0, *) else {
+        return false
+    }
+    var installed: Bool?
+    Task { @MainActor in
+        installed = await LanguageAvailability().status(
+            from: Locale.Language(identifier: "en"), to: Locale.Language(identifier: "zh-Hans")
+        ) == .installed
+    }
+    // Spin the run loop instead of blocking: the task and LanguageAvailability's reply need the main thread.
+    let deadline = Date().addingTimeInterval(10)
+    while installed == nil, Date() < deadline {
+        RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))
+    }
+    return installed ?? false
+}
 func describe(_ frame: CGRect?) -> String {
     frame.map { "\(Int($0.width))x\(Int($0.height))" } ?? "not visible"
 }
@@ -229,6 +252,29 @@ let beforeGith = committedText()
 type("gith")
 press(keyCodes["2"]!)
 check("gith + 2 (promoted completion, display casing)", beforeGith + "GitHub", committedText())
+
+// Selection translation POC: ⌃⌥T on a selection opens the popup; Escape leaves the text unchanged.
+let beforeTranslation = committedText()
+guardNoInterference()
+press(0, flags: .maskCommand)
+press(17, flags: [.maskControl, .maskAlternate])
+Thread.sleep(forTimeInterval: 1.5)
+check("⌃⌥T opens the translation popup", "true", String(imeWindowVisible()))
+press(escape)
+Thread.sleep(forTimeInterval: 0.3)
+check("Escape keeps the text and closes the popup", beforeTranslation + " / hidden",
+      committedText() + (imeWindowVisible() ? " / visible" : " / hidden"))
+if translationModelInstalled() {
+    press(0, flags: .maskCommand)
+    press(17, flags: [.maskControl, .maskAlternate])
+    Thread.sleep(forTimeInterval: 4)
+    press(returnKey)
+    let translated = committedText()
+    check("Return replaces the selection with a translation", "true",
+          String(translated != beforeTranslation && !translated.isEmpty))
+} else {
+    print("SKIP  translation result: English -> Simplified Chinese model is not downloaded")
+}
 
 print("final text: \"\(committedText())\"")
 finish()
