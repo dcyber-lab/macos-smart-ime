@@ -33,21 +33,6 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
     }
 
-    private var activeEngine: (any ChineseInputEngine)? {
-        switch sessionStore.state.mode {
-        case .chinese:
-            return chineseEngine
-        case .english:
-            // EnglishInputEngine and ChineseInputEngine share the same method signatures we use here.
-            // We can cast or use a shared protocol if we had one, but for now we know both respond to these.
-            // To satisfy Swift's type system without a shared protocol, we can just return the object.
-            // Actually, let's just use the specific engines in handle.
-            return nil 
-        case .mixed:
-            return nil
-        }
-    }
-
     public override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         do {
             let rimeEngine = try RimeBridgeEngine(

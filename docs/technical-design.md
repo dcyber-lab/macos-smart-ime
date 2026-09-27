@@ -127,14 +127,13 @@ third_party/
 ```swift
 struct Candidate {
     let text: String
-    let source: CandidateSource
-    let score: Double
+    let source: CandidateSource   // rime, englishCompletion, englishTranslation
+    let annotation: String?       // e.g. a Chinese gloss for an English word
 }
 
 enum InputMode {
     case chinese
     case english
-    case mixed
 }
 
 struct CompositionState {

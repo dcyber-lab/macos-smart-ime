@@ -50,9 +50,9 @@ final class CandidatePanelModelTests: XCTestCase {
         let state = CompositionState(
             compositionText: "x",
             candidates: [
-                Candidate(text: "deploy", source: .englishCompletion, score: 0, annotation: "部署"),
-                Candidate(text: "x", source: .englishCompletion, score: 0, annotation: "一二三四五六七八九十甲乙丙"),
-                Candidate(text: "de", source: .englishCompletion, score: 0),
+                Candidate(text: "deploy", source: .englishCompletion, annotation: "部署"),
+                Candidate(text: "x", source: .englishCompletion, annotation: "一二三四五六七八九十甲乙丙"),
+                Candidate(text: "de", source: .englishCompletion),
             ],
             selectedCandidateIndex: 0
         )
@@ -74,7 +74,7 @@ final class CandidatePanelModelTests: XCTestCase {
     private func state(_ candidates: [(String, CandidateSource)], selected: Int? = 0) -> CompositionState {
         CompositionState(
             compositionText: "x",
-            candidates: candidates.map { Candidate(text: $0.0, source: $0.1, score: 0) },
+            candidates: candidates.map { Candidate(text: $0.0, source: $0.1) },
             selectedCandidateIndex: selected
         )
     }
@@ -187,7 +187,7 @@ final class CandidatePanelHeaderTests: XCTestCase {
         CompositionState(
             mode: mode,
             compositionText: preedit,
-            candidates: [Candidate(text: "候选", source: .rime, score: 0)],
+            candidates: [Candidate(text: "候选", source: .rime)],
             selectedCandidateIndex: 0,
             candidatePageIndex: page,
             isLastCandidatePage: isLast

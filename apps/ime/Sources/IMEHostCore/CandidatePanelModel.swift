@@ -56,9 +56,9 @@ enum CandidatePanelModel {
 
     private static func isEnglish(_ source: CandidateSource) -> Bool {
         switch source {
-        case .englishCompletion, .englishCorrection, .englishTranslation:
+        case .englishCompletion, .englishTranslation:
             return true
-        case .rime, .placeholder:
+        case .rime:
             return false
         }
     }
