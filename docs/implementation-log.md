@@ -2,6 +2,12 @@
 
 ## 2026-09-27
 
+### CI build
+
+- Added `.github/workflows/build.yml`: on `macos-26`, installs `librime`, `xcodegen`, and `pkgconf`, caches the rime-ice download, and runs `scripts/release/package.sh`, the script used for local release builds. Pull requests to `main` upload the zip (kept 7 days); `v*` tags publish the release after checking the tag against `MARKETING_VERSION`. Documentation-only pull requests are skipped to save macOS minutes (10x against the 2,000 free minutes of a private repository).
+- `package.sh` now runs `swift test` first, so a local run checks the same things as CI. `install.sh` also installs `pkgconf`, which SwiftPM uses to find librime.
+- The smoke test stays local (`./install.sh --test`): it needs Accessibility access to post keystrokes.
+
 ### Release package
 
 - Added `scripts/release/package.sh`, which produces `build/release.noindex/LinguaType-<version>-macOS-arm64.zip` (27 MB): the app with librime and its Homebrew dependencies (glog, gflags, yaml-cpp, leveldb, snappy, marisa, opencc) in `Contents/Frameworks` under `@rpath`, ad-hoc signed, plus `install-host.sh`, `install.command`, `README.txt`, and the third-party licenses. `--publish` uploads it as a GitHub release.

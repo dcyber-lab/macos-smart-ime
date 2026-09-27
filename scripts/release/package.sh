@@ -2,7 +2,7 @@
 
 # Build a self-contained LinguaType release: the app with librime and its Homebrew dependencies bundled, an
 # installer that needs neither Xcode nor Homebrew, and the third-party licenses, zipped into
-# build/release.noindex/.
+# build/release.noindex/. Runs the unit tests first. CI (.github/workflows/build.yml) runs this same script.
 #
 # Usage: scripts/release/package.sh [--publish]
 #   --publish  also upload the zip as GitHub release v<version> (needs an authenticated gh)
@@ -29,6 +29,12 @@ if $PUBLISH; then
   [[ -z "$(git -C "$REPO_ROOT" status --porcelain)" ]] || fail "--publish needs a clean working tree"
   git -C "$REPO_ROOT" branch -r --contains HEAD | grep -q . || fail "--publish needs HEAD pushed to GitHub first"
 fi
+
+mkdir -p "$REPO_ROOT/build/ime-host"
+echo "Running unit tests..."
+swift test --package-path "$REPO_ROOT" > "$REPO_ROOT/build/unit-tests.log" 2>&1 \
+  || { tail -n 40 "$REPO_ROOT/build/unit-tests.log" >&2; fail "unit tests failed; see build/unit-tests.log"; }
+grep -E 'Executed [0-9]+ tests' "$REPO_ROOT/build/unit-tests.log" | tail -n 1
 
 echo "Building..."
 "$REPO_ROOT/scripts/ime/build-host.sh" > "$REPO_ROOT/build/ime-host/build.log" 2>&1 \
