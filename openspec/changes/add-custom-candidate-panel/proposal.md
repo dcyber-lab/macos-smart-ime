@@ -1,10 +1,11 @@
 ## Why
 
-The host shows candidates with the stock `IMKCandidates` single-column scrolling panel. It cannot be styled, looks out of place next to other input methods (Squirrel draws its own panel), and gives no way to tell English words and translations apart from Chinese candidates now that Chinese mode mixes them. Users judged it ugly after trying English candidates in Chinese mode.
+The host shows candidates with the stock `IMKCandidates` single-column scrolling panel. It has a fixed height, so short lists leave a block of empty rows below the candidates; it cannot be styled, looks out of place next to other input methods (Squirrel draws its own panel), and gives no way to tell English words and translations apart from Chinese candidates now that Chinese mode mixes them. Users judged it ugly after trying English candidates in Chinese mode.
 
 ## What Changes
 
 - Replace `IMKCandidates` with a project-drawn vertical candidate panel owned by `IMEHostCore`.
+- Size the panel to its content: the height fits exactly the current rows and the width fits the longest row, recomputed on every update.
 - Visual design: rounded corners, translucent background that follows the system light/dark appearance, one numbered row per candidate, the highlighted row filled with the system accent color.
 - When a list mixes Chinese and English candidates, draw a separator between the Chinese and English groups and a small secondary-color tag on English rows: 英 for English words, 译 for translations. Lists with a single kind (e.g. English mode) show no tags or separators.
 - Position the panel just below the caret, flip it above the caret when there is not enough room below, and keep it inside the visible screen area.
