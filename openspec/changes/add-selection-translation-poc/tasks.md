@@ -14,3 +14,7 @@
 - [x] 3.1 Run `scripts/ime/dev-cycle.sh` (existing smoke test must still pass) and add a smoke-test check that `⌃⌥T` with a selection opens the popup and `Escape` leaves the text unchanged
 - [x] 3.2 Verify a real translation end to end after the model is downloaded
 - [x] 3.3 Update `docs/technical-design.md` (POC exception), `docs/implementation-log.md`, and `docs/ime-manual-validation.md`
+
+## Status Note
+
+Promoted to a regular feature by `productize-selection-translation` (direction detection, settings, and the IME rule for user-triggered asynchronous actions).

@@ -159,24 +159,26 @@ Use a normal editable text field such as TextEdit, in Chinese mode.
 
 This milestone is not considered complete until steps 1 through 18 are verified in a real macOS text client.
 
-## Selection Translation (POC) Checklist
+## Selection Translation Checklist
 
 Requires macOS 26 and the English and Simplified Chinese translation languages (System Settings › General › Language & Region › Translation Languages). Use TextEdit or Notes with SmartIMEHost active.
 
 1. Type or paste an English sentence and select it
-2. Press `⌃⌥T` and confirm a popup below the selection shows "翻译中…" and then the Chinese translation with "⏎ 替换 · Esc 取消"
+2. Press `⌃⌥T` and confirm a popup below the selection shows "英 → 中", then the Chinese translation with "⏎ 替换 · Esc 取消"
 3. Press `Return` and confirm the selection is replaced by the translation
-4. Select English again, press `⌃⌥T`, then `Escape`, and confirm the text is unchanged
-5. Press `⌃⌥T` with nothing selected and confirm the popup says "请先选中要翻译的英文"
-6. Remove the translation languages (or test on a machine without them) and confirm the popup explains where to download them
+4. Select a Chinese sentence (for example 请在周五前审阅部署计划), press `⌃⌥T`, and confirm the popup shows "中 → 英" and an English translation
+5. Select English again, press `⌃⌥T`, then `Escape`, and confirm the text is unchanged
+6. Press `⌃⌥T` with nothing selected and confirm the popup says "请先选中要翻译的英文"
 7. While composing pinyin, press `⌃⌥T` and confirm nothing happens
+8. Run `defaults write lab.dcyber.inputmethod.smartime SelectionTranslationHotkey "cmd+shift+y"`, confirm `⌘⇧Y` translates and `⌃⌥T` no longer does; then `defaults delete lab.dcyber.inputmethod.smartime SelectionTranslationHotkey`
+9. Run `defaults write lab.dcyber.inputmethod.smartime SelectionTranslationEnabled -bool false`, confirm the hotkey does nothing; then `defaults delete lab.dcyber.inputmethod.smartime SelectionTranslationEnabled`
 
 ## Automated Smoke Test
 
 `scripts/ime/dev-cycle.sh` builds and installs the host, then runs the smoke test (`scripts/ime/build-e2e.sh` builds it from `scripts/ime/e2e/`):
 
 - `SmartIMETestClient.app` is a throwaway window with one text view. It never opens documents or writes anywhere except a temporary state directory, so the test cannot touch the user's apps or files.
-- `SmartIMEDriver` waits until the keyboard and mouse have been idle for 5 seconds, posts synthetic keys only to the test client, and checks the committed and marked text: Space, number keys, translation, Return, Escape, raw preedit for `good`, the Shift toggle, a row click, `gith` + 2, and the selection-translation popup (open, Escape; plus Return replacement when the translation model is installed). It prints the live panel size.
+- `SmartIMEDriver` waits until the keyboard and mouse have been idle for 5 seconds, posts synthetic keys only to the test client, and checks the committed and marked text: Space, number keys, translation, Return, Escape, raw preedit for `good`, the Shift toggle, a row click, `gith` + 2, and selection translation (popup opens, Escape keeps the text, and with the models installed Return replaces Chinese → English and English → Chinese). It prints the live panel size.
 - It aborts on a real key press or when the test window loses focus, restores the previous input source and app, and exits non-zero on any failure.
 
 Run it after every change to the IME host before hand-off.

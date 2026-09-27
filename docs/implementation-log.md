@@ -12,6 +12,13 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Selection translation promoted to a feature
+
+- Implemented OpenSpec change `productize-selection-translation`. The direction is detected from the selection (Simplified Chinese → English when Han characters ≥ English words, otherwise English → Simplified Chinese; a 2× weighting was tried first and misrouted "这个feature要deploy到production"). The popup shows 中 → 英 or 英 → 中, and the missing-model message names the pair.
+- Settings in the `lab.dcyber.inputmethod.smartime` defaults domain, read on every key: `SelectionTranslationEnabled` and `SelectionTranslationHotkey` (`ctrl+option+t` by default; invalid or modifier-less values fall back).
+- `docs/technical-design.md` now allows explicit, user-triggered, asynchronous, on-device actions in the IME while keeping per-keystroke work free of AI, network calls, and long-running tasks.
+- Smoke test 15/15, including real replacements in both directions ("你好meetinghellowomen测试he 数据库GitHub" → "Hello meeting hello women test he database GitHub"; "please review the plan" → 请查看计划). 112 `swift test` cases pass.
+
 ### Selection translation POC
 
 - Implemented OpenSpec change `add-selection-translation-poc` inside the IME at the user's request (the documented home is the Companion app): select English, press `⌃⌥T`, read the on-device Chinese translation in a popup, `Return` replaces the selection, `Escape` dismisses. Uses Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26, weak-linked so the host still loads on older systems).

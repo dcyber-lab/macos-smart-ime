@@ -64,11 +64,13 @@ Owns explicit and async workflows:
 - Keyboard handling stays in `IMEInputController.handle(_:client:)`; the panel only reports row clicks, which go through the same `selectCandidate(at:)` path as number keys.
 - Text reaches the client through `IMKTextInput.insertText`; `composedString` returns an empty string (never nil) so `updateComposition()` clears marked text on cancel.
 
-## Selection Translation (POC)
+## Selection Translation
 
-- Proof of concept that deliberately crosses the IME/Companion boundary: while SmartIMEHost is active and nothing is composed, `⌃⌥T` reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`), translates it English → Simplified Chinese on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; the framework is weak-linked), and shows the result in `TranslationPopup`. `Return` replaces the captured range; `Escape` or any other key dismisses.
-- It runs only on an explicit hotkey, asynchronously on the main actor, and never on keystrokes; stale results are dropped by request id. `SelectionTranslationController` holds the state and is unit-tested with a fake translator.
-- Limits: only works while SmartIMEHost is the active input source and in apps that report their selection to input methods; the translation model must be downloaded in System Settings. The intended long-term home is the Companion app (global hotkey plus Accessibility).
+- While SmartIMEHost is active and nothing is being composed, the translation hotkey (default `⌃⌥T`) reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`) and translates it on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; weak-linked). `TranslationPopup` shows the result; `Return` replaces the captured range, `Escape` or any other key dismisses.
+- Direction is detected from the text: Simplified Chinese → English when Han characters ≥ English words, otherwise English → Simplified Chinese (`TranslationDirection`).
+- Settings live in the input method's defaults domain and are read on every key: `SelectionTranslationEnabled` (default true) and `SelectionTranslationHotkey` (default `ctrl+option+t`; modifiers plus one letter, must include ctrl, option, or cmd).
+- IME rule: explicit, user-triggered, asynchronous, on-device actions such as this are allowed in the IME; AI, network calls, and long-running work stay out of the per-keystroke and composition path. The Companion app remains the planned home for features that must work in every app and with every input method.
+- Limits: only while SmartIMEHost is the active input source and in apps that report their selection to input methods; translation models are downloaded in System Settings.
 
 ## Data and Privacy Boundaries
 
