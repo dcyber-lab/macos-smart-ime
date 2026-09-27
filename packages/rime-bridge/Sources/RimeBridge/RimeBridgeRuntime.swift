@@ -175,11 +175,7 @@ public final class RimeBridgeSession {
                 return nil
             }
 
-            return Candidate(
-                text: String(cString: text),
-                source: .rime,
-                score: Double(Int(menu.num_candidates) - index)
-            )
+            return Candidate(text: String(cString: text), source: .rime)
         }
     }
 }

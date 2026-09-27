@@ -430,7 +430,7 @@ private final class FakeChineseEngine: ChineseInputEngine {
             rawInput: input,
             mode: .chinese,
             compositionText: preeditByInput[input] ?? input,
-            candidates: candidates.map { Candidate(text: $0, source: .rime, score: 0) },
+            candidates: candidates.map { Candidate(text: $0, source: .rime) },
             selectedCandidateIndex: candidates.isEmpty ? nil : highlightedIndex,
             candidatePageIndex: pageIndex
         )

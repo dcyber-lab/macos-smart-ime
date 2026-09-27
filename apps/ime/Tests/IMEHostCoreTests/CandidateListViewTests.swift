@@ -53,7 +53,7 @@ final class CandidateListViewTests: XCTestCase {
         let annotated = CandidateListView()
         annotated.rows = CandidatePanelModel.rows(for: CompositionState(
             compositionText: "x",
-            candidates: [Candidate(text: "deploy", source: .englishCompletion, score: 0, annotation: "部署")],
+            candidates: [Candidate(text: "deploy", source: .englishCompletion, annotation: "部署")],
             selectedCandidateIndex: 0
         ))
 
@@ -85,7 +85,7 @@ final class CandidateListViewTests: XCTestCase {
     private func state(_ texts: [String]) -> CompositionState {
         CompositionState(
             compositionText: "x",
-            candidates: texts.map { Candidate(text: $0, source: .rime, score: 0) },
+            candidates: texts.map { Candidate(text: $0, source: .rime) },
             selectedCandidateIndex: 0
         )
     }
