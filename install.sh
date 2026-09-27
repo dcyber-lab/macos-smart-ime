@@ -38,7 +38,7 @@ xcodebuild -checkFirstLaunchStatus >/dev/null 2>&1 \
   || fail "Xcode has not finished its first-launch setup. Run: sudo xcodebuild -runFirstLaunch"
 command -v brew >/dev/null 2>&1 || fail "Homebrew is required: https://brew.sh"
 missing=()
-for formula in librime xcodegen; do
+for formula in librime xcodegen pkgconf; do
   brew list --versions "$formula" >/dev/null 2>&1 || missing+=("$formula")
 done
 if (( ${#missing} )); then

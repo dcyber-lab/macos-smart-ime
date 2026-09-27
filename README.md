@@ -39,4 +39,6 @@ scripts/release/package.sh             # build/release.noindex/LinguaType-<versi
 scripts/release/package.sh --publish   # also upload it as GitHub release v<version>
 ```
 
+`package.sh` runs the unit tests first. CI (`.github/workflows/build.yml`, on `macos-26`) runs the same script: pull requests to `main` keep the zip as a build artifact for 7 days, and pushing a `v<version>` tag that matches `MARKETING_VERSION` in `project.yml` publishes the release. Documentation-only changes do not trigger a build, because macOS minutes count 10x against the free Actions quota.
+
 The zip holds a self-contained app (librime, its libraries, and the Chinese dictionary bundled) plus an installer that needs neither Xcode nor Homebrew: unzip, then run `zsh install.command`. It runs on Apple Silicon Macs with macOS 26 or later.
