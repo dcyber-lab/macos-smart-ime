@@ -77,5 +77,13 @@ let package = Package(
                 .linkedFramework("InputMethodKit"),
             ]
         ),
+        .testTarget(
+            name: "IMEHostCoreTests",
+            dependencies: [
+                "IMEHostCore",
+                "SharedModels",
+            ],
+            path: "apps/ime/Tests/IMEHostCoreTests"
+        ),
     ]
 )

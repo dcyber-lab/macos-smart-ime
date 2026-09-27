@@ -29,7 +29,7 @@ public final class IMEInputController: IMKInputController {
     private let englishEngine: EnglishInputEngine?
     private var candidateWindow: IMKCandidates?
     private var isSyncingCandidateSelection = false
-    private var lastModifierFlags: NSEvent.ModifierFlags = []
+    private var shiftToggle = ShiftToggleDetector()
 
     private var activeEngine: (any ChineseInputEngine)? {
         switch sessionStore.state.mode {
@@ -84,12 +84,17 @@ public final class IMEInputController: IMKInputController {
         }
 
         if event.type == .flagsChanged {
-            return handleFlagsChanged(event, client: sender)
+            guard shiftToggle.flagsChanged(event.modifierFlags) else {
+                return false
+            }
+            toggleInputMode()
+            return true
         }
 
         guard event.type == .keyDown else {
             return false
         }
+        shiftToggle.keyDown()
 
         if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
             resetSession(resetEngine: true)
@@ -142,24 +147,6 @@ public final class IMEInputController: IMKInputController {
         }
 
         return apply(update, sender: sender)
-    }
-
-    private func handleFlagsChanged(_ event: NSEvent, client sender: Any!) -> Bool {
-        let newFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let oldFlags = lastModifierFlags
-
-        // Detect Shift key toggle (pressed and released without other modifiers)
-        if oldFlags.contains(.shift) && !newFlags.contains(.shift) {
-            // Shift was released. Check if it was a standalone press.
-            // This is a simple heuristic: if no other flags were involved.
-            if oldFlags == [.shift] {
-                toggleInputMode()
-                return true
-            }
-        }
-
-        lastModifierFlags = newFlags
-        return false
     }
 
     private func toggleInputMode() {
