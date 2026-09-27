@@ -26,4 +26,5 @@ The generator renders the app icon at every `.iconset` size (16–1024 px): a ro
 ## Risks / Trade-offs
 
 - [macOS caches input source names and icons] → `install-host.sh` re-registers the source and restarts `TextInputMenuAgent`; if the old icon persists, removing and re-adding the input source or logging out refreshes it.
+- [Build copies registered with LaunchServices can keep `imklaunchagent` from launching the installed input method] → `install-host.sh` unregisters them; the input method is left for `imklaunchagent` to launch, since apps only receive endpoints of instances it launched.
 - [Two glyphs in 16 pt are small] → Glyph sizes and positions are checked at 1× and 2× in rendered previews before deploying.
