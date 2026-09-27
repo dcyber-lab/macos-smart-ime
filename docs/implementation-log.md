@@ -2,6 +2,14 @@
 
 ## 2026-09-27
 
+### Repository cleanup
+
+- Removed the OpenSpec commands and skills that `openspec init` generated for 24 AI tools other than Claude Code, plus `GEMINI.md`; `.claude` keeps the OpenSpec workflow.
+- Removed the OpenSpec change designs under `openspec/changes/`; git history keeps them.
+- Removed unused code: `IMEInputController.activeEngine`, `CandidateSource.placeholder` / `.englishCorrection`, `InputMode.mixed`, and `Candidate.score` (set by every engine, never read).
+- Dropped `third_party/librime-data/minimal` (luna_pinyin, cangjie5, essay, symbols). `smartime_pinyin` uses none of it, and luna_pinyin was a fallback schema the input method never selects; `default.yaml` now lists only `smartime_pinyin`, so installs compile one schema.
+- 112 unit tests pass; smoke test 15/15. The first smoke test right after install failed because `imklaunchagent` relaunched the input method only 45 seconds after the install stopped it; rerun against the running input method, it passed.
+
 ### Larger English completion lexicon
 
 - The previous hand-written `wordlist.txt` had 720 lines (not the 1000+ noted on 2026-03-20), including 71 duplicates, and was not frequency-ordered, so most prefixes produced few or no completions.
