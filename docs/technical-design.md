@@ -64,6 +64,12 @@ Owns explicit and async workflows:
 - Keyboard handling stays in `IMEInputController.handle(_:client:)`; the panel only reports row clicks, which go through the same `selectCandidate(at:)` path as number keys.
 - Text reaches the client through `IMKTextInput.insertText`; `composedString` returns an empty string (never nil) so `updateComposition()` clears marked text on cancel.
 
+## Selection Translation (POC)
+
+- Proof of concept that deliberately crosses the IME/Companion boundary: while SmartIMEHost is active and nothing is composed, `⌃⌥T` reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`), translates it English → Simplified Chinese on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; the framework is weak-linked), and shows the result in `TranslationPopup`. `Return` replaces the captured range; `Escape` or any other key dismisses.
+- It runs only on an explicit hotkey, asynchronously on the main actor, and never on keystrokes; stale results are dropped by request id. `SelectionTranslationController` holds the state and is unit-tested with a fake translator.
+- Limits: only works while SmartIMEHost is the active input source and in apps that report their selection to input methods; the translation model must be downloaded in System Settings. The intended long-term home is the Companion app (global hotkey plus Accessibility).
+
 ## Data and Privacy Boundaries
 
 - Sensitive fields must not use context enhancement.

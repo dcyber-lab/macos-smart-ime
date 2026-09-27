@@ -73,7 +73,7 @@ final class CandidatePanel {
         window.orderOut(nil)
     }
 
-    private static func roundedMask(radius: CGFloat) -> NSImage {
+    static func roundedMask(radius: CGFloat) -> NSImage {
         let edge = radius * 2 + 1
         let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
             NSColor.black.setFill()
