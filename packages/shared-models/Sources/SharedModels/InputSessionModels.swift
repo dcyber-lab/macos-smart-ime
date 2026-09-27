@@ -85,3 +85,10 @@ public protocol ChineseInputEngine: AnyObject {
     func highlightCandidate(at index: Int) -> InputSessionUpdate
     func reset()
 }
+
+public protocol EnglishInputEngine: AnyObject {
+    func process(_ event: InputKeyEvent) -> InputSessionUpdate
+    func selectCandidate(at index: Int) -> InputSessionUpdate
+    func highlightCandidate(at index: Int) -> InputSessionUpdate
+    func reset()
+}

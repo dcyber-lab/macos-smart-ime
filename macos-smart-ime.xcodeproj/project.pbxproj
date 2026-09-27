@@ -7,7 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4681FADCC8D2606AEC1342FF /* SharedModels in Frameworks */ = {isa = PBXBuildFile; productRef = 1C1FF5F3840A6C973EA13B7E /* SharedModels */; };
 		6F7A507403742737AD2AEB32 /* IMEHostCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6BEF3EEC4AC0BACD138E31F /* IMEHostCore */; };
+		79E924AD5E8D6B2324DAA0D9 /* EnglishEngine in Frameworks */ = {isa = PBXBuildFile; productRef = E8523DAAA993C91CDE59D00A /* EnglishEngine */; };
 		86D4DD994EBB7411D23867B3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = CD21B74F10EF019D3E0BA64D /* InfoPlist.strings */; };
 		93F9FAD58C3303FDD65032DB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4877725FEE1CF1BF6882F463 /* AppDelegate.swift */; };
 		E77B3637F65EE536FE950E44 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF014FE5998AB87DD0CC626C /* main.swift */; };
@@ -30,6 +32,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				6F7A507403742737AD2AEB32 /* IMEHostCore in Frameworks */,
+				79E924AD5E8D6B2324DAA0D9 /* EnglishEngine in Frameworks */,
+				4681FADCC8D2606AEC1342FF /* SharedModels in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,6 +118,8 @@
 			name = SmartIMEHost;
 			packageProductDependencies = (
 				B6BEF3EEC4AC0BACD138E31F /* IMEHostCore */,
+				E8523DAAA993C91CDE59D00A /* EnglishEngine */,
+				1C1FF5F3840A6C973EA13B7E /* SharedModels */,
 			);
 			productName = SmartIMEHost;
 			productReference = 03CD576684F40B7BC672D2D0 /* SmartIMEHost.app */;
@@ -394,9 +400,17 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1C1FF5F3840A6C973EA13B7E /* SharedModels */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SharedModels;
+		};
 		B6BEF3EEC4AC0BACD138E31F /* IMEHostCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = IMEHostCore;
+		};
+		E8523DAAA993C91CDE59D00A /* EnglishEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = EnglishEngine;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

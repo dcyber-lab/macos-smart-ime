@@ -93,11 +93,33 @@ Use a normal editable text field such as TextEdit.
 
 This milestone is not considered complete until steps 5 through 11 are verified in a real macOS text client with the visible candidate panel.
 
+## Basic English Mode Checklist
+
+Use a normal editable text field such as TextEdit.
+
+1. Switch to `SmartIMEHost` (it starts in Chinese mode by default)
+2. Press and release the `Shift` key
+3. Confirm the system toggles to English mode (check logs or try typing)
+4. Type `he`
+5. Confirm an English composition string `he` appears
+6. Confirm the candidate window shows `he` first, followed by frequency-ranked completions (e.g., "her", "here", "help")
+7. Press `Space`
+8. Confirm the typed text `he` is committed followed by a space (Space never swaps the typed word for a completion)
+9. Type `th` and press `2`
+10. Confirm the second candidate ("the") is committed
+11. Type `deplo`, press `Down` until "deployment" is highlighted, then press `Space`
+12. Confirm "deployment " is committed
+13. Press and release `Shift` again to toggle back to Chinese mode
+14. Confirm typing `nihao` now produces Chinese candidates again
+
+This milestone is not considered complete until steps 1 through 14 are verified in a real macOS text client.
+
 ## Known Limits In This Milestone
 
-- This checklist validates the current Chinese `librime` path only
-- This session rebuilt the host after adding explicit `IMKCandidates` presentation, but did not re-run a full GUI validation pass for `nihao`-style candidate display and selection
-- Richer candidate controls are still a follow-up milestone
+- This checklist validates both the Chinese `librime` path and the basic English completion path
+- English mode completes from a bundled 30,000-word frequency list generated from wordfreq (`scripts/english/build-wordlist.py`); there is no user dictionary or learning yet
+- `Shift` key toggle is a simple heuristic based on standalone press/release
+- This session rebuilt the host after adding English mode and `IMKCandidates` sync, but did not re-run a full GUI validation pass for the new interactions
+- Richer candidate controls and mixed-mode input are still follow-up milestones
 - The app target is still using local-development settings, not a release distribution setup
-- In this session, the repository-owned scripts were updated to produce a Release-style ad-hoc-signed bundle because the earlier Debug-style build was not being registered by macOS as a text input source.
 - The validated registration shape for `SmartIMEHost` is a selectable `TISTypeKeyboardInputMethodWithoutModes` source rather than a mode-driven input method bundle.
