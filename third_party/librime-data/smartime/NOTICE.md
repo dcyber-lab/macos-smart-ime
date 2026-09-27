@@ -14,5 +14,5 @@ licensed under the GNU General Public License v3.0.
 
 The files in this directory (`smartime_pinyin.schema.yaml`,
 `smartime_pinyin.dict.yaml`, `default.yaml`) are project-authored; the schema's
-speller rules and `default.yaml` derive from the Rime `luna_pinyin` data in
-`../minimal`.
+speller rules and `default.yaml` derive from the `luna_pinyin` schema and
+`default.yaml` in librime's `data/minimal`.

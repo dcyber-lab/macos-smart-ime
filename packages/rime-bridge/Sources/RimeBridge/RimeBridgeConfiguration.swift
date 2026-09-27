@@ -20,7 +20,7 @@ public struct RimeBridgeConfiguration: Sendable {
         distributionName: String,
         distributionCodeName: String,
         distributionVersion: String,
-        defaultSchemaID: String = "luna_pinyin"
+        defaultSchemaID: String = "smartime_pinyin"
     ) {
         self.sharedDataDirectory = sharedDataDirectory
         self.userDataDirectory = userDataDirectory

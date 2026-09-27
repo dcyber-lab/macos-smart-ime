@@ -2,6 +2,14 @@
 
 ## 2026-09-27
 
+### Repository cleanup
+
+- Removed the OpenSpec commands and skills that `openspec init` generated for 24 AI tools other than Claude Code, plus `GEMINI.md`; `.claude` keeps the OpenSpec workflow.
+- Removed the OpenSpec change designs under `openspec/changes/`; git history keeps them.
+- Removed unused code: `IMEInputController.activeEngine`, `CandidateSource.placeholder` / `.englishCorrection`, `InputMode.mixed`, and `Candidate.score` (set by every engine, never read).
+- Dropped `third_party/librime-data/minimal` (luna_pinyin, cangjie5, essay, symbols). `smartime_pinyin` uses none of it, and luna_pinyin was a fallback schema the input method never selects; `default.yaml` now lists only `smartime_pinyin`, so installs compile one schema.
+- 112 unit tests pass; smoke test 15/15. The first smoke test right after install failed because `imklaunchagent` relaunched the input method only 45 seconds after the install stopped it; rerun against the running input method, it passed.
+
 ### Larger English completion lexicon
 
 - The previous hand-written `wordlist.txt` had 720 lines (not the 1000+ noted on 2026-03-20), including 71 duplicates, and was not frequency-ordered, so most prefixes produced few or no completions.
@@ -16,11 +24,9 @@
 
 - Implemented OpenSpec change `rebrand-as-linguatype`. The input method is shown as "LinguaType" (灵译输入法 on Chinese systems) through localized `CFBundleDisplayName` / `CFBundleName`; the Rime schema is named 灵译拼音. Bundle, executable, bundle identifier, defaults domain, and scripts keep `SmartIMEHost`, so the installed input source did not need to be re-added.
 - `scripts/branding/make-icons.swift` generates a template menu icon (`LinguaType.tiff`, rounded square with "中" and "A" cut out from real glyph outlines, `TISIconIsTemplate`) and a gradient app icon (`LinguaType.icns`) that replaces the green checkmark placeholder.
-- The menu icon started as a 16 pt PDF, first with an even-odd fill and then with the glyph outlines subtracted geometrically (`CGPath.subtracting`). Both rendered correctly through `NSImage` previews, but the input menu showed a solid white square each time. System input methods with template icons (for example AinuIM's `Ainu.tiff`) ship a bitmap TIFF with 16 px and 32 px representations, so the generator now writes that format.
+- PDF versions of the menu icon showed up as a solid white square in the input menu; system template icons (such as `Ainu.tiff`) are bitmap TIFFs, so the icon is a 16 px + 32 px TIFF.
 - Removed the stale user-level copy in `~/Library/Input Methods` (an unused 12:11 build still registered as "SmartIMEHost" with the old icon); only the system-level LinguaType source remains, enabled and selectable.
-- After that, switching to the input method stopped working: the build copies (`build/ime-host/SmartIMEHost.app` and the DerivedData product) were also registered with LaunchServices, and with no running instance `imklaunchagent` failed to launch LinguaType. `install-host.sh` now unregisters both build copies after installing. The step lives in the install script rather than the build script because LaunchServices registers fresh build products asynchronously and re-added them right after an unregister at the end of the build.
-- Starting the input method with `open` to work around that made things worse: `imklaunchagent` accepted the endpoint but never pushed it to apps, so every app got "Request for Endpoint Invalid"; after that process was stopped, `imklaunchagent` kept serving its dead endpoint because it only watches (and relaunches) instances it launched itself. Only `imklaunchagent` should start the input method. Recovery was `killall imklaunchagent` (launchd restarts it; `launchctl kickstart` is blocked by SIP), after which it launched LinguaType on demand and the smoke test passed 15/15.
-- Apps that tried to switch to LinguaType while it was broken (Ghostty, markd) stayed stuck afterwards: selecting LinguaType no longer made them request its endpoint at all, while freshly started apps worked. Relaunching such an app clears the state, as it did for Ghostty earlier in the day.
+- Build copies registered with LaunchServices under the same bundle ID made `imklaunchagent` fail to launch LinguaType; `install-host.sh` now unregisters them after installing. Apps that tried to switch to it while it was broken need a relaunch.
 - The localized `CFBundleName` also renamed the running process in window lists, so the smoke test's `kCGWindowOwnerName == "SmartIMEHost"` check stopped finding the candidate panel; it now matches windows by the input method's process id. Smoke test 15/15 after the change.
 
 ### Selection translation promoted to a feature

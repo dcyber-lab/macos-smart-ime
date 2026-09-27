@@ -117,10 +117,8 @@ public final class BasicEnglishEngine: EnglishInputEngine {
         }
 
         // The typed text always comes first so Space never replaces it with a different word.
-        candidates = ([buffer] + completions)
-            .enumerated()
-            .map { index, word in
-                Candidate(text: word, source: .englishCompletion, score: Double(100 - index), annotation: glossary.gloss(for: word))
-            }
+        candidates = ([buffer] + completions).map { word in
+            Candidate(text: word, source: .englishCompletion, annotation: glossary.gloss(for: word))
+        }
     }
 }

@@ -193,7 +193,7 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
             }
             // Translations need no gloss: the user just typed the Chinese.
             let annotation = source == .englishCompletion ? glossary.gloss(for: text) : nil
-            return .english(Candidate(text: text, source: source, score: 0, annotation: annotation))
+            return .english(Candidate(text: text, source: source, annotation: annotation))
         }
 
         let merged = leading.compactMap { english($0, .englishCompletion) }
