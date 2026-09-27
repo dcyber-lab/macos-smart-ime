@@ -196,6 +196,16 @@ else
   killall SystemUIServer >/dev/null 2>&1 || true
 fi
 
+# LaunchServices picks up build products on its own (xcodebuild registers them, lsd notices new bundles).
+# imklaunchagent launches the input method on demand by bundle ID and may then pick a build copy and fail,
+# so keep only the installed copy registered. This runs here, well after the build, so the asynchronous
+# registration of the fresh build products has already happened. Do not start the input method with `open`:
+# apps only receive the endpoint of an instance that imklaunchagent launched itself.
+if [[ -x "$LSREGISTER" ]]; then
+  "$LSREGISTER" -u "$SOURCE_APP" >/dev/null 2>&1 || true
+  "$LSREGISTER" -u "$REPO_ROOT/build/ime-host/DerivedData/Build/Products/Release/SmartIMEHost.app" >/dev/null 2>&1 || true
+fi
+
 sleep 2
 
 # Verify the input source is selectable after installation.
