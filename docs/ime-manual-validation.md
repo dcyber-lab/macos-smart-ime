@@ -114,6 +114,25 @@ Use a normal editable text field such as TextEdit.
 
 This milestone is not considered complete until steps 1 through 14 are verified in a real macOS text client.
 
+## English Candidates In Chinese Mode Checklist
+
+Use a normal editable text field such as TextEdit, in Chinese mode.
+
+1. Type `shujuku`
+2. Confirm 数据库 is first and `database` appears after the Chinese candidates
+3. Press the number key of `database` and confirm `database` is committed with no trailing space
+4. Type `hello`
+5. Confirm `hello` is the first candidate, then press `Space` and confirm `hello` is committed
+6. Type `women`
+7. Confirm 我们 is first, followed later by `we`, `us`, and `women`; press `Space` and confirm 我们 is committed
+8. Type `gith`, confirm `github` appears after the Chinese candidates, press `Down` until it is highlighted, then press `Space` and confirm `github` is committed
+9. Type `deploy`, press the number key of the first Chinese candidate (2), and confirm that Chinese candidate is committed
+10. Type `nihao`, then press `=` (next page) and confirm the English candidates disappear on page 2
+11. Type `hello` and press `Return`, and confirm the raw input `hello` is committed
+12. Type `zg` and confirm no English candidates appear
+
+This milestone is not considered complete until steps 1 through 12 are verified in a real macOS text client.
+
 ## Known Limits In This Milestone
 
 - This checklist validates both the Chinese `librime` path and the basic English completion path

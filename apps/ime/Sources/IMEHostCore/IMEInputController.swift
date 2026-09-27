@@ -48,7 +48,7 @@ public final class IMEInputController: IMKInputController {
 
     public override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         do {
-            chineseEngine = try RimeBridgeEngine(
+            let rimeEngine = try RimeBridgeEngine(
                 configuration: RimeBridgeConfiguration(
                     sharedDataDirectory: IMEHostConfiguration.rimeSharedDataDirectory(),
                     userDataDirectory: IMEHostConfiguration.rimeUserDataDirectory(),
@@ -61,6 +61,7 @@ public final class IMEInputController: IMKInputController {
                     defaultSchemaID: IMEHostConfiguration.defaultSchemaID
                 )
             )
+            chineseEngine = EnglishAugmentedChineseEngine(base: rimeEngine)
         } catch {
             chineseEngine = nil
         }

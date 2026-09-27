@@ -3,6 +3,7 @@ public enum CandidateSource: String, Sendable {
     case rime
     case englishCompletion
     case englishCorrection
+    case englishTranslation
 }
 
 public struct Candidate: Equatable, Sendable {
@@ -48,6 +49,7 @@ public struct CompositionState: Equatable, Sendable {
     public var compositionText: String
     public var candidates: [Candidate]
     public var selectedCandidateIndex: Int?
+    public var candidatePageIndex: Int
     public var recentText: String
 
     public init(
@@ -56,6 +58,7 @@ public struct CompositionState: Equatable, Sendable {
         compositionText: String = "",
         candidates: [Candidate] = [],
         selectedCandidateIndex: Int? = nil,
+        candidatePageIndex: Int = 0,
         recentText: String = ""
     ) {
         self.rawInput = rawInput
@@ -63,6 +66,7 @@ public struct CompositionState: Equatable, Sendable {
         self.compositionText = compositionText
         self.candidates = candidates
         self.selectedCandidateIndex = selectedCandidateIndex
+        self.candidatePageIndex = candidatePageIndex
         self.recentText = recentText
     }
 }

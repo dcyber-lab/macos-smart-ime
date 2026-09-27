@@ -45,8 +45,42 @@ The system SHALL place an exact English word match before the `librime` candidat
 - **WHEN** the user types `women` in Chinese mode
 - **THEN** the first candidate SHALL be the first `librime` candidate and "women" SHALL appear after all `librime` candidates on the page
 
+### Requirement: Translation Candidates in Chinese Mode
+When the raw input is eligible and can be fully segmented into valid pinyin syllables, the system SHALL look up the first `librime` candidate in the bundled Chinese→English dictionary if it has two or more characters, and SHALL show up to two English translations directly after the `librime` candidates and before any appended English word candidates.
+
+#### Scenario: Translation of a typed Chinese word
+- **WHEN** the user types `shujuku` in Chinese mode and the first `librime` candidate is 数据库
+- **THEN** "database" SHALL appear after the `librime` candidates
+
+#### Scenario: Common-noun translation preferred over proper noun
+- **WHEN** the first `librime` candidate is 苹果
+- **THEN** the first translation SHALL be "apple"
+
+#### Scenario: Single-character candidate
+- **WHEN** the first `librime` candidate is a single character
+- **THEN** no translation candidates SHALL be shown
+
+#### Scenario: Non-pinyin input
+- **WHEN** the user types `hello` in Chinese mode
+- **THEN** no translation candidates SHALL be shown
+
+#### Scenario: Word not in the dictionary
+- **WHEN** the first `librime` candidate has no dictionary entry
+- **THEN** only the `librime` candidates and any English word candidates SHALL be shown
+
+### Requirement: Merged Candidate Limits
+The merged candidate list SHALL contain at most nine entries so every entry has a selection key, and SHALL NOT contain the same text twice.
+
+#### Scenario: Full page with translations and English words
+- **WHEN** `librime` shows five candidates, two translations are available, and three English words match
+- **THEN** the list SHALL contain the five `librime` candidates, the two translations, and the first two English words
+
+#### Scenario: Translation equals an English word candidate
+- **WHEN** a translation has the same text as an English word candidate
+- **THEN** it SHALL appear only once, in the translation position
+
 ### Requirement: English Candidate Selection
-Selecting an English candidate SHALL commit the English word without a trailing space and clear the `librime` composition. Selecting a Chinese candidate SHALL behave exactly as it does without English candidates.
+Selecting an English candidate, whether an English word or a translation, SHALL commit the English text without a trailing space and clear the `librime` composition. Selecting a Chinese candidate SHALL behave exactly as it does without English candidates.
 
 #### Scenario: Space commits a first-place English word
 - **WHEN** the user types `hello` in Chinese mode and presses `Space`
@@ -63,6 +97,10 @@ Selecting an English candidate SHALL commit the English word without a trailing 
 #### Scenario: Number key selects a Chinese candidate after English candidates
 - **WHEN** an English candidate is first and the user presses the number key of the first `librime` candidate
 - **THEN** the first `librime` candidate on the current page SHALL be committed
+
+#### Scenario: Number key selects a translation
+- **WHEN** the user types `shujuku` and presses the number key of "database"
+- **THEN** "database" SHALL be committed and the composition SHALL be cleared
 
 #### Scenario: Highlighted English candidate committed with Space
 - **WHEN** the user highlights an English candidate with the arrow keys and presses `Space`
