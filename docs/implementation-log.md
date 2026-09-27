@@ -12,6 +12,12 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Smoke test moved off TextEdit
+
+- Incident: the TextEdit-based smoke test assumed its new document was the front one and read or closed "the front document". While the user was using TextEdit, their typing landed in the test document, cleanup closed their saved document, and every run had also left an autosaved `Untitled N.rtf` in the user's iCloud TextEdit folder. The leftover files (Untitled 2–7) were moved to the Trash with the user's approval.
+- Replaced `scripts/ime/e2e-textedit.swift` with `scripts/ime/e2e/`: a throwaway `SmartIMETestClient.app` (one text view, publishes committed and marked text to a temporary directory) and a `SmartIMEDriver` that waits for 5 idle seconds, posts keys only to the client from a private event source, aborts on real key presses or focus loss, and adds a marked-text check for `good`. Built by `scripts/ime/build-e2e.sh`, run by `dev-cycle.sh`. Result: 9/9 pass.
+- Not yet exercised: the abort paths (real key press, focus loss) have not been triggered in a real run.
+
 ### Raw input as preedit for non-pinyin input
 
 - librime segments non-pinyin input into syllable fragments, so typing `good` in Chinese mode showed "go o d" inline and in the panel header. `EnglishAugmentedChineseEngine` now shows the raw input as the composition text when the input is all lowercase letters, cannot be segmented into pinyin, and has no converted Chinese part yet. Pinyin keeps librime's segmentation ("shu ju ku").

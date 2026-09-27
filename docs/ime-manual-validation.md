@@ -152,7 +152,13 @@ This milestone is not considered complete until steps 1 through 12 are verified 
 
 ## Automated Smoke Test
 
-`scripts/ime/e2e-textedit.swift` types into a new TextEdit document and checks what gets committed (Space, number keys, translation, Return, Escape, Shift toggle, row click) and prints the live panel size. See the header of the script for requirements. Run it after every change to the IME host before hand-off.
+`scripts/ime/dev-cycle.sh` builds and installs the host, then runs the smoke test (`scripts/ime/build-e2e.sh` builds it from `scripts/ime/e2e/`):
+
+- `SmartIMETestClient.app` is a throwaway window with one text view. It never opens documents or writes anywhere except a temporary state directory, so the test cannot touch the user's apps or files.
+- `SmartIMEDriver` waits until the keyboard and mouse have been idle for 5 seconds, posts synthetic keys only to the test client, and checks the committed and marked text: Space, number keys, translation, Return, Escape, raw preedit for `good`, the Shift toggle, and a row click. It prints the live panel size.
+- It aborts on a real key press or when the test window loses focus, restores the previous input source and app, and exits non-zero on any failure.
+
+Run it after every change to the IME host before hand-off.
 
 ## Candidate Panel Checklist
 
