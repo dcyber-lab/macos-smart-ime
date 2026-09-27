@@ -44,7 +44,7 @@ scripts/ime/build-host.sh
 The generated app is placed at:
 
 ```text
-build/ime-host/SmartIMEHost.app
+build/ime-host/Products.noindex/SmartIMEHost.app
 ```
 
 ## Install For Manual Testing
