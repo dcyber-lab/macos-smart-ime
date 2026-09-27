@@ -7,6 +7,7 @@ struct CandidatePanelRow: Equatable {
     let tag: String?
     let isHighlighted: Bool
     let hasSeparatorBefore: Bool
+    let annotation: String?
 }
 
 struct CandidatePanelHeader: Equatable {
@@ -16,6 +17,8 @@ struct CandidatePanelHeader: Equatable {
 }
 
 enum CandidatePanelModel {
+    static let maxAnnotationLength = 12
+
     /// Chinese mode shows the preedit above the rows; English mode already shows the typed text as row 1.
     static func header(for state: CompositionState) -> CandidatePanelHeader? {
         guard state.mode == .chinese, !state.compositionText.isEmpty else {
@@ -41,9 +44,14 @@ enum CandidatePanelModel {
                 text: candidate.text,
                 tag: isMixed && english ? tag(for: candidate.source) : nil,
                 isHighlighted: index == state.selectedCandidateIndex,
-                hasSeparatorBefore: isMixed && english != previousIsEnglish
+                hasSeparatorBefore: isMixed && english != previousIsEnglish,
+                annotation: candidate.annotation.map(truncated)
             )
         }
+    }
+
+    private static func truncated(_ annotation: String) -> String {
+        annotation.count > maxAnnotationLength ? annotation.prefix(maxAnnotationLength) + "…" : annotation
     }
 
     private static func isEnglish(_ source: CandidateSource) -> Bool {

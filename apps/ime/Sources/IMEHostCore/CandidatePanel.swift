@@ -94,6 +94,7 @@ final class CandidateListView: NSView {
         static let rowVerticalPadding: CGFloat = 3
         static let columnGap: CGFloat = 7
         static let tagGap: CGFloat = 12
+        static let annotationGap: CGFloat = 6
         static let tagHorizontalPadding: CGFloat = 5
         static let tagVerticalPadding: CGFloat = 1
         static let separatorSpacing: CGFloat = 7
@@ -107,6 +108,7 @@ final class CandidateListView: NSView {
     private let labelFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
     private let tagFont = NSFont.systemFont(ofSize: 10, weight: .medium)
     private let headerFont = NSFont.systemFont(ofSize: 12)
+    private let annotationFont = NSFont.systemFont(ofSize: 12)
     private let chevronConfiguration = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
 
     var header: CandidatePanelHeader? {
@@ -149,7 +151,7 @@ final class CandidateListView: NSView {
     }
 
     override var fittingSize: NSSize {
-        let textWidth = rows.map { $0.text.size(withAttributes: [.font: textFont]).width }.max() ?? 0
+        let textWidth = rows.map(contentWidth(of:)).max() ?? 0
         let tagWidth = rows.compactMap { $0.tag.map(tagSize(for:))?.width }.max()
         var rowsWidth = Metrics.rowHorizontalPadding * 2 + labelColumnWidth + Metrics.columnGap + ceil(textWidth)
         if let tagWidth {
@@ -192,8 +194,14 @@ final class CandidateListView: NSView {
             let contentX = rect.minX + Metrics.rowHorizontalPadding
             draw(row.label, font: labelFont, color: row.isHighlighted ? highlightText.withAlphaComponent(0.85) : .secondaryLabelColor,
                  at: contentX + labelWidth - row.label.size(withAttributes: [.font: labelFont]).width, in: rect)
-            draw(row.text, font: textFont, color: row.isHighlighted ? highlightText : .labelColor,
-                 at: contentX + labelWidth + Metrics.columnGap, in: rect)
+            let textX = contentX + labelWidth + Metrics.columnGap
+            draw(row.text, font: textFont, color: row.isHighlighted ? highlightText : .labelColor, at: textX, in: rect)
+            if let annotation = row.annotation {
+                let annotationX = textX + row.text.size(withAttributes: [.font: textFont]).width + Metrics.annotationGap
+                draw(annotation, font: annotationFont,
+                     color: row.isHighlighted ? highlightText.withAlphaComponent(0.75) : .secondaryLabelColor,
+                     at: annotationX, in: rect)
+            }
             if let tag = row.tag {
                 drawTag(tag, highlightText: row.isHighlighted ? highlightText : nil, rightEdge: rect.maxX - Metrics.rowHorizontalPadding, in: rect)
             }
@@ -212,6 +220,15 @@ final class CandidateListView: NSView {
             return
         }
         onSelect?(index)
+    }
+
+    /// Candidate text plus its annotation, if any.
+    private func contentWidth(of row: CandidatePanelRow) -> CGFloat {
+        let text = row.text.size(withAttributes: [.font: textFont]).width
+        guard let annotation = row.annotation else {
+            return text
+        }
+        return text + Metrics.annotationGap + annotation.size(withAttributes: [.font: annotationFont]).width
     }
 
     private func rowRects() -> [CGRect] {

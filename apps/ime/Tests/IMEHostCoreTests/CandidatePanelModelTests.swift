@@ -46,6 +46,22 @@ final class CandidatePanelModelTests: XCTestCase {
         XCTAssertEqual(rows.map(\.hasSeparatorBefore), [false, true, false])
     }
 
+    func testAnnotationsAreCarriedAndTruncated() {
+        let state = CompositionState(
+            compositionText: "x",
+            candidates: [
+                Candidate(text: "deploy", source: .englishCompletion, score: 0, annotation: "部署"),
+                Candidate(text: "x", source: .englishCompletion, score: 0, annotation: "一二三四五六七八九十甲乙丙"),
+                Candidate(text: "de", source: .englishCompletion, score: 0),
+            ],
+            selectedCandidateIndex: 0
+        )
+
+        let rows = CandidatePanelModel.rows(for: state)
+
+        XCTAssertEqual(rows.map(\.annotation), ["部署", "一二三四五六七八九十甲乙…", nil])
+    }
+
     func testEnglishOnlyListHasNoTagsOrSeparators() {
         let rows = CandidatePanelModel.rows(
             for: state([("he", .englishCompletion), ("her", .englishCompletion), ("here", .englishCompletion)])

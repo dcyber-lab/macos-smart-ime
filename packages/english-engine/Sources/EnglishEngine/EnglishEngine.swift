@@ -5,12 +5,14 @@ public final class BasicEnglishEngine: EnglishInputEngine {
     private static let maxCandidates = 9
 
     private let lexicon: EnglishLexicon
+    private let glossary: EnglishGlossary
     private var buffer: String = ""
     private var candidates: [Candidate] = []
     private var highlightedIndex: Int?
 
-    public init(lexicon: EnglishLexicon = .bundled) {
+    public init(lexicon: EnglishLexicon = .bundled, glossary: EnglishGlossary = .bundled) {
         self.lexicon = lexicon
+        self.glossary = glossary
     }
 
     public func process(_ event: InputKeyEvent) -> InputSessionUpdate {
@@ -118,7 +120,7 @@ public final class BasicEnglishEngine: EnglishInputEngine {
         candidates = ([buffer] + completions)
             .enumerated()
             .map { index, word in
-                Candidate(text: word, source: .englishCompletion, score: Double(100 - index))
+                Candidate(text: word, source: .englishCompletion, score: Double(100 - index), annotation: glossary.gloss(for: word))
             }
     }
 }

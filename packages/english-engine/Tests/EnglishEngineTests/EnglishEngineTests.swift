@@ -118,6 +118,15 @@ final class BasicEnglishEngineTests: XCTestCase {
         XCTAssertEqual(update.commitText, "hello")
     }
 
+    func testCompletionsCarryGlosses() {
+        let engine = BasicEnglishEngine(lexicon: lexicon, glossary: EnglishGlossary(glosses: ["category": "类别"]))
+
+        let candidates = type("cat", into: engine).state.candidates
+
+        XCTAssertEqual(candidates.first { $0.text == "category" }?.annotation, "类别")
+        XCTAssertNil(candidates.first { $0.text == "catch" }?.annotation)
+    }
+
     func testNoCandidatesWhenNothingCompletes() {
         let engine = BasicEnglishEngine(lexicon: lexicon)
 
