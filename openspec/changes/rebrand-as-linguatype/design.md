@@ -18,7 +18,7 @@
 `InfoPlist.strings` sets `CFBundleDisplayName` and `CFBundleName` to 灵译输入法 (zh-Hans) and LinguaType (en); `Info.plist`'s `CFBundleDisplayName` becomes LinguaType as the fallback. `CFBundleName` in `Info.plist` stays `$(PRODUCT_NAME)` so the executable and bundle keep their names.
 
 ### 2. Vector template menu icon
-`make-icons.swift` builds the menu icon as a single even-odd path: a rounded square with the outlines of "中" (PingFang SC Semibold) and "A" (SF Pro Semibold) as holes, written as a 16 × 16 pt PDF. `tsInputMethodIconFileKey` points to `LinguaType.pdf` and `TISIconIsTemplate` is true, so macOS tints it for light and dark menu bars. Using real glyph outlines (not text drawn with a clear blend mode) keeps the PDF a plain vector shape.
+`make-icons.swift` builds the menu icon by subtracting the outlines of "中" (PingFang SC Semibold) and "A" (SF Pro Semibold) from a rounded square (`CGPath.subtracting`) and writes it as a 16 × 16 pt PDF filled with the nonzero rule. `tsInputMethodIconFileKey` points to `LinguaType.pdf` and `TISIconIsTemplate` is true, so macOS tints it for light and dark menu bars. The first version relied on an even-odd fill for the holes; it rendered correctly through `NSImage` but the input menu showed a solid square, so the holes are now part of the geometry and do not depend on the fill rule.
 
 ### 3. App icon from the same glyph layout
 The generator renders the app icon at every `.iconset` size (16–1024 px): a rounded square with an indigo-to-teal gradient, subtle top highlight, and white "中/A" glyphs, then runs `iconutil` to produce `LinguaType.icns` for `CFBundleIconFile`.

@@ -52,9 +52,13 @@ func glyphs(in box: CGRect) -> CGPath {
 
 let menuSize: CGFloat = 16
 let menuBox = CGRect(x: 0.5, y: 0.5, width: menuSize - 1, height: menuSize - 1)
-let menuPath = CGMutablePath()
-menuPath.addRoundedRect(in: menuBox, cornerWidth: 3.5, cornerHeight: 3.5)
-menuPath.addPath(glyphs(in: menuBox))
+let menuBackground = CGPath(roundedRect: menuBox, cornerWidth: 3.5, cornerHeight: 3.5, transform: nil)
+let evenOddPath = CGMutablePath()
+evenOddPath.addPath(menuBackground)
+evenOddPath.addPath(glyphs(in: menuBox))
+// The input menu fills icons with the nonzero winding rule, which filled the glyph "holes" of an
+// even-odd path solid. Subtract the glyphs instead so the holes survive any fill rule.
+let menuPath = menuBackground.subtracting(glyphs(in: menuBox), using: .evenOdd)
 
 var mediaBox = CGRect(x: 0, y: 0, width: menuSize, height: menuSize)
 let pdfURL = resources.appendingPathComponent("LinguaType.pdf")
@@ -62,7 +66,7 @@ let pdf = CGContext(pdfURL as CFURL, mediaBox: &mediaBox, nil)!
 pdf.beginPDFPage(nil)
 pdf.addPath(menuPath)
 pdf.setFillColor(NSColor.black.cgColor)
-pdf.fillPath(using: .evenOdd)
+pdf.fillPath(using: .winding)
 pdf.endPDFPage()
 pdf.closePDF()
 print("wrote \(pdfURL.path)")
@@ -158,7 +162,7 @@ if let previewDirectory {
             context.scaleBy(x: scale, y: scale)
             context.addPath(menuPath)
             context.setFillColor(foreground.cgColor)
-            context.fillPath(using: .evenOdd)
+            context.fillPath(using: .winding)
             context.restoreGState()
             x += menuSize * scale + 24
         }
