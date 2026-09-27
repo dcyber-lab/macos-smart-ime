@@ -12,6 +12,14 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### rime-ice Chinese dictionary
+
+- Implemented OpenSpec change `adopt-rime-ice-dictionary`. The default schema is now `smartime_pinyin`, whose dictionary imports rime-ice's `8105`, `base`, `ext`, and `others` tables (about 890,000 entries); `luna_pinyin` remains as a fallback schema.
+- The tables (GPL-3.0, 28 MB) are fetched at build time from pinned commit `3aea6d3694` with SHA-256 checks, cached under `build/rime-data/`, and assembled into `build/rime-data/shared`; they are not committed. Verified that a corrupted cache file is re-downloaded and that a checksum mismatch fails the build.
+- `install-host.sh` precompiles the tables with `rime_deployer --build` (about 4 s; `smartime_pinyin.table.bin` is 28 MB). In the deploy run the table was written at 13:10:15 and the host started at 13:10:16, so the first keystroke did not wait for a Rime deploy.
+- Real-librime comparison: 云原生, 内卷, 复盘 now come first (`luna_pinyin` gave 晕原声, 内眷, 覆盘). The smoke test passes 10/10 on the new dictionary.
+- Known: words learned under `luna_pinyin` do not carry over; the first build needs network access.
+
 ### English candidates while typing and a larger lexicon
 
 - Implemented OpenSpec change `improve-mixed-english-candidates`. Translations of the first Chinese candidate now appear for unfinished or abbreviated pinyin (`shujuk`, `sjk`, `huiy` → database / meeting), and for 4+ letter non-pinyin input the best common English completion is promoted to position 2 (`gith` → 1.个 2.GitHub; `Space` still commits Chinese).

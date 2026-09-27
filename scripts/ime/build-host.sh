@@ -10,6 +10,9 @@ OUTPUT_APP="$BUILD_ROOT/SmartIMEHost.app"
 BUILD_CONFIGURATION="Release"
 DERIVED_APP="$DERIVED_DATA_PATH/Build/Products/$BUILD_CONFIGURATION/SmartIMEHost.app"
 
+echo "Assembling Rime shared data..."
+"$REPO_ROOT/scripts/rime/assemble-shared-data.sh"
+
 echo "Generating Xcode project..."
 cd "$REPO_ROOT"
 xcodegen generate
