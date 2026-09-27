@@ -4,7 +4,8 @@ import RimeBridge
 import EnglishEngine
 import SharedModels
 
-public final class IMEInputController: IMKInputController {
+// Confined to the main thread: InputMethodKit creates and calls input controllers only there.
+public final class IMEInputController: IMKInputController, @unchecked Sendable {
     private enum KeyCode {
         static let one: UInt16 = 18
         static let two: UInt16 = 19
@@ -20,15 +21,9 @@ public final class IMEInputController: IMKInputController {
         static let upArrow: UInt16 = 126
     }
 
-    private enum CandidatePanel {
-        static let selectionKeys: [NSNumber] = [18, 19, 20, 21, 23, 22, 26, 28, 25].map(NSNumber.init(value:))
-    }
-
     private let sessionStore = IMEHostSessionStore()
     private let chineseEngine: ChineseInputEngine?
     private let englishEngine: EnglishInputEngine?
-    private var candidateWindow: IMKCandidates?
-    private var isSyncingCandidateSelection = false
     private var shiftToggle = ShiftToggleDetector()
 
     private var activeEngine: (any ChineseInputEngine)? {
@@ -169,17 +164,12 @@ public final class IMEInputController: IMKInputController {
         NSAttributedString(string: sessionStore.state.rawInput)
     }
 
-    public override func candidates(_ sender: Any!) -> [Any]! {
-        sessionStore.state.candidates.map(\.text)
-    }
-
     public override func commitComposition(_ sender: Any!) {
         commit(sessionStore.state.compositionText, using: sender)
         chineseEngine?.reset()
         englishEngine?.reset()
         sessionStore.reset()
-        candidateWindow?.clearSelection()
-        candidateWindow?.hide()
+        withCandidatePanel { $0.hide() }
     }
 
     public override func deactivateServer(_ sender: Any!) {
@@ -190,46 +180,6 @@ public final class IMEInputController: IMKInputController {
     public override func inputControllerWillClose() {
         tearDownSession()
         super.inputControllerWillClose()
-    }
-
-    public override func candidateSelected(_ candidateString: NSAttributedString!) {
-        let selectedText = candidateString?.string ?? ""
-        guard !selectedText.isEmpty else {
-            resetSession(resetEngine: true)
-            return
-        }
-
-        commit(selectedText, using: client())
-        chineseEngine?.reset()
-        englishEngine?.reset()
-        sessionStore.reset(committedText: selectedText)
-        syncPresentation()
-    }
-
-    public override func candidateSelectionChanged(_ candidateString: NSAttributedString!) {
-        if isSyncingCandidateSelection {
-            return
-        }
-
-        guard let candidateString else {
-            return
-        }
-
-        let candidates = sessionStore.state.candidates.map(\.text)
-        guard let index = candidates.firstIndex(of: candidateString.string) else {
-            return
-        }
-
-        let update: InputSessionUpdate?
-        if sessionStore.state.mode == .chinese {
-            update = chineseEngine?.highlightCandidate(at: index)
-        } else {
-            update = englishEngine?.highlightCandidate(at: index)
-        }
-        
-        if let update {
-            _ = apply(update, sender: client())
-        }
     }
 
     private func commit(_ committedText: String, using sender: Any?) {
@@ -255,8 +205,7 @@ public final class IMEInputController: IMKInputController {
         chineseEngine?.reset()
         englishEngine?.reset()
         sessionStore.reset()
-        candidateWindow?.clearSelection()
-        candidateWindow?.hide()
+        withCandidatePanel { $0.hide() }
     }
 
     @discardableResult
@@ -277,53 +226,41 @@ public final class IMEInputController: IMKInputController {
     }
 
     private func syncCandidateWindow() {
-        if candidateWindow == nil {
-            let cw = IMKCandidates(server: server(), panelType: kIMKSingleColumnScrollingCandidatePanel)
-            NSLog("SmartIME: creating IMKCandidates – server()=%@, result=%@",
-                  String(describing: server()), String(describing: cw))
-            cw?.setSelectionKeys(CandidatePanel.selectionKeys)
-            cw?.setAttributes([IMKCandidatesSendServerKeyEventFirst: NSNumber(value: true)])
-            cw?.setDismissesAutomatically(true)
-            self.candidateWindow = cw
-        }
-
-        guard let candidateWindow else {
-            NSLog("SmartIME: syncCandidateWindow – candidateWindow is nil, bailing out")
+        let state = sessionStore.state
+        guard !state.compositionText.isEmpty, !state.candidates.isEmpty else {
+            withCandidatePanel { $0.hide() }
             return
         }
 
-        isSyncingCandidateSelection = true
-        defer { isSyncingCandidateSelection = false }
-
-        let candidates = sessionStore.state.candidates.map(\.text)
-        let compositionText = sessionStore.state.compositionText
-        let shouldShowCandidates = !compositionText.isEmpty && !candidates.isEmpty
-
-        NSLog("SmartIME: syncCandidateWindow – mode=%@ composition='%@' candidates=%d shouldShow=%d isVisible=%d",
-              sessionStore.state.mode.rawValue, compositionText, candidates.count, shouldShowCandidates ? 1 : 0, candidateWindow.isVisible() ? 1 : 0)
-
-        if shouldShowCandidates {
-            candidateWindow.setCandidateData(candidates)
-            if let selectedCandidateIndex = sessionStore.state.selectedCandidateIndex,
-               candidates.indices.contains(selectedCandidateIndex)
-            {
-                let selectedCandidate = candidates[selectedCandidateIndex]
-                let identifier = candidateWindow.candidateStringIdentifier(selectedCandidate)
-                if identifier != NSNotFound {
-                    _ = candidateWindow.selectCandidate(withIdentifier: identifier)
-                }
-            } else {
-                candidateWindow.clearSelection()
+        let caretRect = caretRect()
+        withCandidatePanel { panel in
+            panel.show(state: state, caretRect: caretRect) { [weak self] index in
+                self?.selectCandidateFromPanel(at: index)
             }
-            if candidateWindow.isVisible() {
-                candidateWindow.update()
-            } else {
-                candidateWindow.show(kIMKLocateCandidatesBelowHint)
-            }
-        } else {
-            candidateWindow.clearSelection()
-            candidateWindow.hide()
         }
+    }
+
+    /// InputMethodKit always calls input controllers on the main thread.
+    private func withCandidatePanel(_ body: @MainActor (CandidatePanel) -> Void) {
+        MainActor.assumeIsolated {
+            body(CandidatePanel.shared)
+        }
+    }
+
+    private func caretRect() -> NSRect {
+        var rect = NSRect.zero
+        _ = client()?.attributes(forCharacterIndex: 0, lineHeightRectangle: &rect)
+        return rect
+    }
+
+    private func selectCandidateFromPanel(at index: Int) {
+        let update: InputSessionUpdate?
+        if sessionStore.state.mode == .chinese {
+            update = chineseEngine?.selectCandidate(at: index)
+        } else {
+            update = englishEngine?.selectCandidate(at: index)
+        }
+        apply(update, sender: client())
     }
 
     private func candidateIndex(for keyCode: UInt16) -> Int? {

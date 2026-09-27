@@ -7,6 +7,14 @@ The host SHALL display candidates in its own vertical panel, one numbered row pe
 - **WHEN** the composition has candidates 数据库, 数据, 书局
 - **THEN** the panel SHALL show three rows labeled 1, 2, 3 in that order
 
+#### Scenario: Height fits the candidates
+- **WHEN** the composition has three candidates
+- **THEN** the panel SHALL be exactly tall enough for three rows, with no empty rows below them
+
+#### Scenario: Panel resizes while typing
+- **WHEN** the candidate list changes from six candidates to two
+- **THEN** the panel SHALL shrink to fit two rows
+
 #### Scenario: Dark appearance
 - **WHEN** the system appearance is dark
 - **THEN** the panel background and text SHALL use dark-appearance colors
