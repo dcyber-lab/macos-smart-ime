@@ -40,6 +40,12 @@ Owns explicit and async workflows:
 - English logic: project-owned engine
 - Command-style transformations: `transform-engine`
 
+## Chinese Dictionary
+
+- The default Rime schema is `smartime_pinyin` (simplified full pinyin, `luna_pinyin` speller rules, no Lua). Its dictionary imports the rime-ice (雾凇拼音, GPL-3.0) tables `8105`, `base`, `ext`, and `others`, about 890,000 entries; `luna_pinyin` stays in the schema list as a fallback.
+- The rime-ice tables are fetched at build time from a pinned commit with SHA-256 checks (`scripts/rime/fetch-rime-ice.sh`) and assembled with `third_party/librime-data/minimal` and `third_party/librime-data/smartime` into `build/rime-data/shared` (`RIME_SHARED_DATA_DIR`). They are never committed.
+- `scripts/ime/install-host.sh` precompiles the tables with `rime_deployer --build` into the user's Rime build directory, so the host's startup maintenance finds them up to date.
+
 ## Chinese-Mode English Candidates
 
 - `IMEInputController` holds a `ChineseInputEngine`; in production it is `EnglishAugmentedChineseEngine` (in `english-engine`) wrapping `RimeBridgeEngine`. The host does not know English candidates exist.

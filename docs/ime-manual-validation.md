@@ -23,6 +23,8 @@ Expected result:
 - the built bundle is ad-hoc signed
 - the main executable is not a Debug `@rpath/...debug.dylib` wrapper
 
+The first build downloads the rime-ice Chinese tables (about 28 MB, SHA-256 verified) into `build/rime-data/`; later builds reuse them. See `third_party/librime-data/smartime/NOTICE.md` for licensing.
+
 ## Install
 
 Install for the current user:
@@ -107,8 +109,9 @@ Use a normal editable text field such as TextEdit.
 10. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
 11. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
 12. Confirm Chinese text is inserted only for the committed cases
+13. Type `yunyuansheng`, `neijuan`, and `fupan` and confirm 云原生, 内卷, and 复盘 are the first candidates (rime-ice vocabulary)
 
-This milestone is not considered complete until steps 5 through 11 are verified in a real macOS text client with the visible candidate panel.
+This milestone is not considered complete until steps 5 through 13 are verified in a real macOS text client with the visible candidate panel.
 
 ## Basic English Mode Checklist
 
@@ -188,6 +191,7 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 - English mode completes from a bundled 30,000-word frequency list generated from wordfreq (`scripts/english/build-wordlist.py`); there is no user dictionary or learning yet
 - `Shift` key toggle is a simple heuristic based on standalone press/release
 - Basic input (Space, number keys, Enter, Escape) was confirmed working in a real client on 2026-09-27 after the text-commit fix; the English mode and mixed-candidate checklists still need a full pass
+- Switching the default schema from `luna_pinyin` to `smartime_pinyin` starts a new user dictionary; words learned under `luna_pinyin` do not carry over
 - Install with `sudo scripts/ime/install-host.sh --system`. On the development machine, a user-level install alone (`~/Library/Input Methods`) was never launched by `imklaunchagent` (`LaunchInputMethod() Error, status=-50`); the root cause is not yet known
 - Removing or replacing the IME bundle while its process runs can leave already-open apps holding a dead input method connection; relaunch those apps (or log out and back in) if typing passes through as plain letters
 - Richer candidate controls and mixed-mode input are still follow-up milestones

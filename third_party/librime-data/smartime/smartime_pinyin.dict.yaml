@@ -1,0 +1,18 @@
+# Rime dictionary
+# encoding: utf-8
+#
+# Imports the rime-ice (雾凇拼音, https://github.com/iDvel/rime-ice, GPL-3.0) Chinese tables.
+# scripts/rime/fetch-rime-ice.sh downloads them into build/rime-data at build time; they are
+# not stored in this repository.
+
+---
+name: smartime_pinyin
+version: "rime-ice-3aea6d3694"
+sort: by_weight
+use_preset_vocabulary: false
+import_tables:
+  - cn_dicts/8105
+  - cn_dicts/base
+  - cn_dicts/ext
+  - cn_dicts/others
+...

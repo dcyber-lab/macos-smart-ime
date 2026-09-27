@@ -66,6 +66,21 @@ fi
 mkdir -p "$TARGET_APP"
 rsync -a --delete "$SOURCE_APP/" "$TARGET_APP/"
 
+# Compile the Rime tables now so the first keystroke does not wait for a deploy.
+SHARED_DATA="$REPO_ROOT/build/rime-data/shared"
+TARGET_HOME=$(eval echo "~$TARGET_USER")
+RIME_USER_DIR="$TARGET_HOME/Library/Application Support/SmartIMEHost/Rime"
+RIME_DEPLOYER=$(command -v rime_deployer || echo /opt/homebrew/bin/rime_deployer)
+if [[ -x "$RIME_DEPLOYER" && -d "$SHARED_DATA" ]]; then
+  echo "Compiling Rime dictionaries..."
+  run_for_target_user mkdir -p "$RIME_USER_DIR/build"
+  run_for_target_user "$RIME_DEPLOYER" --build "$RIME_USER_DIR" "$SHARED_DATA" "$RIME_USER_DIR/build" \
+    > "$REPO_ROOT/build/ime-host/rime-deploy.log" 2>&1 \
+    || echo "Warning: rime_deployer failed; see build/ime-host/rime-deploy.log. SmartIMEHost will compile on first use." >&2
+else
+  echo "Warning: rime_deployer or $SHARED_DATA not found; SmartIMEHost will compile its dictionaries on first use." >&2
+fi
+
 if [[ "$SYSTEM_INSTALL" == true && "$EUID" -eq 0 ]]; then
   chown -R root:wheel "$TARGET_APP"
 fi
