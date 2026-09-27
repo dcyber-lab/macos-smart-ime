@@ -12,6 +12,12 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Install script enable step
+
+- `scripts/ime/install-host.sh` crashed with "Unexpectedly found nil" when the input source was installed but not yet enabled: the enable snippet called `TISCreateInputSourceList(filter, false)`, which only returns enabled sources. It now looks up all installed sources before calling `TISEnableInputSource`, and the verification snippet reports a missing source instead of crashing.
+- After running `xcodebuild -runFirstLaunch`, `scripts/ime/build-host.sh` built the host and both `~/Library/Input Methods` and `sudo ... --system` installs were refreshed. TIS reports the source as enabled and selectable.
+- Note: this machine has both a user and a system install with the same bundle ID. A stale system copy shadowed the user install until it was reinstalled; keep both in sync or uninstall one.
+
 ## 2026-03-20
 
 ### Space / Return not confirming candidates
