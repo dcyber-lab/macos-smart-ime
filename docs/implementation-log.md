@@ -2,6 +2,15 @@
 
 ## 2026-09-27
 
+### Release package
+
+- Added `scripts/release/package.sh`, which produces `build/release.noindex/LinguaType-<version>-macOS-arm64.zip` (27 MB): the app with librime and its Homebrew dependencies (glog, gflags, yaml-cpp, leveldb, snappy, marisa, opencc) in `Contents/Frameworks` under `@rpath`, ad-hoc signed, plus `install-host.sh`, `install.command`, `README.txt`, and the third-party licenses. `--publish` uploads it as a GitHub release.
+- The Homebrew bottles are arm64-only with `minos 26.0`, so the package sets `LSMinimumSystemVersion` to 26.0. Older macOS or Intel Macs would need librime built from source.
+- Rime data now ships in the app (`Contents/Resources/RimeData`) with tables precompiled at build time (compiling takes about 2 s; a fresh user directory then deploys without compiling). The `RimeSharedDataDirectory` Info.plist key, which pointed into the developer's checkout, is gone, and `install-host.sh` no longer runs `rime_deployer`.
+- Input source registration moved from three `swift -e` snippets in `install-host.sh` into the app (`SmartIMEHost --install`), so installing needs no Swift toolchain. `install-host.sh` takes an optional app path and clears the quarantine attribute.
+- `build-host.sh` unregisters the DerivedData product that `xcodebuild` registers with LaunchServices.
+- Verified: the probe loaded only bundled libraries and returned 你好; the packaged app installed with `install-host.sh` passed the smoke test 15/15, and the running input method mapped `librime.1.dylib` from `Contents/Frameworks`. Not yet verified: the first-time `sudo` path of `install.command` on a Mac without Homebrew or Xcode.
+
 ### One-step install and update
 
 - Added `./install.sh`: checks Xcode and Homebrew, installs `librime` and `xcodegen` when missing, builds, and installs into `/Library/Input Methods`. The first install runs `install-host.sh` and `enable-dev-install.sh` under sudo (one password prompt), later runs update without sudo. `--pull` fast-forwards the checkout first; `--test` runs the smoke test. It replaces `scripts/ime/dev-cycle.sh`.
