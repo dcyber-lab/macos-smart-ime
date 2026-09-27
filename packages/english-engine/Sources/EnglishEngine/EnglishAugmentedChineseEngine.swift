@@ -26,6 +26,7 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
     private let base: ChineseInputEngine
     private let lexicon: EnglishLexicon
     private let dictionary: ChineseEnglishDictionary
+    private let glossary: EnglishGlossary
     private var baseState = CompositionState()
     private var entries: [Entry] = []
     private var highlight = Highlight.automatic
@@ -33,11 +34,13 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
     public init(
         base: ChineseInputEngine,
         lexicon: EnglishLexicon = .bundled,
-        dictionary: ChineseEnglishDictionary = .bundled
+        dictionary: ChineseEnglishDictionary = .bundled,
+        glossary: EnglishGlossary = .bundled
     ) {
         self.base = base
         self.lexicon = lexicon
         self.dictionary = dictionary
+        self.glossary = glossary
     }
 
     public func process(_ event: InputKeyEvent) -> InputSessionUpdate {
@@ -188,7 +191,9 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
             guard seen.insert(text).inserted else {
                 return nil
             }
-            return .english(Candidate(text: text, source: source, score: 0))
+            // Translations need no gloss: the user just typed the Chinese.
+            let annotation = source == .englishCompletion ? glossary.gloss(for: text) : nil
+            return .english(Candidate(text: text, source: source, score: 0, annotation: annotation))
         }
 
         let merged = leading.compactMap { english($0, .englishCompletion) }

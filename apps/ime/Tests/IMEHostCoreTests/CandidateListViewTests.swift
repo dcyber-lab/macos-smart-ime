@@ -47,6 +47,20 @@ final class CandidateListViewTests: XCTestCase {
         XCTAssertLessThan(oneCharacter, 80, "a one-character list stays narrow")
     }
 
+    func testAnnotationWidensThePanel() {
+        let plain = CandidateListView()
+        plain.rows = CandidatePanelModel.rows(for: state(["deploy"]))
+        let annotated = CandidateListView()
+        annotated.rows = CandidatePanelModel.rows(for: CompositionState(
+            compositionText: "x",
+            candidates: [Candidate(text: "deploy", source: .englishCompletion, score: 0, annotation: "部署")],
+            selectedCandidateIndex: 0
+        ))
+
+        XCTAssertGreaterThan(annotated.fittingSize.width, plain.fittingSize.width)
+        XCTAssertEqual(annotated.fittingSize.height, plain.fittingSize.height)
+    }
+
     func testHeaderAddsHeightAndFitsItsText() {
         let view = CandidateListView()
         view.rows = rows(count: 3)

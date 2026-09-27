@@ -154,8 +154,10 @@ Use a normal editable text field such as TextEdit, in Chinese mode.
 14. Type `gith` and confirm `GitHub` is the second candidate; press `2` and confirm `GitHub` is committed
 15. Type `dep` and confirm the first candidate is Chinese (得票), not an English word
 16. Type `kube`, `json`, and `refac` and confirm `Kubernetes`, `JSON`, and `refactor` are offered
+17. Type `depl` and confirm `deployed 部署` shows its gloss in small gray text, while the translation `database` for `shujuku` shows none
+18. Switch to English mode, type `negot`, and confirm completions show glosses such as `negotiate 商议，谈判`
 
-This milestone is not considered complete until steps 1 through 16 are verified in a real macOS text client.
+This milestone is not considered complete until steps 1 through 18 are verified in a real macOS text client.
 
 ## Automated Smoke Test
 

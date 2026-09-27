@@ -10,11 +10,14 @@ public struct Candidate: Equatable, Sendable {
     public let text: String
     public let source: CandidateSource
     public let score: Double
+    /// Short secondary text shown after the candidate, e.g. a Chinese gloss for an English word.
+    public let annotation: String?
 
-    public init(text: String, source: CandidateSource, score: Double) {
+    public init(text: String, source: CandidateSource, score: Double, annotation: String? = nil) {
         self.text = text
         self.source = source
         self.score = score
+        self.annotation = annotation
     }
 }
 

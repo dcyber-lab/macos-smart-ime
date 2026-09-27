@@ -3,7 +3,8 @@ import Foundation
 public final class EnglishLexicon: Sendable {
     public static let bundled = EnglishLexicon(
         wordsByFrequency: loadBundledLines("wordlist"),
-        supplement: loadBundledLines("supplement")
+        // supplement.txt is `display<TAB>gloss`; the gloss column feeds EnglishGlossary.
+        supplement: loadBundledLines("supplement").map { $0.split(separator: "\t").first.map(String.init) ?? $0 }
     )
 
     /// Supplement terms rank after the most common words but ahead of the long tail.

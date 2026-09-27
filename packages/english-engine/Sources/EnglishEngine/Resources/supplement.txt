@@ -1,182 +1,202 @@
-GitHub
-iOS
-macOS
-iPhone
-iPad
-iCloud
-OpenAI
-ChatGPT
-Claude
-API
-SDK
-JSON
-YAML
-HTML
-CSS
-URL
-HTTP
-HTTPS
-SQL
-MySQL
-PostgreSQL
-Redis
-MongoDB
-Kafka
-Elasticsearch
-Nginx
-Docker
-Kubernetes
-Terraform
-Ansible
-Jenkins
-GitLab
-Bitbucket
-Jira
-Figma
-Gmail
-WeChat
-WeCom
-Feishu
-DingTalk
-Alipay
-TypeScript
-JavaScript
-Golang
-SwiftUI
-Kotlin
-Scala
-PHP
-Node.js
-Next.js
-Vue
-Svelte
-Webpack
-Vite
-npm
-pnpm
-Xcode
-VSCode
-IntelliJ
-Vim
-Emacs
-Linux
-Ubuntu
-Debian
-CentOS
-AWS
-GCP
-Cloudflare
-Vercel
-Netlify
-Firebase
-Supabase
-Shopify
-Salesforce
-LLM
-GPT
-AI
-ML
-NLP
-embedding
-embeddings
-prompt
-prompts
-finetune
-finetuning
-inference
-tokenizer
-chatbot
-copilot
-localhost
-async
-await
-refactor
-refactoring
-rebase
-cherrypick
-hotfix
-changelog
-codebase
-monorepo
-repo
-repos
-webhook
-webhooks
-middleware
-frontend
-backend
-fullstack
-devops
-serverless
-microservice
-microservices
-namespace
-runtime
-dataset
-datasets
-timestamp
-config
-configs
-env
-auth
-OAuth
-SSO
-JWT
-UUID
-regex
-lint
-linter
-CI
-CD
-QA
-UAT
-PR
-MVP
-POC
-PRD
-SLA
-SLO
-OKR
-OKRs
-KPI
-KPIs
-ROI
-GMV
-DAU
-MAU
-CEO
-CTO
-CFO
-VP
-HR
-PM
-UI
-UX
-roadmap
-backlog
-standup
-retro
-sprint
-onboarding
-offboarding
-stakeholder
-stakeholders
-deliverable
-deliverables
-deadline
-headcount
-kickoff
-followup
-brainstorm
-agenda
-workshop
-milestone
-blocker
-blockers
-PowerPoint
-PDF
-MacBook
-AirPods
-Bluetooth
-WiFi
-USB
+GitHub	代码托管平台
+iOS	苹果移动操作系统
+macOS	苹果电脑操作系统
+iPhone	苹果手机
+iPad	苹果平板
+iCloud	苹果云服务
+OpenAI	人工智能公司
+ChatGPT	AI 聊天助手
+Claude	AI 助手
+API	应用程序接口
+SDK	软件开发工具包
+JSON	数据交换格式
+YAML	配置文件格式
+HTML	网页标记语言
+CSS	网页样式表
+URL	网址
+HTTP	超文本传输协议
+HTTPS	安全超文本传输协议
+SQL	结构化查询语言
+MySQL	关系型数据库
+PostgreSQL	关系型数据库
+Redis	内存数据库
+MongoDB	文档数据库
+Kafka	消息队列
+Elasticsearch	搜索引擎
+Nginx	Web 服务器
+Docker	容器平台
+Kubernetes	容器编排
+Terraform	基础设施即代码
+Ansible	自动化运维
+Jenkins	持续集成工具
+GitLab	代码托管平台
+Bitbucket	代码托管平台
+Jira	项目管理工具
+Figma	设计协作工具
+Gmail	谷歌邮箱
+WeChat	微信
+WeCom	企业微信
+Feishu	飞书
+DingTalk	钉钉
+Alipay	支付宝
+TypeScript	编程语言
+JavaScript	编程语言
+Golang	Go 语言
+SwiftUI	苹果界面框架
+Kotlin	编程语言
+Scala	编程语言
+PHP	编程语言
+Node.js	JavaScript 运行时
+Next.js	React 框架
+Vue	前端框架
+Svelte	前端框架
+Webpack	前端打包工具
+Vite	前端构建工具
+npm	Node 包管理器
+pnpm	Node 包管理器
+Xcode	苹果开发工具
+VSCode	代码编辑器
+IntelliJ	集成开发环境
+Vim	文本编辑器
+Emacs	文本编辑器
+Linux	操作系统
+Ubuntu	Linux 发行版
+Debian	Linux 发行版
+CentOS	Linux 发行版
+AWS	亚马逊云
+GCP	谷歌云
+Cloudflare	网络服务商
+Vercel	前端部署平台
+Netlify	前端部署平台
+Firebase	谷歌应用平台
+Supabase	后端服务平台
+Shopify	电商平台
+Salesforce	客户关系管理
+LLM	大语言模型
+GPT	生成式预训练模型
+AI	人工智能
+ML	机器学习
+NLP	自然语言处理
+embedding	向量表示
+embeddings	向量表示
+prompt	提示词
+prompts	提示词
+finetune	微调
+finetuning	微调
+inference	推理
+tokenizer	分词器
+chatbot	聊天机器人
+copilot	AI 助手
+localhost	本机
+async	异步
+await	等待
+refactor	重构
+refactoring	重构
+rebase	变基
+cherrypick	挑选提交
+hotfix	热修复
+changelog	变更日志
+codebase	代码库
+monorepo	单一仓库
+repo	代码仓库
+repos	代码仓库
+webhook	回调通知
+webhooks	回调通知
+middleware	中间件
+frontend	前端
+backend	后端
+fullstack	全栈
+devops	开发运维
+serverless	无服务器
+microservice	微服务
+microservices	微服务
+namespace	命名空间
+runtime	运行时
+dataset	数据集
+datasets	数据集
+timestamp	时间戳
+config	配置
+configs	配置
+env	环境变量
+auth	认证
+OAuth	授权协议
+SSO	单点登录
+JWT	登录令牌
+UUID	唯一标识符
+regex	正则表达式
+lint	代码检查
+linter	代码检查工具
+CI	持续集成
+CD	持续交付
+QA	质量保证
+UAT	用户验收测试
+PR	合并请求
+MVP	最小可行产品
+POC	概念验证
+PRD	产品需求文档
+SLA	服务等级协议
+SLO	服务等级目标
+OKR	目标与关键成果
+OKRs	目标与关键成果
+KPI	关键绩效指标
+KPIs	关键绩效指标
+ROI	投资回报率
+GMV	成交总额
+DAU	日活跃用户
+MAU	月活跃用户
+CEO	首席执行官
+CTO	首席技术官
+CFO	首席财务官
+VP	副总裁
+HR	人力资源
+PM	产品经理
+UI	用户界面
+UX	用户体验
+roadmap	路线图
+backlog	待办列表
+standup	站会
+retro	复盘会
+sprint	冲刺迭代
+onboarding	入职引导
+offboarding	离职交接
+stakeholder	相关方
+stakeholders	相关方
+deliverable	交付物
+deliverables	交付物
+deadline	截止日期
+headcount	编制人数
+kickoff	启动会
+followup	跟进
+brainstorm	头脑风暴
+agenda	议程
+workshop	研讨会
+milestone	里程碑
+blocker	阻塞问题
+blockers	阻塞问题
+PowerPoint	演示文稿软件
+PDF	PDF 文档
+MacBook	苹果笔记本
+AirPods	苹果耳机
+Bluetooth	蓝牙
+WiFi	无线网络
+USB	USB 接口
+deploy	部署
+deployment	部署
+release	发布
+feature	功能
+review	评审
+merge	合并
+commit	提交
+branch	分支
+bug	缺陷
+debug	调试
+issue	问题
+ticket	工单
+schedule	日程
+sync	同步
+align	对齐
+download	下载
+upload	上传
+email	邮件
+login	登录
+password	密码

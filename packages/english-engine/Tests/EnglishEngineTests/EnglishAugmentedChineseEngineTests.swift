@@ -209,6 +209,30 @@ final class EnglishAugmentedChineseEngineTests: XCTestCase {
         XCTAssertEqual(update.state.candidates[1].source, .englishTranslation)
     }
 
+    // MARK: Glosses
+
+    func testEnglishWordsGetGlossesButTranslationsDoNot() {
+        engine = EnglishAugmentedChineseEngine(
+            base: fake,
+            lexicon: lexicon,
+            dictionary: dictionary,
+            glossary: EnglishGlossary(glosses: ["deploy": "部署", "deployment": "部署", "database": "数据库"])
+        )
+        fake.candidatesByInput["deploy"] = ["得票"]
+        let words = type("deploy").state.candidates
+
+        XCTAssertEqual(words.first?.text, "deploy")
+        XCTAssertEqual(words.first?.annotation, "部署")
+        XCTAssertNil(words.first { $0.text == "得票" }?.annotation)
+
+        engine.reset()
+        fake.candidatesByInput["shujuku"] = ["数据库"]
+        let translation = type("shujuku").state.candidates.first { $0.text == "database" }
+
+        XCTAssertEqual(translation?.source, .englishTranslation)
+        XCTAssertNil(translation?.annotation)
+    }
+
     // MARK: Preedit
 
     func testNonPinyinInputShowsRawInputAsPreedit() {
