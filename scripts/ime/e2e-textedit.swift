@@ -46,6 +46,10 @@ func select(_ id: String) {
 let originalSource = sourceID(TISCopyCurrentKeyboardInputSource().takeRetainedValue())
 let originalApp = NSWorkspace.shared.frontmostApplication
 
+print("Starting in 3 seconds; do not use the keyboard or mouse for about 20 seconds.")
+_ = run("display notification \"约 20 秒内请勿操作键盘和鼠标\" with title \"SmartIME 自动测试即将开始\"")
+Thread.sleep(forTimeInterval: 3)
+
 _ = run("tell application \"TextEdit\" to activate")
 _ = run("tell application \"TextEdit\" to make new document")
 Thread.sleep(forTimeInterval: 1.0)
@@ -164,3 +168,4 @@ print("RESULT: \(passed) passed, \(failed) failed")
 _ = run("tell application \"TextEdit\" to close front document saving no")
 select(originalSource)
 originalApp?.activate()
+exit(failed == 0 ? 0 : 1)
