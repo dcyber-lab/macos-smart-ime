@@ -1,6 +1,6 @@
 import AppKit
 
-/// Popup near the selection for the selection-translation POC; styled like the candidate panel.
+/// Popup near the selection for selection translation; styled like the candidate panel.
 @MainActor
 final class TranslationPopup {
     static let shared = TranslationPopup()
@@ -113,19 +113,19 @@ final class TranslationPopupView: NSView {
         switch state {
         case .idle:
             return false
-        case .translating(let source):
-            fill(source: source, body: "翻译中…", hint: "Esc 取消")
-        case .result(let source, let translation):
-            fill(source: source, body: translation, hint: "⏎ 替换 · Esc 取消")
+        case .translating(let source, let direction):
+            fill(title: "\(direction.label)  \(source)", body: "翻译中…", hint: "Esc 取消")
+        case .result(let source, let translation, let direction):
+            fill(title: "\(direction.label)  \(source)", body: translation, hint: "⏎ 替换 · Esc 取消")
         case .message(let text):
-            fill(source: nil, body: text, hint: "Esc 关闭")
+            fill(title: "翻译", body: text, hint: "Esc 关闭")
         }
         layoutSubtreeIfNeeded()
         return true
     }
 
-    private func fill(source: String?, body: String, hint: String) {
-        sourceLabel.stringValue = source.map { "英 → 中  \($0)" } ?? "英 → 中"
+    private func fill(title: String, body: String, hint: String) {
+        sourceLabel.stringValue = title
         bodyLabel.stringValue = body
         hintLabel.stringValue = hint
     }

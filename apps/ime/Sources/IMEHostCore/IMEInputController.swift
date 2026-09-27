@@ -17,7 +17,6 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         static let eight: UInt16 = 28
         static let nine: UInt16 = 25
         static let escape: UInt16 = 53
-        static let t: UInt16 = 17
         static let downArrow: UInt16 = 125
         static let upArrow: UInt16 = 126
     }
@@ -221,7 +220,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         MainActor.assumeIsolated { selectionTranslation.dismiss() }
     }
 
-    // MARK: Selection translation (POC)
+    // MARK: Selection translation
 
     /// Returns nil when the key is not part of the selection-translation flow and should be handled normally.
     private func handleSelectionTranslationKey(_ event: NSEvent) -> Bool? {
@@ -239,8 +238,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             break
         }
 
-        let modifiers = event.modifierFlags.intersection([.shift, .control, .option, .command])
-        guard keyCode == KeyCode.t, modifiers == [.control, .option], !sessionStore.hasActiveComposition else {
+        // Read on every key so `defaults write` changes apply without restarting the input method.
+        let settings = SelectionTranslationSettings()
+        guard settings.isEnabled,
+              settings.hotkey.matches(keyCode: keyCode, modifierFlags: event.modifierFlags),
+              !sessionStore.hasActiveComposition else {
             return nil
         }
         startSelectionTranslation()

@@ -157,14 +157,14 @@ func imeWindowVisible() -> Bool {
     let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
     return windows.contains { ($0[kCGWindowOwnerName as String] as? String) == "SmartIMEHost" }
 }
-func translationModelInstalled() -> Bool {
+func translationModelInstalled(from source: String, to target: String) -> Bool {
     guard #available(macOS 26.0, *) else {
         return false
     }
     var installed: Bool?
     Task { @MainActor in
         installed = await LanguageAvailability().status(
-            from: Locale.Language(identifier: "en"), to: Locale.Language(identifier: "zh-Hans")
+            from: Locale.Language(identifier: source), to: Locale.Language(identifier: target)
         ) == .installed
     }
     // Spin the run loop instead of blocking: the task and LanguageAvailability's reply need the main thread.
@@ -253,7 +253,26 @@ type("gith")
 press(keyCodes["2"]!)
 check("gith + 2 (promoted completion, display casing)", beforeGith + "GitHub", committedText())
 
-// Selection translation POC, on a fresh English sentence (mixed Chinese text comes back unchanged).
+// Selection translation, Chinese -> English: the mostly Chinese text typed so far.
+func containsHan(_ text: String) -> Bool {
+    text.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
+}
+if translationModelInstalled(from: "zh-Hans", to: "en") {
+    let beforeChinese = committedText()
+    guardNoInterference()
+    press(0, flags: .maskCommand)
+    press(17, flags: [.maskControl, .maskAlternate])
+    Thread.sleep(forTimeInterval: 3)
+    press(returnKey)
+    let english = committedText()
+    print("translated text: \"\(english)\"")
+    check("Chinese selection is replaced with an English translation", "true",
+          String(english != beforeChinese && !containsHan(english) && !english.isEmpty))
+} else {
+    print("SKIP  Chinese -> English: model is not downloaded")
+}
+
+// Selection translation, English -> Chinese on a fresh English sentence.
 let deleteKey: CGKeyCode = 51
 guardNoInterference()
 press(0, flags: .maskCommand)
@@ -276,18 +295,17 @@ Thread.sleep(forTimeInterval: 0.3)
 check("Escape keeps the text and closes the popup", english + " / hidden",
       committedText() + (imeWindowVisible() ? " / visible" : " / hidden"))
 
-if translationModelInstalled() {
+if translationModelInstalled(from: "en", to: "zh-Hans") {
     press(0, flags: .maskCommand)
     press(17, flags: [.maskControl, .maskAlternate])
     Thread.sleep(forTimeInterval: 3)
     press(returnKey)
     let translated = committedText()
-    let hasChinese = translated.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
     print("translated text: \"\(translated)\"")
     check("Return replaces the selection with a Chinese translation", "true",
-          String(translated != english && hasChinese))
+          String(translated != english && containsHan(translated)))
 } else {
-    print("SKIP  translation result: English -> Simplified Chinese model is not downloaded")
+    print("SKIP  English -> Chinese: model is not downloaded")
 }
 
 print("final text: \"\(committedText())\"")
