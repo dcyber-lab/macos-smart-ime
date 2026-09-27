@@ -1,6 +1,6 @@
 ## 1. Icons
 
-- [x] 1.1 Add `scripts/branding/make-icons.swift` generating `LinguaType.pdf` (template menu icon) and `LinguaType.icns` (app icon)
+- [x] 1.1 Add `scripts/branding/make-icons.swift` generating `LinguaType.tiff` (template menu icon) and `LinguaType.icns` (app icon)
 - [x] 1.2 Render previews (menu icon at 1× and 2× on light and dark bars, app icon at several sizes) for user review
 
 ## 2. Names and Resources
