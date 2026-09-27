@@ -150,13 +150,13 @@ import Carbon
 let bundleID = "lab.dcyber.inputmethod.smartime" as CFString
 let properties: [CFString: Any] = [kTISPropertyBundleID: bundleID]
 let filter = properties as CFDictionary
-let list = TISCreateInputSourceList(filter, false).takeRetainedValue() as NSArray
-
-guard let source = list.firstObject else {
+// Include installed-but-disabled sources: a fresh install is not enabled yet.
+guard let list = TISCreateInputSourceList(filter, true)?.takeRetainedValue() as? [TISInputSource],
+      let source = list.first else {
     fatalError("SmartIMEHost input source not found after registration")
 }
 
-let status = TISEnableInputSource((source as! TISInputSource))
+let status = TISEnableInputSource(source)
 if status != noErr {
     fatalError("TISEnableInputSource failed with status \\(status)")
 }
@@ -181,7 +181,7 @@ import Foundation
 
 let bundleID = "lab.dcyber.inputmethod.smartime" as CFString
 let filter: [CFString: Any] = [kTISPropertyBundleID: bundleID]
-let list = TISCreateInputSourceList(filter as CFDictionary, false).takeRetainedValue() as! [TISInputSource]
+let list = (TISCreateInputSourceList(filter as CFDictionary, false)?.takeRetainedValue() as? [TISInputSource]) ?? []
 
 guard let src = list.first else {
     fputs("Verification FAILED: SmartIMEHost not found in enabled sources.\n", stderr)
