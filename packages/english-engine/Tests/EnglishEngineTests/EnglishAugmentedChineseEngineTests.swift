@@ -144,6 +144,29 @@ final class EnglishAugmentedChineseEngineTests: XCTestCase {
         XCTAssertEqual(update.state.candidates[1].source, .englishTranslation)
     }
 
+    // MARK: Preedit
+
+    func testNonPinyinInputShowsRawInputAsPreedit() {
+        fake.candidatesByInput["good"] = ["够殴打"]
+        fake.preeditByInput["good"] = "go o d"
+
+        XCTAssertEqual(type("good").state.compositionText, "good")
+    }
+
+    func testPinyinKeepsSyllableSegmentation() {
+        fake.candidatesByInput["shujuku"] = ["数据库"]
+        fake.preeditByInput["shujuku"] = "shu ju ku"
+
+        XCTAssertEqual(type("shujuku").state.compositionText, "shu ju ku")
+    }
+
+    func testPartiallyConvertedInputKeepsLibrimePreedit() {
+        fake.candidatesByInput["zgrm"] = ["人民"]
+        fake.preeditByInput["zgrm"] = "中国r m"
+
+        XCTAssertEqual(type("zgrm").state.compositionText, "中国r m")
+    }
+
     // MARK: Selection
 
     func testSpaceCommitsFirstPlaceEnglishWord() {
@@ -252,6 +275,8 @@ final class EnglishAugmentedChineseEngineTests: XCTestCase {
 /// Minimal stand-in for `RimeBridgeEngine`: letters append, Space commits the highlight, Return commits raw input.
 private final class FakeChineseEngine: ChineseInputEngine {
     var candidatesByInput: [String: [String]] = [:]
+    /// Mimics librime's syllable-segmented preedit, e.g. "good" -> "go o d".
+    var preeditByInput: [String: String] = [:]
     var pageIndex = 0
     private(set) var input = ""
     private(set) var highlightedIndex = 0
@@ -315,7 +340,7 @@ private final class FakeChineseEngine: ChineseInputEngine {
         let state = CompositionState(
             rawInput: input,
             mode: .chinese,
-            compositionText: input,
+            compositionText: preeditByInput[input] ?? input,
             candidates: candidates.map { Candidate(text: $0, source: .rime, score: 0) },
             selectedCandidateIndex: candidates.isEmpty ? nil : highlightedIndex,
             candidatePageIndex: pageIndex

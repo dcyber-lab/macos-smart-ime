@@ -118,6 +118,9 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
 
     private func mergedState() -> CompositionState {
         var state = baseState
+        if showsRawInputAsPreedit {
+            state.compositionText = baseState.rawInput
+        }
         state.candidates = entries.map { entry in
             switch entry {
             case .chinese(let pageIndex):
@@ -182,6 +185,17 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
             + chinese
             + trailing.compactMap { english($0.0, $0.1) }
         return Array(merged.prefix(Self.maxCandidates))
+    }
+
+    /// librime shows non-pinyin input as syllable fragments ("good" -> "go o d"); show what was typed instead,
+    /// unless part of it has already been converted to Chinese.
+    private var showsRawInputAsPreedit: Bool {
+        let input = baseState.rawInput
+        return baseState.mode == .chinese
+            && !input.isEmpty
+            && input.allSatisfy { $0.isASCII && $0.isLowercase }
+            && baseState.compositionText.allSatisfy(\.isASCII)
+            && !PinyinSyllableSegmenter.canSegment(input)
     }
 
     private func isEligible(_ input: String) -> Bool {
