@@ -2,6 +2,13 @@
 
 ## 2026-09-27
 
+### One-step install and update
+
+- Added `./install.sh`: checks Xcode and Homebrew, installs `librime` and `xcodegen` when missing, builds, and installs into `/Library/Input Methods`. The first install runs `install-host.sh` and `enable-dev-install.sh` under sudo (one password prompt), later runs update without sudo. `--pull` fast-forwards the checkout first; `--test` runs the smoke test. It replaces `scripts/ime/dev-cycle.sh`.
+- Build output moved to `build/ime-host/Products.noindex` and `DerivedData.noindex`. Spotlight indexes app bundles in ordinary folders and registers them with LaunchServices within about 5 seconds (a probe copy in a plain folder was registered after 5 s, one in a `.noindex` folder not within 60 s). That happened after `install-host.sh` had unregistered the build copy, and `imklaunchagent` then failed to launch LinguaType (`LaunchInputMethod() Error, status=-50`). `build-host.sh` removes and unregisters output left at the old paths.
+- `install-host.sh` now stops the previous instance only after the new bundle is in place.
+- Restarting `imklaunchagent` (`killall`, done once while debugging at 15:27) left it degraded until the next login: the login agent relaunched LinguaType 1–3 seconds after every restart between 13:03 and 15:05, while restarted agents kept serving the dead endpoint for about 40 seconds after the input method exited and failed with `-50` when asked within seconds of starting. The scripts never restart it; a logout and login restores it.
+
 ### Repository cleanup
 
 - Removed the OpenSpec commands and skills that `openspec init` generated for 24 AI tools other than Claude Code, plus `GEMINI.md`; `.claude` keeps the OpenSpec workflow.

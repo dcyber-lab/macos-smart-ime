@@ -19,7 +19,7 @@ scripts/ime/build-host.sh
 
 Expected result:
 
-- `build/ime-host/SmartIMEHost.app` exists
+- `build/ime-host/Products.noindex/SmartIMEHost.app` exists
 - the built bundle is ad-hoc signed
 - the main executable is not a Debug `@rpath/...debug.dylib` wrapper
 
@@ -27,48 +27,17 @@ The first build downloads the rime-ice Chinese tables (about 28 MB, SHA-256 veri
 
 ## Install
 
-Install for the current user:
-
 ```bash
-scripts/ime/install-host.sh
+./install.sh          # install, or update an existing install
+./install.sh --pull   # pull the latest code first
+./install.sh --test   # also run the automated smoke test
 ```
 
-Expected result:
+The script checks for Xcode and Homebrew, installs `librime` and `xcodegen` when missing, builds, and installs into `/Library/Input Methods`. The first install asks for the administrator password once and hands the bundle to the current account (`scripts/ime/enable-dev-install.sh`), so updates need no password. Trade-off: any process running as that account can modify the installed input method; `sudo scripts/ime/install-host.sh --system` restores `root:wheel` ownership.
 
-- `~/Library/Input Methods/SmartIMEHost.app` exists
-
-For a system-wide install instead:
-
-```bash
-sudo scripts/ime/install-host.sh --system
-```
-
-The system-wide install path should leave the bundle owned by `root:wheel`.
-
-### Development loop without sudo
-
-On a development machine, run once:
-
-```bash
-sudo scripts/ime/enable-dev-install.sh
-```
-
-This makes `/Library/Input Methods/SmartIMEHost.app` owned by the developer account. After that, build, install, and run the TextEdit smoke test with no password prompt:
-
-```bash
-scripts/ime/dev-cycle.sh            # build + install --system + smoke test
-scripts/ime/dev-cycle.sh --no-test  # build + install only
-```
-
-Trade-off: any process running as the developer account can modify the installed input method. A later `sudo scripts/ime/install-host.sh --system` restores `root:wheel` ownership and turns this mode off.
+Build output lives in `*.noindex` folders (`build/ime-host/Products.noindex`, `DerivedData.noindex`). Spotlight indexes app bundles anywhere else and registers them with LaunchServices, and `imklaunchagent` then fails to launch the input method from that copy (`LaunchInputMethod() Error, status=-50`), so typing does nothing.
 
 To remove the install later:
-
-```bash
-scripts/ime/uninstall-host.sh
-```
-
-For a system-wide uninstall:
 
 ```bash
 sudo scripts/ime/uninstall-host.sh --system
@@ -175,7 +144,7 @@ Requires macOS 26 and the English and Simplified Chinese translation languages (
 
 ## Automated Smoke Test
 
-`scripts/ime/dev-cycle.sh` builds and installs the host, then runs the smoke test (`scripts/ime/build-e2e.sh` builds it from `scripts/ime/e2e/`):
+`./install.sh --test` builds and installs the host, then runs the smoke test (`scripts/ime/build-e2e.sh` builds it from `scripts/ime/e2e/`):
 
 - `SmartIMETestClient.app` is a throwaway window with one text view. It never opens documents or writes anywhere except a temporary state directory, so the test cannot touch the user's apps or files.
 - `SmartIMEDriver` waits until the keyboard and mouse have been idle for 5 seconds, posts synthetic keys only to the test client, and checks the committed and marked text: Space, number keys, translation, Return, Escape, raw preedit for `good`, the Shift toggle, a row click, `gith` + 2, and selection translation (popup opens, Escape keeps the text, and with the models installed Return replaces Chinese → English and English → Chinese). It prints the live panel size.

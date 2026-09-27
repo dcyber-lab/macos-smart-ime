@@ -5,10 +5,19 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 BUILD_ROOT="$REPO_ROOT/build/ime-host"
-DERIVED_DATA_PATH="$BUILD_ROOT/DerivedData"
-OUTPUT_APP="$BUILD_ROOT/SmartIMEHost.app"
+# Spotlight skips *.noindex folders. Anywhere else it indexes a fresh app bundle and registers it with
+# LaunchServices seconds later, and the system may then try to launch that copy instead of the installed one.
+DERIVED_DATA_PATH="$BUILD_ROOT/DerivedData.noindex"
+OUTPUT_APP="$BUILD_ROOT/Products.noindex/SmartIMEHost.app"
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
 BUILD_CONFIGURATION="Release"
 DERIVED_APP="$DERIVED_DATA_PATH/Build/Products/$BUILD_CONFIGURATION/SmartIMEHost.app"
+
+# Output from before the .noindex layout stays registered, so remove it.
+for old_app in "$BUILD_ROOT/SmartIMEHost.app" "$BUILD_ROOT/DerivedData/Build/Products/$BUILD_CONFIGURATION/SmartIMEHost.app"; do
+  [[ -d "$old_app" ]] && "$LSREGISTER" -u "$old_app" >/dev/null 2>&1 || true
+done
+rm -rf "$BUILD_ROOT/SmartIMEHost.app" "$BUILD_ROOT/DerivedData"
 
 echo "Assembling Rime shared data..."
 "$REPO_ROOT/scripts/rime/assemble-shared-data.sh"
@@ -31,7 +40,7 @@ if [[ ! -d "$DERIVED_APP" ]]; then
   exit 1
 fi
 
-mkdir -p "$BUILD_ROOT"
+mkdir -p "$(dirname "$OUTPUT_APP")"
 rm -rf "$OUTPUT_APP"
 rsync -a "$DERIVED_APP/" "$OUTPUT_APP/"
 

@@ -23,8 +23,11 @@ GitHub repository:
 
 OpenSpec is installed in this repository. For any new feature, create or update an OpenSpec change before implementation.
 
-For IME build/install validation:
+## Install or update
 
-- `scripts/ime/build-host.sh`
-- `sudo scripts/ime/install-host.sh`
-- `docs/ime-manual-validation.md`
+```bash
+./install.sh          # install, or update an existing install
+./install.sh --pull   # pull the latest code first
+```
+
+The first install asks for the administrator password once; updates need none. See `docs/ime-manual-validation.md` for details and the manual checklist.

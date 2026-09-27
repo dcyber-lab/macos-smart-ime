@@ -1,8 +1,8 @@
 #!/bin/zsh
 
 # One-time setup for development machines: make the system-level SmartIMEHost bundle
-# owned by the developer account, so `scripts/ime/install-host.sh --system` and
-# `scripts/ime/dev-cycle.sh` can update it without sudo.
+# owned by the developer account, so `./install.sh` and `scripts/ime/install-host.sh --system`
+# can update it without sudo. `./install.sh` runs this on the first install.
 #
 # Trade-off: any process running as that account can modify the installed input method.
 # A later `sudo scripts/ime/install-host.sh --system` restores root ownership.
@@ -30,4 +30,4 @@ fi
 
 chown -R "$DEVELOPER":staff "$TARGET_APP"
 echo "$TARGET_APP is now owned by $DEVELOPER."
-echo "Deploy without sudo: scripts/ime/install-host.sh --system (or scripts/ime/dev-cycle.sh)"
+echo "Update without sudo: ./install.sh"
