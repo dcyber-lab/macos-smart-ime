@@ -1,12 +1,11 @@
 # Rime default settings
-# SmartIME: copy of ../minimal/default.yaml with smartime_pinyin as the first schema.
+# SmartIME: librime's data/minimal default.yaml with smartime_pinyin as the only schema.
 # encoding: utf-8
 
 config_version: "0.16.minimal"
 
 schema_list:
   - schema: smartime_pinyin
-  - schema: luna_pinyin
 
 switcher:
   caption: 〔方案選單〕
