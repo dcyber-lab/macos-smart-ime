@@ -19,6 +19,11 @@ public final class EnglishLexicon: Sendable {
         sortedWords.count
     }
 
+    public func contains(_ word: String) -> Bool {
+        let index = lowerBound(of: word)
+        return index < sortedWords.count && sortedWords[index] == word
+    }
+
     /// Returns words starting with `prefix`, most frequent first.
     public func completions(forPrefix prefix: String, limit: Int) -> [String] {
         guard !prefix.isEmpty, limit > 0 else {

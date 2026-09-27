@@ -138,6 +138,7 @@ public final class RimeBridgeSession {
         if context.menu.highlighted_candidate_index >= 0 {
             state.selectedCandidateIndex = Int(context.menu.highlighted_candidate_index)
         }
+        state.candidatePageIndex = Int(context.menu.page_no)
         state.candidates = mapCandidates(from: context.menu)
         return state
     }

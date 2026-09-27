@@ -14,6 +14,7 @@ Measured against the bundled lexicon: of the top 5,000 English words with three 
 
 **Goals:**
 - Offer English word candidates inside Chinese mode without a mode toggle.
+- Offer English translations of the Chinese word being typed (`shujuku` → 数据库 → "database").
 - Keep pure pinyin typing unchanged: the first `librime` candidate stays first for pinyin-like input.
 - Keep number keys, arrow highlight, `Space`, mouse selection, and paging correct for both candidate kinds.
 - Keep all new logic unit-testable without `librime`.
@@ -22,6 +23,9 @@ Measured against the bundled lexicon: of the top 5,000 English words with three 
 - Capitalization or brand casing (`GitHub`, `iPhone`); candidates stay lowercase.
 - Learning user-typed English words or a user dictionary.
 - English spelling correction inside Chinese mode.
+- Sentence or phrase translation (needs AI; belongs to the Companion one-key English transformation).
+- Translating Chinese candidates other than the first one, or pinyin abbreviations such as `sjk`.
+- A user-maintained translation table for missing or imprecise entries (e.g. 周报 → "weekly report"); follow-up change.
 - A user-facing on/off setting (belongs to a future Companion settings change).
 - English candidates on candidate pages after the first.
 - Automatic spacing between Chinese and English text.
@@ -62,8 +66,26 @@ The merged list is modeled as entries of `.chinese(pageIndex)` or `.english(word
 - The wrapped engine's `selectedCandidateIndex` is shifted by the number of English entries placed before the Chinese candidates.
 - Mouse selection (`candidateSelected`) already commits the clicked text and resets engines, so it needs no mapping.
 
-### 5. Performance
-Per keystroke: one segmentation pass (input length × 6 set lookups) and one `EnglishLexicon` prefix query (binary search plus a scan of matching words). Both are in-memory and sub-millisecond; the lexicon is already loaded for English mode.
+### 5. Translation data from CC-CEDICT
+`scripts/english/build-translations.py` turns a CC-CEDICT release into `zh-en.tsv` (`中文<TAB>gloss1[<TAB>gloss2]`, sorted by key). For each simplified headword of two or more Han characters it:
+
+- Splits glosses on `/` and `; `, removes parentheticals, leading "to " and articles, and keeps the text before the first comma (`Beijing, capital of …` → "Beijing").
+- Drops glosses with classifiers (`CL:`), cross-references (`variant of`, `see`, `abbr.`), `sb`/`sth` placeholders, digits, non-ASCII, or more than three words.
+- Prefers entries with lowercase pinyin (common nouns) over proper-noun entries, so 苹果 → "apple" rather than "Apple (company)"; keeps at most two unique glosses in dictionary order.
+
+This yields ~81,000 entries (~2 MB). CC-CEDICT is CC-BY-SA 4.0, the same license as the word list; attribution goes in `packages/english-engine/DATA_LICENSE.md`.
+
+Alternatives considered:
+- *ECDICT (MIT)*: an English→Chinese dictionary; reversing it gives noisy, many-to-many Chinese→English mappings.
+- *Online translation or AI*: violates the no-network, no-AI real-time path rule.
+
+### 6. Translation trigger and placement
+Translations are looked up for the **first** `librime` candidate only, when the raw input is eligible (Decision 3), fully pinyin-segmentable, and the candidate is two or more characters. Up to two translations are placed right after the `librime` candidates and before appended English word candidates, deduplicated by text. The merged list is capped at nine entries (dropping from the end), so a full five-candidate Rime page leaves room for two translations and two English words.
+
+Translating only the first candidate keeps the list stable while the user arrows through candidates; translating the highlighted candidate would reshuffle entries under the cursor.
+
+### 7. Performance and loading
+Per keystroke: one segmentation pass (input length × 6 set lookups), one `EnglishLexicon` prefix query (binary search plus a scan of matching words), and one dictionary hash lookup. All are in-memory and sub-millisecond. `EnglishLexicon` and `ChineseEnglishDictionary` are loaded once per process when the first input controller is created, not on a keystroke.
 
 ## Risks / Trade-offs
 
@@ -71,6 +93,8 @@ Per keystroke: one segmentation pass (input length × 6 set lookups) and one `En
 - [Words that are valid pinyin (`change`, `china`, ~6% of common words) are not first] → They still appear on the first page after the `librime` candidates, selectable with number keys 6–8.
 - [Partial pinyin that happens to be a non-pinyin English word jumps English first, and `Space` commits English] → Rare given the measurement above; covered by unit tests with representative pinyin sequences, and revisit if manual validation shows real collisions.
 - [Merged list is longer than the Rime page (up to 8)] → Selection keys 1–9 already cover it; the panel is a single scrolling column.
+- [CC-CEDICT glosses are dictionary-style and sometimes off for workplace usage (周报 → "weekly publication", 部署 → "dispose" before "deploy")] → Two glosses are shown; a user translation table is a planned follow-up.
+- [~2 MB dictionary increases IME memory and launch time] → Loaded once per process; load time is measured in tests and must stay well under the host's first-activation budget.
 - [Index mapping regressions for Chinese selection] → Tests with a fake `ChineseInputEngine` covering select, highlight, `Space`, and paging for every placement.
 
 ## Migration Plan
@@ -81,3 +105,4 @@ No data or configuration migration. Rollback is constructing `RimeBridgeEngine` 
 
 - Should committing an English word next to Chinese text insert CJK–Latin spacing? Deferred; could be a Companion setting or a `transform-engine` concern.
 - Should the minimum length or the three-candidate cap become user-tunable once Companion settings exist?
+- Should pinyin abbreviations (`sjk` → 数据库) also get translations once there is a reliable way to tell abbreviations from English input?
