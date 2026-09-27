@@ -35,4 +35,4 @@
 
 ## Status Note
 
-Wiring was reverted on 2026-09-27 while diagnosing an unrelated text-commit bug, then restored after that bug was fixed. `scripts/ime/e2e-textedit.swift` verified committing with `Space`, number keys, `Return`, `Escape`, and a row click in TextEdit, plus live panel heights. Task 4.2 stays open for the user's visual review of the live panel (automated screenshots need screen-capture permission).
+Wiring was reverted on 2026-09-27 while diagnosing an unrelated text-commit bug, then restored after that bug was fixed. The smoke test (first `scripts/ime/e2e-textedit.swift`, now `scripts/ime/e2e/`) verified committing with `Space`, number keys, `Return`, `Escape`, and a row click in TextEdit, plus live panel heights. Task 4.2 stays open for the user's visual review of the live panel (automated screenshots need screen-capture permission).
