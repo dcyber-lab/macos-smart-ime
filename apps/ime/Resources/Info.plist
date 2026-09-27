@@ -28,8 +28,6 @@
 	<string>IMEHostCore.IMEInputController</string>
 	<key>LSUIElement</key>
 	<string>1</string>
-	<key>RimeSharedDataDirectory</key>
-	<string>$(RIME_SHARED_DATA_DIR)</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>TICapsLockLanguageSwitchCapable</key>
