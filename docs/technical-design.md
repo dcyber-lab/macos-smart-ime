@@ -43,8 +43,14 @@ Owns explicit and async workflows:
 ## Chinese Dictionary
 
 - The default Rime schema is `smartime_pinyin` (simplified full pinyin, `luna_pinyin` speller rules, no Lua). Its dictionary imports the rime-ice (雾凇拼音, GPL-3.0) tables `8105`, `base`, `ext`, and `others`, about 890,000 entries. It is the only schema in the list.
-- The rime-ice tables are fetched at build time from a pinned commit with SHA-256 checks (`scripts/rime/fetch-rime-ice.sh`) and assembled with `third_party/librime-data/smartime` into `build/rime-data/shared` (`RIME_SHARED_DATA_DIR`). They are never committed.
-- `scripts/ime/install-host.sh` precompiles the tables with `rime_deployer --build` into the user's Rime build directory, so the host's startup maintenance finds them up to date.
+- The rime-ice tables are fetched at build time from a pinned commit with SHA-256 checks (`scripts/rime/fetch-rime-ice.sh`) and assembled with `third_party/librime-data/smartime` into `build/rime-data/shared`. They are never committed.
+- `assemble-shared-data.sh` also precompiles the tables into `shared/build` with `rime_deployer`, and `build-host.sh` copies the whole directory into the app as `Contents/Resources/RimeData`. The host uses it as librime's shared data directory and `RimeData/build` as the prebuilt data directory, so a fresh install needs no compile; the user directory (`~/Library/Application Support/SmartIMEHost/Rime`) holds only user data and the staging build.
+
+## Release Package
+
+- `scripts/release/package.sh` builds the app, copies librime and its Homebrew dependencies into `Contents/Frameworks` with `@rpath` install names, raises `LSMinimumSystemVersion` to the newest `minos` among them (macOS 26.0 with current Homebrew bottles, arm64 only), signs ad hoc, and zips it with `install-host.sh`, `install.command`, and the third-party licenses.
+- A probe program links the bundled librime, deploys the bundled data into a scratch directory, and checks that `nihao` yields 你好 with no library loaded from outside the app. librime looks for plugins next to its own dylib, so the bundled copy never loads Homebrew's `rime-plugins`.
+- Installing needs neither Xcode nor Homebrew: `install-host.sh` copies the app, clears the quarantine attribute, and runs `SmartIMEHost --install`, which registers, enables, and verifies the input source (Squirrel uses the same pattern).
 
 ## Chinese-Mode English Candidates
 

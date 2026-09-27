@@ -31,3 +31,12 @@ OpenSpec is installed in this repository. For any new feature, create or update 
 ```
 
 The first install asks for the administrator password once; updates need none. See `docs/ime-manual-validation.md` for details and the manual checklist.
+
+## Release package
+
+```bash
+scripts/release/package.sh             # build/release.noindex/LinguaType-<version>-macOS-arm64.zip
+scripts/release/package.sh --publish   # also upload it as GitHub release v<version>
+```
+
+The zip holds a self-contained app (librime, its libraries, and the Chinese dictionary bundled) plus an installer that needs neither Xcode nor Homebrew: unzip, then run `zsh install.command`. It runs on Apple Silicon Macs with macOS 26 or later.

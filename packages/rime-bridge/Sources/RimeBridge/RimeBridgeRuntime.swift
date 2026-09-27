@@ -53,10 +53,6 @@ public final class RimeBridgeRuntime {
             withIntermediateDirectories: true
         )
         try fileManager.createDirectory(
-            atPath: configuration.prebuiltDataDirectory,
-            withIntermediateDirectories: true
-        )
-        try fileManager.createDirectory(
             atPath: configuration.stagingDirectory,
             withIntermediateDirectories: true
         )

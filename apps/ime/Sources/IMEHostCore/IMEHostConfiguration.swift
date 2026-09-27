@@ -5,14 +5,17 @@ public enum IMEHostConfiguration {
     public static let bundleIdentifier = "lab.dcyber.inputmethod.smartime"
     public static let defaultSchemaID = "smartime_pinyin"
 
+    /// Schemas and dictionaries ship in the app (`Contents/Resources/RimeData`).
     public static func rimeSharedDataDirectory(bundle: Bundle = .main) -> String {
-        if let configuredValue = bundle.object(forInfoDictionaryKey: "RimeSharedDataDirectory") as? String,
-           !configuredValue.isEmpty {
-            return configuredValue
-        }
+        (bundle.resourceURL ?? bundle.bundleURL)
+            .appendingPathComponent("RimeData", isDirectory: true)
+            .path
+    }
 
-        return URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-            .appendingPathComponent("build/rime-data/shared", isDirectory: true)
+    /// Precompiled tables built with the app, so a fresh install does not compile them on first use.
+    public static func rimePrebuiltDataDirectory(bundle: Bundle = .main) -> String {
+        URL(fileURLWithPath: rimeSharedDataDirectory(bundle: bundle), isDirectory: true)
+            .appendingPathComponent("build", isDirectory: true)
             .path
     }
 
