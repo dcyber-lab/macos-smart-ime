@@ -44,8 +44,13 @@ mkdir -p "$(dirname "$OUTPUT_APP")"
 rm -rf "$OUTPUT_APP"
 rsync -a "$DERIVED_APP/" "$OUTPUT_APP/"
 
+rsync -a --delete "$REPO_ROOT/build/rime-data/shared/" "$OUTPUT_APP/Contents/Resources/RimeData/"
+
 echo "Signing SmartIMEHost..."
 codesign --force --deep -s - "$OUTPUT_APP"
+
+# xcodebuild registers its product with LaunchServices; left registered, it can shadow the installed input method.
+"$LSREGISTER" -u "$DERIVED_APP" >/dev/null 2>&1 || true
 
 echo "Build output ready:"
 echo "  $OUTPUT_APP"

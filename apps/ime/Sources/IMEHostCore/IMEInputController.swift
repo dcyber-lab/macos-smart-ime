@@ -39,7 +39,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                 configuration: RimeBridgeConfiguration(
                     sharedDataDirectory: IMEHostConfiguration.rimeSharedDataDirectory(),
                     userDataDirectory: IMEHostConfiguration.rimeUserDataDirectory(),
-                    prebuiltDataDirectory: IMEHostConfiguration.rimeBuildDirectory(),
+                    prebuiltDataDirectory: IMEHostConfiguration.rimePrebuiltDataDirectory(),
                     stagingDirectory: IMEHostConfiguration.rimeBuildDirectory(),
                     appName: "rime.smartime",
                     distributionName: "SmartIME Host",
