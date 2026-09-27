@@ -147,8 +147,12 @@ Use a normal editable text field such as TextEdit, in Chinese mode.
 10. Type `nihao`, then press `=` (next page) and confirm the English candidates disappear on page 2
 11. Type `hello` and press `Return`, and confirm the raw input `hello` is committed
 12. Type `zg` and confirm no English candidates appear
+13. Type `shujuk` (unfinished) and `sjk` (abbreviation) and confirm `database` appears after the Chinese candidates
+14. Type `gith` and confirm `GitHub` is the second candidate; press `2` and confirm `GitHub` is committed
+15. Type `dep` and confirm the first candidate is Chinese (得票), not an English word
+16. Type `kube`, `json`, and `refac` and confirm `Kubernetes`, `JSON`, and `refactor` are offered
 
-This milestone is not considered complete until steps 1 through 12 are verified in a real macOS text client.
+This milestone is not considered complete until steps 1 through 16 are verified in a real macOS text client.
 
 ## Automated Smoke Test
 

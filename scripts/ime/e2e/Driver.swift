@@ -225,5 +225,10 @@ if let frame = panelFrame() {
     print("FAIL  shujuku panel not visible for click test")
 }
 
+let beforeGith = committedText()
+type("gith")
+press(keyCodes["2"]!)
+check("gith + 2 (promoted completion, display casing)", beforeGith + "GitHub", committedText())
+
 print("final text: \"\(committedText())\"")
 finish()

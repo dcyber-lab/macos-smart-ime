@@ -40,10 +40,75 @@ final class EnglishAugmentedChineseEngineTests: XCTestCase {
         XCTAssertEqual(texts(type("deploy")), ["deploy", "的", "deployed", "deployment"])
     }
 
-    func testPrefixCompletionIsAppended() {
+    func testNonPinyinPrefixCompletionIsPromotedToSecond() {
         fake.candidatesByInput["gith"] = ["个", "各"]
 
-        XCTAssertEqual(texts(type("gith")), ["个", "各", "github"])
+        let update = type("gith")
+
+        XCTAssertEqual(texts(update), ["个", "github", "各"])
+        XCTAssertEqual(engine.process(key(49, " ")).commitText, "个", "Space still commits the first Chinese candidate")
+    }
+
+    func testShortInputIsNotPromoted() {
+        fake.candidatesByInput["dep"] = ["得票", "地平"]
+
+        XCTAssertEqual(texts(type("dep")), ["得票", "地平", "deploy", "deployed", "deployment"])
+    }
+
+    func testCompletePinyinIsNotPromoted() {
+        fake.candidatesByInput["wome"] = ["我么", "我们"]
+
+        XCTAssertEqual(texts(type("wome")), ["我么", "我们", "women", "womens", "womenswear"])
+    }
+
+    func testUnfinishedPinyinIsTranslated() {
+        fake.candidatesByInput["shujuk"] = ["数据库", "数据卡"]
+
+        XCTAssertEqual(texts(type("shujuk")), ["数据库", "数据卡", "database"])
+    }
+
+    func testAbbreviatedPinyinIsTranslated() {
+        fake.candidatesByInput["sjk"] = ["数据库", "手机卡"]
+
+        XCTAssertEqual(texts(type("sjk")), ["数据库", "手机卡", "database"])
+    }
+
+    func testRareExactWordIsNotPlacedFirst() {
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexiconWithRareTail(), dictionary: dictionary)
+        fake.candidatesByInput["dep"] = ["得票", "地平"]
+
+        XCTAssertEqual(texts(type("dep")), ["得票", "地平", "deploy"], "rare \"dep\" is dropped; common completions stay appended")
+    }
+
+    func testRareCompletionsOfUnfinishedPinyinAreHidden() {
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexiconWithRareTail(), dictionary: dictionary)
+        fake.candidatesByInput["shuj"] = ["数据"]
+
+        XCTAssertEqual(texts(type("shuj")), ["数据"])
+    }
+
+    func testRareWordsAllowedForLongNonPinyinInput() {
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexiconWithRareTail(), dictionary: dictionary)
+        fake.candidatesByInput["kuber"] = ["哭吧"]
+
+        XCTAssertEqual(texts(type("kuber")), ["哭吧", "kubernetes"], "rare words are appended, never promoted")
+    }
+
+    /// "dep", "shuji", and "kubernetes" sit past the common-word limit.
+    private func lexiconWithRareTail() -> EnglishLexicon {
+        let filler = (0..<EnglishLexicon.commonRankLimit).map { "filler\($0)" }
+        return EnglishLexicon(wordsByFrequency: ["deploy"] + filler + ["dep", "shuji", "kubernetes"])
+    }
+
+    func testExactWordUsesDisplayForm() {
+        engine = EnglishAugmentedChineseEngine(
+            base: fake,
+            lexicon: EnglishLexicon(wordsByFrequency: ["hello"], supplement: ["GitHub"]),
+            dictionary: dictionary
+        )
+        fake.candidatesByInput["github"] = ["个"]
+
+        XCTAssertEqual(texts(type("github")), ["GitHub", "个"])
     }
 
     func testPinyinInputKeepsChineseFirst() {
@@ -224,10 +289,10 @@ final class EnglishAugmentedChineseEngineTests: XCTestCase {
         fake.candidatesByInput["gith"] = ["个", "各"]
         type("gith")
 
-        let highlighted = engine.highlightCandidate(at: 2)
+        let highlighted = engine.highlightCandidate(at: 1)
         let update = engine.process(key(49, " "))
 
-        XCTAssertEqual(highlighted.state.selectedCandidateIndex, 2)
+        XCTAssertEqual(highlighted.state.selectedCandidateIndex, 1)
         XCTAssertEqual(update.commitText, "github")
     }
 

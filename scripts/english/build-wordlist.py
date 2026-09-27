@@ -20,8 +20,8 @@ from pathlib import Path
 import wordfreq
 
 EXPECTED_WORDFREQ_VERSION = "3.1.1"
-DEFAULT_SIZE = 30000
-SCAN_SIZE = 80000
+DEFAULT_SIZE = 100000
+SCAN_SIZE = 250000
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = (
@@ -34,15 +34,38 @@ SINGLE_LETTER_WORDS = {"a", "i"}
 # Profanity, slurs, and explicit slang that should never be offered as a
 # completion. Users can still type these words literally.
 EXCLUDED_WORDS = {
-    "asshole", "assholes", "bitch", "bitches", "bitchy", "blowjob", "boobs",
-    "bullshit", "cock", "cocks", "cum", "cunt", "cunts", "dick", "dicks",
-    "dildo", "dyke", "fag", "faggot", "faggots", "fags", "fuck", "fucked",
-    "fucker", "fuckers", "fuckin", "fucking", "fucks", "hentai", "milf",
-    "motherfucker", "motherfuckers", "motherfucking", "nigga", "niggas",
-    "nigger", "niggers", "porn", "porno", "pussy", "retard", "retarded",
-    "retards", "shit", "shits", "shitty", "slut", "sluts", "tits", "tranny",
-    "twat", "whore", "whores", "xxx",
+    "asshole", "assholes", "bitch", "bitches", "bitchy", "blowjob", "boobies", "boobs",
+    "bullshit", "chink", "chinks", "cock", "cocks", "cum", "cunt", "cunts", "dick",
+    "dickhead", "dickheads", "dicks", "dildo", "dildos", "dyke", "dykes", "fag",
+    "faggot", "faggots", "fags", "gook", "gooks", "hentai", "jizz", "kike", "kikes",
+    "milf", "milfs", "nigga", "niggas", "nigger", "niggers", "porn", "porno", "porns",
+    "pornstar", "pornstars", "pussies", "pussy", "retard", "retarded", "retards",
+    "shit", "slut", "sluts", "spic", "spics", "tits", "titties", "tranny", "trannies",
+    "twat", "twats", "wank", "wanker", "wankers", "wanking", "wetback", "wetbacks",
+    "whore", "whores", "xxx", "xxxx",
 }
+
+# Stems that do not occur inside ordinary English words; any word containing
+# one is excluded (e.g. "shithead", "fuckery", "bullshitting").
+EXCLUDED_SUBSTRINGS = (
+    "asshole", "bitch", "blowjob", "cumshot", "cunt", "dildo", "faggot", "fuck",
+    "jizz", "nigga", "nigger", "shit", "slut", "whore",
+)
+
+
+# Ordinary words and names that happen to contain an excluded stem (checked
+# against the top 250,000 words of wordfreq 3.1.1).
+ALLOWED_WORDS = {
+    "ashita", "dikshit", "ishita", "kinoshita", "lifshitz", "matsushita", "niggardly",
+    "scunthorpe", "slutsky", "snigger", "sniggered", "sniggering", "sniggers",
+    "takeshita", "washita", "yamashita", "yoshitaka", "yoshitsune",
+}
+
+
+def is_excluded(word: str) -> bool:
+    if word in ALLOWED_WORDS:
+        return False
+    return word in EXCLUDED_WORDS or any(stem in word for stem in EXCLUDED_SUBSTRINGS)
 
 
 def build_wordlist(size: int) -> list[str]:
@@ -52,7 +75,7 @@ def build_wordlist(size: int) -> list[str]:
             continue
         if len(word) == 1 and word not in SINGLE_LETTER_WORDS:
             continue
-        if word in EXCLUDED_WORDS:
+        if is_excluded(word):
             continue
         words.append(word)
         if len(words) == size:

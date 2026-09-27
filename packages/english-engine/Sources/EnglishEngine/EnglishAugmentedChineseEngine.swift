@@ -8,6 +8,8 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
     private static let maxWordCandidates = 3
     private static let maxTranslations = 2
     private static let minimumInputLength = 3
+    private static let minimumPromotionLength = 4
+    private static let minimumRareWordLength = 5
 
     private enum Entry {
         case chinese(pageIndex: Int)
@@ -161,17 +163,25 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         }
 
         let isPinyin = PinyinSyllableSegmenter.canSegment(input)
-        let isWord = lexicon.contains(input)
+        // The long tail is full of abbreviations and romanized names ("dep", "shuji") that collide with pinyin.
+        let allowsRareWords = !isPinyin && input.count >= Self.minimumRareWordLength
+        let isUsable = { (word: String) in allowsRareWords || self.lexicon.isCommon(word) }
+        let exactWord = lexicon.displayForm(of: input).flatMap { isUsable($0) ? $0 : nil }
         let completions = lexicon
             .completions(forPrefix: input, limit: Self.maxWordCandidates + 1)
-            .filter { $0 != input }
-        let words = Array(((isWord ? [input] : []) + completions).prefix(Self.maxWordCandidates))
-        let translations = isPinyin ? translationsOfFirstCandidate() : []
+            .filter { $0 != exactWord && isUsable($0) }
+        let words = Array(((exactWord.map { [$0] } ?? []) + completions).prefix(Self.maxWordCandidates))
 
-        // A finished English word that is not pinyin goes first so Space commits it.
-        let leading = !isPinyin && isWord ? [input] : []
+        // A finished common English word that is not pinyin goes first so Space commits it.
+        let leading = !isPinyin ? exactWord.flatMap { lexicon.isCommon($0) ? [$0] : nil } ?? [] : []
+        // Longer non-pinyin input gets its best completion right after the first Chinese candidate,
+        // reachable with number key 2 while Space still commits Chinese.
+        let promoted = leading.isEmpty && !isPinyin && input.count >= Self.minimumPromotionLength
+            ? Array(completions.filter(lexicon.isCommon).prefix(1))
+            : []
+        let translations = leading.isEmpty ? translationsOfFirstCandidate() : []
         let trailing = translations.map { ($0, CandidateSource.englishTranslation) }
-            + words.filter { !leading.contains($0) }.map { ($0, CandidateSource.englishCompletion) }
+            + words.filter { !leading.contains($0) && !promoted.contains($0) }.map { ($0, CandidateSource.englishCompletion) }
 
         var seen = Set(baseState.candidates.map(\.text))
         func english(_ text: String, _ source: CandidateSource) -> Entry? {
@@ -182,7 +192,9 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         }
 
         let merged = leading.compactMap { english($0, .englishCompletion) }
-            + chinese
+            + chinese.prefix(1)
+            + promoted.compactMap { english($0, .englishCompletion) }
+            + chinese.dropFirst()
             + trailing.compactMap { english($0.0, $0.1) }
         return Array(merged.prefix(Self.maxCandidates))
     }
