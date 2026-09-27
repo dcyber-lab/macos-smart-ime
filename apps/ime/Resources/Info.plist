@@ -7,9 +7,9 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleDisplayName</key>
-	<string>SmartIMEHost</string>
+	<string>LinguaType</string>
 	<key>CFBundleIconFile</key>
-	<string>SmartIMEHost.icns</string>
+	<string>LinguaType.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -45,6 +45,8 @@
 		<string>zh-Hans</string>
 	</array>
 	<key>tsInputMethodIconFileKey</key>
-	<string>SmartIMEHost.icns</string>
+	<string>LinguaType.pdf</string>
+	<key>TISIconIsTemplate</key>
+	<true/>
 </dict>
 </plist>

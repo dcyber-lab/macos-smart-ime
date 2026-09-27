@@ -12,6 +12,12 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### LinguaType branding
+
+- Implemented OpenSpec change `rebrand-as-linguatype`. The input method is shown as "LinguaType" (灵译输入法 on Chinese systems) through localized `CFBundleDisplayName` / `CFBundleName`; the Rime schema is named 灵译拼音. Bundle, executable, bundle identifier, defaults domain, and scripts keep `SmartIMEHost`, so the installed input source did not need to be re-added.
+- `scripts/branding/make-icons.swift` generates a vector template menu icon (`LinguaType.pdf`, rounded square with "中" and "A" cut out from real glyph outlines, `TISIconIsTemplate`) and a gradient app icon (`LinguaType.icns`) that replaces the green checkmark placeholder.
+- The localized `CFBundleName` also renamed the running process in window lists, so the smoke test's `kCGWindowOwnerName == "SmartIMEHost"` check stopped finding the candidate panel; it now matches windows by the input method's process id. Smoke test 15/15 after the change.
+
 ### Selection translation promoted to a feature
 
 - Implemented OpenSpec change `productize-selection-translation`. The direction is detected from the selection (Simplified Chinese → English when Han characters ≥ English words, otherwise English → Simplified Chinese; a 2× weighting was tried first and misrouted "这个feature要deploy到production"). The popup shows 中 → 英 or 英 → 中, and the missing-model message names the pair.

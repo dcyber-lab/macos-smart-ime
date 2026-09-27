@@ -3,7 +3,7 @@
 
 schema:
   schema_id: smartime_pinyin
-  name: SmartIME 拼音
+  name: 灵译拼音
   version: "0.1.0"
   description: |
     简体全拼。词库来自雾凇拼音（rime-ice）的 cn_dicts（GPL-3.0）。
