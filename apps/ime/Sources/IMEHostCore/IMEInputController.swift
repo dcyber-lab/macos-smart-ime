@@ -249,11 +249,9 @@ public final class IMEInputController: IMKInputController {
             return
         }
 
-        if let client = (sender as AnyObject?) as? NSTextInputClient {
-            client.insertText(committedText, replacementRange: NSRange(location: NSNotFound, length: 0))
-        } else if let client = self.client() as? NSTextInputClient {
-            client.insertText(committedText, replacementRange: NSRange(location: NSNotFound, length: 0))
-        }
+        // InputMethodKit hands controllers IMKTextInput proxies; they never conform to NSTextInputClient.
+        let target: IMKTextInput? = (sender as? IMKTextInput) ?? client()
+        target?.insertText(committedText, replacementRange: NSRange(location: NSNotFound, length: 0))
     }
 
     private func resetSession(resetEngine: Bool) {
