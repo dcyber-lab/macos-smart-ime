@@ -161,8 +161,8 @@ public final class IMEInputController: IMKInputController {
     }
 
     public override func composedString(_ sender: Any!) -> Any! {
-        let composition = sessionStore.state.compositionText
-        return composition.isEmpty ? nil : composition
+        // An empty string (not nil) makes updateComposition() clear the client's marked text, e.g. on Escape.
+        sessionStore.state.compositionText
     }
 
     public override func originalString(_ sender: Any!) -> NSAttributedString! {
