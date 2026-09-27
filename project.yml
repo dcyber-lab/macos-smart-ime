@@ -37,3 +37,7 @@ targets:
     dependencies:
       - package: LocalPackages
         product: IMEHostCore
+      - package: LocalPackages
+        product: EnglishEngine
+      - package: LocalPackages
+        product: SharedModels

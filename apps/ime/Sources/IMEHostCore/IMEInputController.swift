@@ -1,6 +1,7 @@
 import AppKit
 @preconcurrency import InputMethodKit
 import RimeBridge
+import EnglishEngine
 import SharedModels
 
 public final class IMEInputController: IMKInputController {
@@ -25,8 +26,25 @@ public final class IMEInputController: IMKInputController {
 
     private let sessionStore = IMEHostSessionStore()
     private let chineseEngine: ChineseInputEngine?
+    private let englishEngine: EnglishInputEngine?
     private var candidateWindow: IMKCandidates?
     private var isSyncingCandidateSelection = false
+    private var lastModifierFlags: NSEvent.ModifierFlags = []
+
+    private var activeEngine: (any ChineseInputEngine)? {
+        switch sessionStore.state.mode {
+        case .chinese:
+            return chineseEngine
+        case .english:
+            // EnglishInputEngine and ChineseInputEngine share the same method signatures we use here.
+            // We can cast or use a shared protocol if we had one, but for now we know both respond to these.
+            // To satisfy Swift's type system without a shared protocol, we can just return the object.
+            // Actually, let's just use the specific engines in handle.
+            return nil 
+        case .mixed:
+            return nil
+        }
+    }
 
     public override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         do {
@@ -47,62 +65,111 @@ public final class IMEInputController: IMKInputController {
             chineseEngine = nil
         }
 
-        super.init(server: server, delegate: delegate, client: inputClient)
+        englishEngine = BasicEnglishEngine()
 
+        super.init(server: server, delegate: delegate, client: inputClient)
+        NSLog("SmartIME: IMEInputController init – chineseEngine=%@, englishEngine=%@, bundle=%@",
+              chineseEngine == nil ? "nil" : "ok",
+              englishEngine == nil ? "nil" : "ok",
+              Bundle.main.bundlePath)
     }
 
     public override func recognizedEvents(_ sender: Any!) -> Int {
-        Int(NSEvent.EventTypeMask.keyDown.rawValue)
+        Int(NSEvent.EventTypeMask.keyDown.rawValue | NSEvent.EventTypeMask.flagsChanged.rawValue)
     }
 
     public override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
-        guard let event, event.type == .keyDown else {
+        guard let event else {
             return false
         }
 
-        guard let chineseEngine else {
+        if event.type == .flagsChanged {
+            return handleFlagsChanged(event, client: sender)
+        }
+
+        guard event.type == .keyDown else {
             return false
         }
 
         if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
-            resetChineseSession(resetEngine: true)
+            resetSession(resetEngine: true)
             return true
         }
 
+        // Selection by number keys or arrows
         if sessionStore.hasActiveComposition {
             if let candidateIndex = candidateIndex(for: event.keyCode) {
-                return apply(chineseEngine.selectCandidate(at: candidateIndex), sender: sender)
+                if sessionStore.state.mode == .chinese {
+                    return apply(chineseEngine?.selectCandidate(at: candidateIndex), sender: sender)
+                } else if sessionStore.state.mode == .english {
+                    return apply(englishEngine?.selectCandidate(at: candidateIndex), sender: sender)
+                }
             }
 
             if let highlightedIndex = highlightedCandidateIndexDelta(for: event.keyCode) {
                 let targetIndex = nextHighlightedCandidateIndex(offset: highlightedIndex)
-                guard let targetIndex else {
-                    return true
+                if let targetIndex {
+                    if sessionStore.state.mode == .chinese {
+                        return apply(chineseEngine?.highlightCandidate(at: targetIndex), sender: sender)
+                    } else if sessionStore.state.mode == .english {
+                        return apply(englishEngine?.highlightCandidate(at: targetIndex), sender: sender)
+                    }
                 }
-                return apply(chineseEngine.highlightCandidate(at: targetIndex), sender: sender)
+                return true
             }
         }
 
-        let update = chineseEngine.process(
-            InputKeyEvent(
-                keyCode: event.keyCode,
-                characters: event.characters ?? "",
-                charactersIgnoringModifiers: event.charactersIgnoringModifiers ?? "",
-                modifierFlags: event.modifierFlags.rawValue
-            )
+        let keyEvent = InputKeyEvent(
+            keyCode: event.keyCode,
+            characters: event.characters ?? "",
+            charactersIgnoringModifiers: event.charactersIgnoringModifiers ?? "",
+            modifierFlags: event.modifierFlags.rawValue
         )
+
+        let update: InputSessionUpdate?
+        if sessionStore.state.mode == .chinese {
+            update = chineseEngine?.process(keyEvent)
+        } else {
+            update = englishEngine?.process(keyEvent)
+        }
+
+        guard let update else {
+            return false
+        }
 
         guard update.handled || update.commitText != nil || !update.state.compositionText.isEmpty else {
             return false
         }
 
-        sessionStore.apply(update)
-        if let committedText = update.commitText, !committedText.isEmpty {
-            commit(committedText, using: sender)
-            sessionStore.reset(committedText: committedText)
+        return apply(update, sender: sender)
+    }
+
+    private func handleFlagsChanged(_ event: NSEvent, client sender: Any!) -> Bool {
+        let newFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let oldFlags = lastModifierFlags
+
+        // Detect Shift key toggle (pressed and released without other modifiers)
+        if oldFlags.contains(.shift) && !newFlags.contains(.shift) {
+            // Shift was released. Check if it was a standalone press.
+            // This is a simple heuristic: if no other flags were involved.
+            if oldFlags == [.shift] {
+                toggleInputMode()
+                return true
+            }
         }
+
+        lastModifierFlags = newFlags
+        return false
+    }
+
+    private func toggleInputMode() {
+        let newMode: InputMode = (sessionStore.state.mode == .chinese) ? .english : .chinese
+        NSLog("SmartIME: toggling mode from %@ to %@", sessionStore.state.mode.rawValue, newMode.rawValue)
+        
+        // Reset current session before switching
+        resetSession(resetEngine: true)
+        sessionStore.setMode(newMode)
         syncPresentation()
-        return true
     }
 
     public override func composedString(_ sender: Any!) -> Any! {
@@ -120,28 +187,33 @@ public final class IMEInputController: IMKInputController {
 
     public override func commitComposition(_ sender: Any!) {
         commit(sessionStore.state.compositionText, using: sender)
-        resetChineseSession(resetEngine: true)
+        chineseEngine?.reset()
+        englishEngine?.reset()
+        sessionStore.reset()
+        candidateWindow?.clearSelection()
+        candidateWindow?.hide()
     }
 
     public override func deactivateServer(_ sender: Any!) {
+        tearDownSession()
         super.deactivateServer(sender)
-        resetChineseSession(resetEngine: true)
     }
 
     public override func inputControllerWillClose() {
+        tearDownSession()
         super.inputControllerWillClose()
-        resetChineseSession(resetEngine: true)
     }
 
     public override func candidateSelected(_ candidateString: NSAttributedString!) {
         let selectedText = candidateString?.string ?? ""
         guard !selectedText.isEmpty else {
-            resetChineseSession(resetEngine: true)
+            resetSession(resetEngine: true)
             return
         }
 
         commit(selectedText, using: client())
         chineseEngine?.reset()
+        englishEngine?.reset()
         sessionStore.reset(committedText: selectedText)
         syncPresentation()
     }
@@ -160,7 +232,13 @@ public final class IMEInputController: IMKInputController {
             return
         }
 
-        let update = chineseEngine?.highlightCandidate(at: index)
+        let update: InputSessionUpdate?
+        if sessionStore.state.mode == .chinese {
+            update = chineseEngine?.highlightCandidate(at: index)
+        } else {
+            update = englishEngine?.highlightCandidate(at: index)
+        }
+        
         if let update {
             _ = apply(update, sender: client())
         }
@@ -178,16 +256,26 @@ public final class IMEInputController: IMKInputController {
         }
     }
 
-    private func resetChineseSession(resetEngine: Bool) {
+    private func resetSession(resetEngine: Bool) {
         if resetEngine {
             chineseEngine?.reset()
+            englishEngine?.reset()
         }
         sessionStore.reset()
         syncPresentation()
     }
 
+    private func tearDownSession() {
+        chineseEngine?.reset()
+        englishEngine?.reset()
+        sessionStore.reset()
+        candidateWindow?.clearSelection()
+        candidateWindow?.hide()
+    }
+
     @discardableResult
-    private func apply(_ update: InputSessionUpdate, sender: Any?) -> Bool {
+    private func apply(_ update: InputSessionUpdate?, sender: Any?) -> Bool {
+        guard let update else { return false }
         sessionStore.apply(update)
         if let committedText = update.commitText, !committedText.isEmpty {
             commit(committedText, using: sender)
@@ -204,19 +292,29 @@ public final class IMEInputController: IMKInputController {
 
     private func syncCandidateWindow() {
         if candidateWindow == nil {
-            let candidateWindow = IMKCandidates(server: server(), panelType: kIMKSingleColumnScrollingCandidatePanel)
-            candidateWindow?.setSelectionKeys(CandidatePanel.selectionKeys)
-            candidateWindow?.setAttributes([IMKCandidatesSendServerKeyEventFirst: NSNumber(value: true)])
-            candidateWindow?.setDismissesAutomatically(true)
-            self.candidateWindow = candidateWindow
+            let cw = IMKCandidates(server: server(), panelType: kIMKSingleColumnScrollingCandidatePanel)
+            NSLog("SmartIME: creating IMKCandidates – server()=%@, result=%@",
+                  String(describing: server()), String(describing: cw))
+            cw?.setSelectionKeys(CandidatePanel.selectionKeys)
+            cw?.setAttributes([IMKCandidatesSendServerKeyEventFirst: NSNumber(value: true)])
+            cw?.setDismissesAutomatically(true)
+            self.candidateWindow = cw
         }
 
         guard let candidateWindow else {
+            NSLog("SmartIME: syncCandidateWindow – candidateWindow is nil, bailing out")
             return
         }
 
+        isSyncingCandidateSelection = true
+        defer { isSyncingCandidateSelection = false }
+
         let candidates = sessionStore.state.candidates.map(\.text)
-        let shouldShowCandidates = !sessionStore.state.compositionText.isEmpty && !candidates.isEmpty
+        let compositionText = sessionStore.state.compositionText
+        let shouldShowCandidates = !compositionText.isEmpty && !candidates.isEmpty
+
+        NSLog("SmartIME: syncCandidateWindow – mode=%@ composition='%@' candidates=%d shouldShow=%d isVisible=%d",
+              sessionStore.state.mode.rawValue, compositionText, candidates.count, shouldShowCandidates ? 1 : 0, candidateWindow.isVisible() ? 1 : 0)
 
         if shouldShowCandidates {
             candidateWindow.setCandidateData(candidates)
@@ -226,14 +324,10 @@ public final class IMEInputController: IMKInputController {
                 let selectedCandidate = candidates[selectedCandidateIndex]
                 let identifier = candidateWindow.candidateStringIdentifier(selectedCandidate)
                 if identifier != NSNotFound {
-                    isSyncingCandidateSelection = true
                     _ = candidateWindow.selectCandidate(withIdentifier: identifier)
-                    isSyncingCandidateSelection = false
                 }
             } else {
-                isSyncingCandidateSelection = true
                 candidateWindow.clearSelection()
-                isSyncingCandidateSelection = false
             }
             if candidateWindow.isVisible() {
                 candidateWindow.update()
@@ -241,9 +335,7 @@ public final class IMEInputController: IMKInputController {
                 candidateWindow.show(kIMKLocateCandidatesBelowHint)
             }
         } else {
-            isSyncingCandidateSelection = true
             candidateWindow.clearSelection()
-            isSyncingCandidateSelection = false
             candidateWindow.hide()
         }
     }

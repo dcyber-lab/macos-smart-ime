@@ -20,6 +20,10 @@ let package = Package(
             name: "IMEHostCore",
             targets: ["IMEHostCore"]
         ),
+        .library(
+            name: "EnglishEngine",
+            targets: ["EnglishEngine"]
+        ),
     ],
     targets: [
         .systemLibrary(
@@ -43,10 +47,29 @@ let package = Package(
             path: "packages/rime-bridge/Sources/RimeBridge"
         ),
         .target(
+            name: "EnglishEngine",
+            dependencies: [
+                "SharedModels",
+            ],
+            path: "packages/english-engine/Sources/EnglishEngine",
+            resources: [
+                .process("Resources"),
+            ]
+        ),
+        .testTarget(
+            name: "EnglishEngineTests",
+            dependencies: [
+                "EnglishEngine",
+                "SharedModels",
+            ],
+            path: "packages/english-engine/Tests/EnglishEngineTests"
+        ),
+        .target(
             name: "IMEHostCore",
             dependencies: [
                 "SharedModels",
                 "RimeBridge",
+                "EnglishEngine",
             ],
             path: "apps/ime/Sources/IMEHostCore",
             linkerSettings: [

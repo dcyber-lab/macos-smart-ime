@@ -23,4 +23,8 @@ public final class IMEHostSessionStore {
     public func reset(committedText: String) {
         state = CompositionState(mode: state.mode, recentText: committedText)
     }
+
+    public func setMode(_ mode: InputMode) {
+        state.mode = mode
+    }
 }
