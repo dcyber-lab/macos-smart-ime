@@ -24,6 +24,12 @@ done
 
 fail() { print -u2 "Error: $1"; exit 1 }
 
+# A published release is tagged at HEAD, so it must be built from exactly that commit.
+if $PUBLISH; then
+  [[ -z "$(git -C "$REPO_ROOT" status --porcelain)" ]] || fail "--publish needs a clean working tree"
+  git -C "$REPO_ROOT" branch -r --contains HEAD | grep -q . || fail "--publish needs HEAD pushed to GitHub first"
+fi
+
 echo "Building..."
 "$REPO_ROOT/scripts/ime/build-host.sh" > "$REPO_ROOT/build/ime-host/build.log" 2>&1 \
   || { tail -n 30 "$REPO_ROOT/build/ime-host/build.log" >&2; fail "build failed; see build/ime-host/build.log"; }
@@ -145,6 +151,6 @@ ditto -c -k --keepParent "$STAGE" "$ZIP"
 echo "Release ready: $ZIP ($(du -h "$ZIP" | cut -f1))"
 
 if $PUBLISH; then
-  gh release create "v$VERSION" "$ZIP" --repo dcyber-lab/macos-smart-ime \
+  gh release create "v$VERSION" "$ZIP" --repo dcyber-lab/macos-smart-ime --target "$(git -C "$REPO_ROOT" rev-parse HEAD)" \
     --title "LinguaType $VERSION" --notes-file "$STAGE/README.txt"
 fi
