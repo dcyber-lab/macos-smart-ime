@@ -119,7 +119,7 @@ This milestone is not considered complete until steps 1 through 14 are verified 
 - This checklist validates both the Chinese `librime` path and the basic English completion path
 - English mode completes from a bundled 30,000-word frequency list generated from wordfreq (`scripts/english/build-wordlist.py`); there is no user dictionary or learning yet
 - `Shift` key toggle is a simple heuristic based on standalone press/release
-- This session rebuilt the host after adding English mode and `IMKCandidates` sync, but did not re-run a full GUI validation pass for the new interactions
+- Basic input (Space, number keys, Enter, Escape) was confirmed working in a real client on 2026-09-27 after the text-commit fix; the English mode and mixed-candidate checklists still need a full pass
 - Richer candidate controls and mixed-mode input are still follow-up milestones
 - The app target is still using local-development settings, not a release distribution setup
 - The validated registration shape for `SmartIMEHost` is a selectable `TISTypeKeyboardInputMethodWithoutModes` source rather than a mode-driven input method bundle.

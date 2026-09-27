@@ -12,6 +12,14 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Text commit and Shift toggle fixes
+
+- Root cause of "Space or a number key clears the composition but inserts nothing": `IMEInputController.commit` cast the client to `NSTextInputClient`. InputMethodKit's client proxies (`_IPMDServerClientWrapperModern`, `_IMKXPCCompatibilityDOProxyInterposerModern`, and the legacy variants) conform only to `IMKTextInput` (checked with the Objective-C runtime), so the cast always failed and committed text was dropped since the first Chinese input loop. `commit` now inserts through `IMKTextInput`, as Squirrel does.
+- The `Shift` mode toggle fired on any Shift release, including Shift+letter and Cmd+Shift shortcuts, which silently switched to English mode. `ShiftToggleDetector` now toggles only on a standalone Shift tap; covered by 7 tests in the new `IMEHostCoreTests` target.
+- While diagnosing, the host-drawn candidate panel from `add-custom-candidate-panel` was unwired; the host keeps using `IMKCandidates` until the panel is verified in a real client.
+- Verified: the user confirmed basic input works in a real client after this build was deployed.
+- Lesson: earlier changes were only unit-tested; any change to the IMK host layer must be checked end to end in a real app before hand-off.
+
 ### Install script enable step
 
 - `scripts/ime/install-host.sh` crashed with "Unexpectedly found nil" when the input source was installed but not yet enabled: the enable snippet called `TISCreateInputSourceList(filter, false)`, which only returns enabled sources. It now looks up all installed sources before calling `TISEnableInputSource`, and the verification snippet reports a missing source instead of crashing.
