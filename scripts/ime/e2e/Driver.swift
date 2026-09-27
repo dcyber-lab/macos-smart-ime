@@ -253,25 +253,39 @@ type("gith")
 press(keyCodes["2"]!)
 check("gith + 2 (promoted completion, display casing)", beforeGith + "GitHub", committedText())
 
-// Selection translation POC: ⌃⌥T on a selection opens the popup; Escape leaves the text unchanged.
-let beforeTranslation = committedText()
+// Selection translation POC, on a fresh English sentence (mixed Chinese text comes back unchanged).
+let deleteKey: CGKeyCode = 51
 guardNoInterference()
+press(0, flags: .maskCommand)
+press(deleteKey)
+tapShift()
+for word in ["please", "review", "the", "plan"] {
+    type(word)
+    press(space)
+}
+tapShift()
+let english = committedText()
+check("English sentence for translation", "please review the plan ", english)
+
 press(0, flags: .maskCommand)
 press(17, flags: [.maskControl, .maskAlternate])
 Thread.sleep(forTimeInterval: 1.5)
 check("⌃⌥T opens the translation popup", "true", String(imeWindowVisible()))
 press(escape)
 Thread.sleep(forTimeInterval: 0.3)
-check("Escape keeps the text and closes the popup", beforeTranslation + " / hidden",
+check("Escape keeps the text and closes the popup", english + " / hidden",
       committedText() + (imeWindowVisible() ? " / visible" : " / hidden"))
+
 if translationModelInstalled() {
     press(0, flags: .maskCommand)
     press(17, flags: [.maskControl, .maskAlternate])
-    Thread.sleep(forTimeInterval: 4)
+    Thread.sleep(forTimeInterval: 3)
     press(returnKey)
     let translated = committedText()
-    check("Return replaces the selection with a translation", "true",
-          String(translated != beforeTranslation && !translated.isEmpty))
+    let hasChinese = translated.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
+    print("translated text: \"\(translated)\"")
+    check("Return replaces the selection with a Chinese translation", "true",
+          String(translated != english && hasChinese))
 } else {
     print("SKIP  translation result: English -> Simplified Chinese model is not downloaded")
 }
