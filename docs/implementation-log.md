@@ -12,6 +12,13 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### English candidates while typing and a larger lexicon
+
+- Implemented OpenSpec change `improve-mixed-english-candidates`. Translations of the first Chinese candidate now appear for unfinished or abbreviated pinyin (`shujuk`, `sjk`, `huiy` → database / meeting), and for 4+ letter non-pinyin input the best common English completion is promoted to position 2 (`gith` → 1.个 2.GitHub; `Space` still commits Chinese).
+- The word list grew from 30,000 to 100,000 wordfreq words. The profanity filter now also drops compounds by stem (with an allowlist for names such as Yamashita and words such as snigger). A project-authored `supplement.txt` (182 terms) adds technical and office vocabulary with display casing (GitHub, iOS, Kubernetes, JSON, TypeScript, OKR); common words that collide with brand names (Teams, Excel, Swift, Mr) were left out.
+- The long tail collided with pinyin (`dep` became an exact English word, `shuj` offered romanized names), so Chinese mode only uses common words (rank < 30,000) plus the supplement, allowing rarer words only for 5+ letter non-pinyin input.
+- Verified with real librime (`kube` → Kubernetes at position 2, `json` → JSON first, `dep` keeps 得票 first) and with the smoke test, which gained a `gith` + 2 → `GitHub` check: 10/10 pass. 85 `swift test` cases pass.
+
 ### Smoke test moved off TextEdit
 
 - Incident: the TextEdit-based smoke test assumed its new document was the front one and read or closed "the front document". While the user was using TextEdit, their typing landed in the test document, cleanup closed their saved document, and every run had also left an autosaved `Untitled N.rtf` in the user's iCloud TextEdit folder. The leftover files (Untitled 2–7) were moved to the Trash with the user's approval.

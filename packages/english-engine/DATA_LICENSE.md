@@ -8,8 +8,10 @@ from the word frequency data in [wordfreq](https://github.com/rspeer/wordfreq)
 
 - The word list is a derivative of wordfreq's data and is licensed under
   [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-- It keeps the top 30,000 lowercase `[a-z]+` English words in frequency order,
-  and drops profanity and slurs so they are never offered as completions.
+- It keeps the top 100,000 lowercase `[a-z]+` English words in frequency order,
+  and drops profanity and slurs (an exact-word list plus unambiguous stems such
+  as "fuck" or "shit", with an allowlist for names like "Yamashita") so they are
+  never offered as completions.
 - This license applies only to the data file, not to the project source code.
 
 ### Upstream attribution
@@ -28,6 +30,12 @@ wordfreq's data is built from the following sources:
 - Word statistics collected from the Twitter streaming API
 
 Citation: Robyn Speer. (2022). rspeer/wordfreq: v3.0. Zenodo.
+
+## `Sources/EnglishEngine/Resources/supplement.txt`
+
+Project-authored list of technical and office terms with their preferred
+casing (for example "GitHub", "iOS", "OKR"). It is part of this project's own
+source and is not derived from wordfreq or CC-CEDICT.
 
 ## `Sources/EnglishEngine/Resources/zh-en.tsv`
 
