@@ -7,13 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		292A17FD3D2E5B92918C9F22 /* LinguaType.icns in Resources */ = {isa = PBXBuildFile; fileRef = EBFECFED302879A17041BEDC /* LinguaType.icns */; };
 		4681FADCC8D2606AEC1342FF /* SharedModels in Frameworks */ = {isa = PBXBuildFile; productRef = 1C1FF5F3840A6C973EA13B7E /* SharedModels */; };
+		5A66171B231CD3571C3BA7E8 /* LinguaType.pdf in Resources */ = {isa = PBXBuildFile; fileRef = A23F79E47A538DB237BF20D7 /* LinguaType.pdf */; };
 		6F7A507403742737AD2AEB32 /* IMEHostCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6BEF3EEC4AC0BACD138E31F /* IMEHostCore */; };
 		79E924AD5E8D6B2324DAA0D9 /* EnglishEngine in Frameworks */ = {isa = PBXBuildFile; productRef = E8523DAAA993C91CDE59D00A /* EnglishEngine */; };
 		86D4DD994EBB7411D23867B3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = CD21B74F10EF019D3E0BA64D /* InfoPlist.strings */; };
 		93F9FAD58C3303FDD65032DB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4877725FEE1CF1BF6882F463 /* AppDelegate.swift */; };
 		E77B3637F65EE536FE950E44 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF014FE5998AB87DD0CC626C /* main.swift */; };
-		E791DDC48F4245FC59C27EFE /* SmartIMEHost.icns in Resources */ = {isa = PBXBuildFile; fileRef = 6FB79FA97CF1B1AC83D149BD /* SmartIMEHost.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,9 +22,10 @@
 		4877725FEE1CF1BF6882F463 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4A4E848FC278873C6D04B85C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		5FCF1D93B2F93306B555A9B6 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		6FB79FA97CF1B1AC83D149BD /* SmartIMEHost.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SmartIMEHost.icns; sourceTree = "<group>"; };
+		A23F79E47A538DB237BF20D7 /* LinguaType.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = LinguaType.pdf; sourceTree = "<group>"; };
 		A404B13DA214C5090BC73993 /* macos-smart-ime */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "macos-smart-ime"; path = .; sourceTree = SOURCE_ROOT; };
 		DF014FE5998AB87DD0CC626C /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		EBFECFED302879A17041BEDC /* LinguaType.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = LinguaType.icns; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,7 +54,8 @@
 		699908A66CAA5AA9BD7BB32D /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				6FB79FA97CF1B1AC83D149BD /* SmartIMEHost.icns */,
+				EBFECFED302879A17041BEDC /* LinguaType.icns */,
+				A23F79E47A538DB237BF20D7 /* LinguaType.pdf */,
 				CD21B74F10EF019D3E0BA64D /* InfoPlist.strings */,
 			);
 			path = Resources;
@@ -165,7 +168,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				86D4DD994EBB7411D23867B3 /* InfoPlist.strings in Resources */,
-				E791DDC48F4245FC59C27EFE /* SmartIMEHost.icns in Resources */,
+				292A17FD3D2E5B92918C9F22 /* LinguaType.icns in Resources */,
+				5A66171B231CD3571C3BA7E8 /* LinguaType.pdf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

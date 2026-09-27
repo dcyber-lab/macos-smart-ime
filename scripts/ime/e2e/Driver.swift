@@ -144,9 +144,14 @@ func markedText() -> String {
     Thread.sleep(forTimeInterval: 0.3)
     return (try? String(contentsOf: stateDirectory.appendingPathComponent("marked.txt"), encoding: .utf8)) ?? ""
 }
-func panelFrame() -> CGRect? {
+/// On-screen windows of the input method, matched by process (its display name is localized).
+func imeWindows() -> [[String: Any]] {
+    let pids = Set(NSRunningApplication.runningApplications(withBundleIdentifier: imeSourceID).map(\.processIdentifier))
     let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
-    for window in windows where (window[kCGWindowOwnerName as String] as? String) == "SmartIMEHost" {
+    return windows.filter { pids.contains(($0[kCGWindowOwnerPID as String] as? Int32) ?? -1) }
+}
+func panelFrame() -> CGRect? {
+    for window in imeWindows() {
         if let bounds = window[kCGWindowBounds as String] as? [String: CGFloat] {
             return CGRect(x: bounds["X"]!, y: bounds["Y"]!, width: bounds["Width"]!, height: bounds["Height"]!)
         }
@@ -154,8 +159,7 @@ func panelFrame() -> CGRect? {
     return nil
 }
 func imeWindowVisible() -> Bool {
-    let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
-    return windows.contains { ($0[kCGWindowOwnerName as String] as? String) == "SmartIMEHost" }
+    !imeWindows().isEmpty
 }
 func translationModelInstalled(from source: String, to target: String) -> Bool {
     guard #available(macOS 26.0, *) else {
