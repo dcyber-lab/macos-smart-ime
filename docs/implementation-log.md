@@ -12,6 +12,14 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Candidate panel wired and verified in TextEdit
+
+- Re-wired the host-drawn `CandidatePanel` (OpenSpec `add-custom-candidate-panel`), replacing the fixed-height `IMKCandidates` panel that left empty rows under short lists. The panel height now fits its rows (3 new `CandidateListViewTests`; 60 `swift test` cases pass).
+- Fixed Escape inserting the pinyin: `composedString` returned nil for an empty composition, so `updateComposition()` never cleared the client's marked text and the client later committed it. It now returns an empty string.
+- Added `scripts/ime/e2e-textedit.swift`, which drives a fresh TextEdit document with synthetic events. Result on this build: 8/8 checks pass (Space → 你好, number key → translation "meeting", `hello` + Space, `women` + Return, Escape cancels, number key on a Chinese candidate, Shift → English `he` + Space, click on row 1 → 数据库). Measured live panel heights: 181 pt (6 rows), 208 pt (7 rows), 253 pt (9 rows).
+- Deployment findings: a user-level install alone was never launched by `imklaunchagent` (`status=-50`), so the system-level install stays required. Deleting the system bundle while it ran, plus restarting `imklaunchagent`, left open apps with invalid IMK endpoints until they were relaunched.
+- Pending: visual review of the live panel by the user (no screen-capture permission for automated screenshots).
+
 ### Text commit and Shift toggle fixes
 
 - Root cause of "Space or a number key clears the composition but inserts nothing": `IMEInputController.commit` cast the client to `NSTextInputClient`. InputMethodKit's client proxies (`_IPMDServerClientWrapperModern`, `_IMKXPCCompatibilityDOProxyInterposerModern`, and the legacy variants) conform only to `IMKTextInput` (checked with the Objective-C runtime), so the cast always failed and committed text was dropped since the first Chinese input loop. `commit` now inserts through `IMKTextInput`, as Squirrel does.

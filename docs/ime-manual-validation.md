@@ -133,6 +133,10 @@ Use a normal editable text field such as TextEdit, in Chinese mode.
 
 This milestone is not considered complete until steps 1 through 12 are verified in a real macOS text client.
 
+## Automated Smoke Test
+
+`scripts/ime/e2e-textedit.swift` types into a new TextEdit document and checks what gets committed (Space, number keys, translation, Return, Escape, Shift toggle, row click) and prints the live panel size. See the header of the script for requirements. Run it after every change to the IME host before hand-off.
+
 ## Candidate Panel Checklist
 
 Use a normal editable text field such as TextEdit.
@@ -154,6 +158,8 @@ Use a normal editable text field such as TextEdit.
 - English mode completes from a bundled 30,000-word frequency list generated from wordfreq (`scripts/english/build-wordlist.py`); there is no user dictionary or learning yet
 - `Shift` key toggle is a simple heuristic based on standalone press/release
 - Basic input (Space, number keys, Enter, Escape) was confirmed working in a real client on 2026-09-27 after the text-commit fix; the English mode and mixed-candidate checklists still need a full pass
+- Install with `sudo scripts/ime/install-host.sh --system`. On the development machine, a user-level install alone (`~/Library/Input Methods`) was never launched by `imklaunchagent` (`LaunchInputMethod() Error, status=-50`); the root cause is not yet known
+- Removing or replacing the IME bundle while its process runs can leave already-open apps holding a dead input method connection; relaunch those apps (or log out and back in) if typing passes through as plain letters
 - Richer candidate controls and mixed-mode input are still follow-up milestones
 - The app target is still using local-development settings, not a release distribution setup
 - The validated registration shape for `SmartIMEHost` is a selectable `TISTypeKeyboardInputMethodWithoutModes` source rather than a mode-driven input method bundle.
