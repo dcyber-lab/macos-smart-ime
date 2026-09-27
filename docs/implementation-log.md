@@ -12,6 +12,11 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Raw input as preedit for non-pinyin input
+
+- librime segments non-pinyin input into syllable fragments, so typing `good` in Chinese mode showed "go o d" inline and in the panel header. `EnglishAugmentedChineseEngine` now shows the raw input as the composition text when the input is all lowercase letters, cannot be segmented into pinyin, and has no converted Chinese part yet. Pinyin keeps librime's segmentation ("shu ju ku").
+- Verified against real librime: `good` → "good", `github` → "github", `zg` → "zg", `shujuku` → "shu ju ku". 3 new tests; 72 `swift test` cases pass.
+
 ### Candidate panel visual refinements
 
 - Softer highlight (accent tint with accent text instead of a solid accent fill; text lightened in dark mode for contrast), capsule 英/译 tags, and a Chinese-mode header showing the Rime preedit with up/down chevrons when more pages exist. `CompositionState` gained `isLastCandidatePage`, filled from `RimeMenu.is_last_page`.

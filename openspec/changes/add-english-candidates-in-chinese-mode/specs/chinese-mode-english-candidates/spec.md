@@ -79,6 +79,21 @@ The merged candidate list SHALL contain at most nine entries so every entry has 
 - **WHEN** a translation has the same text as an English word candidate
 - **THEN** it SHALL appear only once, in the translation position
 
+### Requirement: Preedit for Non-Pinyin Input
+When the raw input consists only of lowercase letters, cannot be fully segmented into valid pinyin syllables, and no part of it has been converted to Chinese yet, the composition text shown in the client and in the panel SHALL be the raw input instead of the `librime` syllable segmentation.
+
+#### Scenario: English word typed in Chinese mode
+- **WHEN** the user types `good` in Chinese mode and `librime` segments it as "go o d"
+- **THEN** the composition text SHALL be "good"
+
+#### Scenario: Pinyin keeps the syllable segmentation
+- **WHEN** the user types `shujuku` in Chinese mode
+- **THEN** the composition text SHALL be the `librime` preedit, e.g. "shu ju ku"
+
+#### Scenario: Partially converted input keeps the librime preedit
+- **WHEN** part of a non-pinyin input has already been converted to Chinese characters
+- **THEN** the composition text SHALL be the `librime` preedit
+
 ### Requirement: English Candidate Selection
 Selecting an English candidate, whether an English word or a translation, SHALL commit the English text without a trailing space and clear the `librime` composition. Selecting a Chinese candidate SHALL behave exactly as it does without English candidates.
 

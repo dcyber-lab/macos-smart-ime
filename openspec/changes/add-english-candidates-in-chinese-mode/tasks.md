@@ -13,6 +13,7 @@
 - [x] 2.6 Implement placement: exact non-pinyin match first, then `librime` candidates, then up to two translations of the first candidate, then English words; dedupe by text and cap at nine
 - [x] 2.7 Implement index mapping for `selectCandidate(at:)`, `highlightCandidate(at:)`, the shifted `selectedCandidateIndex`, and `Space` when an English candidate is highlighted
 - [x] 2.8 Add unit tests with a fake `ChineseInputEngine` covering every scenario in `specs/chinese-mode-english-candidates/spec.md`
+- [x] 2.9 Show the raw input as the composition text for non-pinyin input that has no converted part (e.g. `good` instead of "go o d"), with tests
 
 ## 3. IME Host Integration
 
