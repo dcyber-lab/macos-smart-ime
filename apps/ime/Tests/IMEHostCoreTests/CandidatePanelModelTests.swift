@@ -123,3 +123,58 @@ final class CandidatePanelPlacementTests: XCTestCase {
         )
     }
 }
+
+final class CandidatePanelHeaderTests: XCTestCase {
+    func testChineseModeShowsPreedit() {
+        let header = CandidatePanelModel.header(for: state(mode: .chinese, preedit: "shu ju ku"))
+
+        XCTAssertEqual(header?.text, "shu ju ku")
+    }
+
+    func testEnglishModeHasNoHeader() {
+        XCTAssertNil(CandidatePanelModel.header(for: state(mode: .english, preedit: "he")))
+    }
+
+    func testEmptyPreeditHasNoHeader() {
+        XCTAssertNil(CandidatePanelModel.header(for: state(mode: .chinese, preedit: "")))
+    }
+
+    func testSinglePageHasNoChevrons() {
+        let header = CandidatePanelModel.header(for: state(mode: .chinese, preedit: "wo", page: 0, isLast: true))
+
+        XCTAssertEqual(header?.canPageUp, false)
+        XCTAssertEqual(header?.canPageDown, false)
+    }
+
+    func testFirstOfSeveralPagesShowsDownOnly() {
+        let header = CandidatePanelModel.header(for: state(mode: .chinese, preedit: "shi", page: 0, isLast: false))
+
+        XCTAssertEqual(header?.canPageUp, false)
+        XCTAssertEqual(header?.canPageDown, true)
+    }
+
+    func testMiddlePageShowsBoth() {
+        let header = CandidatePanelModel.header(for: state(mode: .chinese, preedit: "shi", page: 1, isLast: false))
+
+        XCTAssertEqual(header?.canPageUp, true)
+        XCTAssertEqual(header?.canPageDown, true)
+    }
+
+    func testLastPageShowsUpOnly() {
+        let header = CandidatePanelModel.header(for: state(mode: .chinese, preedit: "shi", page: 3, isLast: true))
+
+        XCTAssertEqual(header?.canPageUp, true)
+        XCTAssertEqual(header?.canPageDown, false)
+    }
+
+    private func state(mode: InputMode, preedit: String, page: Int = 0, isLast: Bool = true) -> CompositionState {
+        CompositionState(
+            mode: mode,
+            compositionText: preedit,
+            candidates: [Candidate(text: "候选", source: .rime, score: 0)],
+            selectedCandidateIndex: 0,
+            candidatePageIndex: page,
+            isLastCandidatePage: isLast
+        )
+    }
+}

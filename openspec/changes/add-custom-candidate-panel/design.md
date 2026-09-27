@@ -24,7 +24,6 @@ The chosen look (confirmed with the user) is a vertical list:
 
 **Non-Goals:**
 - Horizontal layout, user themes, or font-size settings (future Companion settings).
-- Showing the preedit or page indicators inside the panel; the preedit stays inline in the client.
 - Animations.
 - VoiceOver support for the panel (follow-up; the stock panel's accessibility is lost in this change).
 
@@ -52,7 +51,9 @@ The model and placement are covered by a new `IMEHostCoreTests` target.
 ### 4. Look
 - Background: `NSVisualEffectView` (`.popover` material, `.active` state) with a 10 pt corner radius and the window shadow. It adapts to light/dark automatically.
 - Rows: candidate text in the 16 pt system font with `labelColor`; index in 13 pt monospaced-digit `secondaryLabelColor`; tag in 11 pt `tertiaryLabelColor`, right-aligned.
-- Highlighted row: rounded rectangle filled with `controlAccentColor`; text, index, and tag switch to `alternateSelectedControlTextColor`.
+- Highlighted row: rounded rectangle filled with `controlAccentColor` at low opacity (a soft tint); the candidate text and index use `controlAccentColor`. A solid accent fill with white text looked heavy in a small panel.
+- Tags: capsule with a `quaternaryLabelColor` fill and `secondaryLabelColor` 10 pt medium text; on the highlighted row the capsule uses the accent tint.
+- Header (Chinese mode only): the Rime preedit in 12 pt `secondaryLabelColor` above the rows, with `chevron.up` / `chevron.down` symbols at its right edge when earlier or later pages exist (`candidatePageIndex > 0`, `!isLastCandidatePage`). Hidden in English mode, where the first row already shows the typed text.
 - Separator: 1 pt `separatorColor` line inset to the row padding.
 
 ### 5. Window behavior and placement

@@ -47,6 +47,17 @@ final class CandidateListViewTests: XCTestCase {
         XCTAssertLessThan(oneCharacter, 80, "a one-character list stays narrow")
     }
 
+    func testHeaderAddsHeightAndFitsItsText() {
+        let view = CandidateListView()
+        view.rows = rows(count: 3)
+        let withoutHeader = view.fittingSize
+
+        view.header = CandidatePanelHeader(text: "zhong hua ren min gong he guo", canPageUp: true, canPageDown: true)
+
+        XCTAssertGreaterThan(view.fittingSize.height, withoutHeader.height)
+        XCTAssertGreaterThan(view.fittingSize.width, withoutHeader.width, "a long preedit widens the panel")
+    }
+
     private func height(rowCount: Int) -> CGFloat {
         let view = CandidateListView()
         view.rows = rows(count: rowCount)

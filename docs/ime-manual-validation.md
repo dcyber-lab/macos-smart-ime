@@ -159,15 +159,18 @@ This milestone is not considered complete until steps 1 through 12 are verified 
 Use a normal editable text field such as TextEdit.
 
 1. In light appearance, type `shujuku` in Chinese mode
-2. Confirm a rounded vertical panel appears just below the caret with numbered rows, 数据库 highlighted in the accent color, a separator line above `database`, and a gray 译 tag on `database`
-3. Confirm the panel is exactly as tall as its rows, with no empty space below; type `huiyi` and confirm the panel resizes
-4. Press `Down` twice and confirm the highlight moves to the third row
-5. Click the `database` row and confirm `database` is committed and the panel disappears
-6. Type `hello` and confirm `hello` is first with an 英 tag and a separator below it
-7. Press `Shift` to switch to English mode, type `he`, and confirm the rows have no tags or separators
-8. Switch the system to dark appearance and repeat step 1; confirm the panel background and text follow dark colors
-9. Move the caret near the bottom and the right edge of the screen and confirm the panel flips above the caret and stays fully on screen
-10. Type `nihao`, press `Escape`, and confirm the panel disappears and nothing is inserted; type again, switch to another app, and confirm the panel does not stay behind
+2. Confirm a rounded vertical panel appears just below the caret with the pinyin (`shu ju ku`) in small gray text at the top, numbered rows, 数据库 highlighted with a soft accent tint, a separator line above `database`, and a capsule 译 tag on `database`
+3. Confirm a down chevron appears next to the pinyin; press `=` and confirm both up and down chevrons appear on page 2
+4. Confirm the panel is exactly as tall as its rows, with no empty space below; type `huiyi` and confirm the panel resizes
+5. Press `Down` twice and confirm the highlight moves to the third row
+6. Click the `database` row and confirm `database` is committed and the panel disappears
+7. Type `hello` and confirm `hello` is first with an 英 tag and a separator below it
+8. Press `Shift` to switch to English mode, type `he`, and confirm the rows have no tags or separators
+9. Switch the system to dark appearance and repeat step 1; confirm the panel background and text follow dark colors
+10. Move the caret near the bottom and the right edge of the screen and confirm the panel flips above the caret and stays fully on screen
+11. Type `nihao`, press `Escape`, and confirm the panel disappears and nothing is inserted; type again, switch to another app, and confirm the panel does not stay behind
+
+This milestone is not considered complete until steps 1 through 11 are verified in a real macOS text client.
 
 ## Known Limits In This Milestone
 

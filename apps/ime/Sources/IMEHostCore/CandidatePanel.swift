@@ -44,6 +44,7 @@ final class CandidatePanel {
         }
 
         listView.onSelect = onSelect
+        listView.header = CandidatePanelModel.header(for: state)
         listView.rows = rows
         let size = listView.fittingSize
 
@@ -85,7 +86,7 @@ final class CandidatePanel {
     }
 }
 
-/// Draws candidate rows top to bottom and reports row clicks.
+/// Draws the optional preedit header and candidate rows top to bottom, and reports row clicks.
 final class CandidateListView: NSView {
     private enum Metrics {
         static let outerPadding: CGFloat = 4
@@ -93,14 +94,24 @@ final class CandidateListView: NSView {
         static let rowVerticalPadding: CGFloat = 3
         static let columnGap: CGFloat = 7
         static let tagGap: CGFloat = 12
+        static let tagHorizontalPadding: CGFloat = 5
+        static let tagVerticalPadding: CGFloat = 1
         static let separatorSpacing: CGFloat = 7
         static let highlightRadius: CGFloat = 6
+        static let headerVerticalPadding: CGFloat = 3
+        static let chevronGap: CGFloat = 12
+        static let chevronSpacing: CGFloat = 4
     }
 
     private let textFont = NSFont.systemFont(ofSize: 16)
     private let labelFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
-    private let tagFont = NSFont.systemFont(ofSize: 11, weight: .medium)
+    private let tagFont = NSFont.systemFont(ofSize: 10, weight: .medium)
+    private let headerFont = NSFont.systemFont(ofSize: 12)
+    private let chevronConfiguration = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
 
+    var header: CandidatePanelHeader? {
+        didSet { needsDisplay = true }
+    }
     var rows: [CandidatePanelRow] = [] {
         didSet { needsDisplay = true }
     }
@@ -114,46 +125,77 @@ final class CandidateListView: NSView {
         ceil(textFont.ascender - textFont.descender + textFont.leading) + Metrics.rowVerticalPadding * 2
     }
 
+    private var headerHeight: CGFloat {
+        guard header != nil else {
+            return 0
+        }
+        return ceil(headerFont.ascender - headerFont.descender + headerFont.leading) + Metrics.headerVerticalPadding * 2
+    }
+
     private var labelColumnWidth: CGFloat {
         let widest = rows.map { $0.label.size(withAttributes: [.font: labelFont]).width }.max() ?? 0
         return ceil(widest)
     }
 
+    private var chevronSlotWidth: CGFloat {
+        ceil(chevron("chevron.down")?.size.width ?? 9)
+    }
+
+    private var showsChevrons: Bool {
+        guard let header else {
+            return false
+        }
+        return header.canPageUp || header.canPageDown
+    }
+
     override var fittingSize: NSSize {
         let textWidth = rows.map { $0.text.size(withAttributes: [.font: textFont]).width }.max() ?? 0
-        let tagWidth = rows.compactMap { $0.tag?.size(withAttributes: [.font: tagFont]).width }.max()
-        var width = Metrics.outerPadding * 2 + Metrics.rowHorizontalPadding * 2
-            + labelColumnWidth + Metrics.columnGap + ceil(textWidth)
+        let tagWidth = rows.compactMap { $0.tag.map(tagSize(for:))?.width }.max()
+        var rowsWidth = Metrics.rowHorizontalPadding * 2 + labelColumnWidth + Metrics.columnGap + ceil(textWidth)
         if let tagWidth {
-            width += Metrics.tagGap + ceil(tagWidth)
+            rowsWidth += Metrics.tagGap + ceil(tagWidth)
+        }
+
+        var headerWidth: CGFloat = 0
+        if let header {
+            headerWidth = Metrics.rowHorizontalPadding * 2 + ceil(header.text.size(withAttributes: [.font: headerFont]).width)
+            if showsChevrons {
+                headerWidth += Metrics.chevronGap + chevronSlotWidth * 2 + Metrics.chevronSpacing
+            }
         }
 
         let separators = CGFloat(rows.filter(\.hasSeparatorBefore).count)
-        let height = Metrics.outerPadding * 2 + CGFloat(rows.count) * rowHeight + separators * Metrics.separatorSpacing
-        return NSSize(width: ceil(width), height: ceil(height))
+        let height = Metrics.outerPadding * 2 + headerHeight + CGFloat(rows.count) * rowHeight
+            + separators * Metrics.separatorSpacing
+        return NSSize(width: ceil(Metrics.outerPadding * 2 + max(rowsWidth, headerWidth)), height: ceil(height))
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        if let header {
+            drawHeader(header)
+        }
+
+        let accent = NSColor.controlAccentColor
+        let isDark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        // Plain accent text is too dark on the dark-mode tint; lighten it there.
+        let highlightText = isDark ? (accent.blended(withFraction: 0.5, of: .white) ?? .labelColor) : accent
         let labelWidth = labelColumnWidth
         for (row, rect) in zip(rows, rowRects()) {
             if row.hasSeparatorBefore {
                 drawSeparator(above: rect)
             }
             if row.isHighlighted {
-                NSColor.controlAccentColor.setFill()
+                accent.withAlphaComponent(isDark ? 0.32 : 0.16).setFill()
                 NSBezierPath(roundedRect: rect, xRadius: Metrics.highlightRadius, yRadius: Metrics.highlightRadius).fill()
             }
 
-            let highlightedText = NSColor.alternateSelectedControlTextColor
             let contentX = rect.minX + Metrics.rowHorizontalPadding
-            draw(row.label, font: labelFont, color: row.isHighlighted ? highlightedText.withAlphaComponent(0.8) : .secondaryLabelColor,
+            draw(row.label, font: labelFont, color: row.isHighlighted ? highlightText.withAlphaComponent(0.85) : .secondaryLabelColor,
                  at: contentX + labelWidth - row.label.size(withAttributes: [.font: labelFont]).width, in: rect)
-            draw(row.text, font: textFont, color: row.isHighlighted ? highlightedText : .labelColor,
+            draw(row.text, font: textFont, color: row.isHighlighted ? highlightText : .labelColor,
                  at: contentX + labelWidth + Metrics.columnGap, in: rect)
             if let tag = row.tag {
-                let tagWidth = tag.size(withAttributes: [.font: tagFont]).width
-                draw(tag, font: tagFont, color: row.isHighlighted ? highlightedText.withAlphaComponent(0.8) : .tertiaryLabelColor,
-                     at: rect.maxX - Metrics.rowHorizontalPadding - tagWidth, in: rect)
+                drawTag(tag, highlightText: row.isHighlighted ? highlightText : nil, rightEdge: rect.maxX - Metrics.rowHorizontalPadding, in: rect)
             }
         }
 
@@ -173,7 +215,7 @@ final class CandidateListView: NSView {
     }
 
     private func rowRects() -> [CGRect] {
-        var y = Metrics.outerPadding
+        var y = Metrics.outerPadding + headerHeight
         return rows.map { row in
             if row.hasSeparatorBefore {
                 y += Metrics.separatorSpacing
@@ -187,6 +229,65 @@ final class CandidateListView: NSView {
             y += rowHeight
             return rect
         }
+    }
+
+    private func drawHeader(_ header: CandidatePanelHeader) {
+        let rect = CGRect(
+            x: Metrics.outerPadding,
+            y: Metrics.outerPadding,
+            width: bounds.width - Metrics.outerPadding * 2,
+            height: headerHeight
+        )
+        draw(header.text, font: headerFont, color: .secondaryLabelColor, at: rect.minX + Metrics.rowHorizontalPadding, in: rect)
+
+        guard showsChevrons else {
+            return
+        }
+        // Fixed slots (up, then down) so the arrows do not shift while paging.
+        let downX = rect.maxX - Metrics.rowHorizontalPadding - chevronSlotWidth
+        let upX = downX - Metrics.chevronSpacing - chevronSlotWidth
+        if header.canPageUp {
+            drawChevron("chevron.up", atX: upX, in: rect)
+        }
+        if header.canPageDown {
+            drawChevron("chevron.down", atX: downX, in: rect)
+        }
+    }
+
+    private func chevron(_ name: String) -> NSImage? {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(chevronConfiguration)
+    }
+
+    private func drawChevron(_ name: String, atX x: CGFloat, in rect: CGRect) {
+        guard let symbol = chevron(name) else {
+            return
+        }
+        let size = symbol.size
+        let tinted = NSImage(size: size, flipped: false) { bounds in
+            symbol.draw(in: bounds)
+            NSColor.secondaryLabelColor.set()
+            bounds.fill(using: .sourceAtop)
+            return true
+        }
+        tinted.draw(in: CGRect(x: x, y: rect.midY - size.height / 2, width: size.width, height: size.height))
+    }
+
+    private func tagSize(for tag: String) -> CGSize {
+        let text = tag.size(withAttributes: [.font: tagFont])
+        return CGSize(
+            width: ceil(text.width) + Metrics.tagHorizontalPadding * 2,
+            height: ceil(text.height) + Metrics.tagVerticalPadding * 2
+        )
+    }
+
+    /// `highlightText` is set when the tag sits on the highlighted row.
+    private func drawTag(_ tag: String, highlightText: NSColor?, rightEdge: CGFloat, in rect: CGRect) {
+        let size = tagSize(for: tag)
+        let capsule = CGRect(x: rightEdge - size.width, y: rect.midY - size.height / 2, width: size.width, height: size.height)
+        (highlightText.map { $0.withAlphaComponent(0.2) } ?? NSColor.quaternaryLabelColor).setFill()
+        NSBezierPath(roundedRect: capsule, xRadius: size.height / 2, yRadius: size.height / 2).fill()
+        draw(tag, font: tagFont, color: highlightText ?? .secondaryLabelColor,
+             at: capsule.minX + Metrics.tagHorizontalPadding, in: capsule)
     }
 
     private func drawSeparator(above rect: CGRect) {
