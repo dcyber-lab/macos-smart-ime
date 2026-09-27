@@ -50,6 +50,7 @@ public struct CompositionState: Equatable, Sendable {
     public var candidates: [Candidate]
     public var selectedCandidateIndex: Int?
     public var candidatePageIndex: Int
+    public var isLastCandidatePage: Bool
     public var recentText: String
 
     public init(
@@ -59,6 +60,7 @@ public struct CompositionState: Equatable, Sendable {
         candidates: [Candidate] = [],
         selectedCandidateIndex: Int? = nil,
         candidatePageIndex: Int = 0,
+        isLastCandidatePage: Bool = true,
         recentText: String = ""
     ) {
         self.rawInput = rawInput
@@ -67,6 +69,7 @@ public struct CompositionState: Equatable, Sendable {
         self.candidates = candidates
         self.selectedCandidateIndex = selectedCandidateIndex
         self.candidatePageIndex = candidatePageIndex
+        self.isLastCandidatePage = isLastCandidatePage
         self.recentText = recentText
     }
 }

@@ -24,14 +24,14 @@ The host SHALL display candidates in its own vertical panel, one numbered row pe
 - **THEN** the panel SHALL be hidden
 
 ### Requirement: Highlighted Row
-The row matching the composition's selected candidate index SHALL be drawn with the system accent color as its background.
+The row matching the composition's selected candidate index SHALL be drawn with a soft tint of the system accent color as its background and accent-colored text.
 
 #### Scenario: Arrow key moves the highlight
 - **WHEN** the first row is highlighted and the user presses `Down`
 - **THEN** the second row SHALL be drawn highlighted and the first row SHALL not
 
 ### Requirement: Mixed-Language Grouping
-When the candidate list contains both Chinese and English candidates, the panel SHALL draw a separator wherever consecutive rows switch between Chinese and English, and SHALL tag English rows: 译 for translations and 英 for English words. When the list contains only one kind, the panel SHALL draw no tags and no separators.
+When the candidate list contains both Chinese and English candidates, the panel SHALL draw a separator wherever consecutive rows switch between Chinese and English, and SHALL tag English rows with a small capsule label: 译 for translations and 英 for English words. When the list contains only one kind, the panel SHALL draw no tags and no separators.
 
 #### Scenario: Translation after Chinese candidates
 - **WHEN** the candidates are 数据库, 数据, database (translation)
@@ -44,6 +44,32 @@ When the candidate list contains both Chinese and English candidates, the panel 
 #### Scenario: English mode list
 - **WHEN** all candidates are English completions
 - **THEN** no row SHALL carry a tag and no separator SHALL be drawn
+
+### Requirement: Preedit Header
+In Chinese mode, the panel SHALL show the text being composed (the Rime preedit) in small secondary text above the candidate rows. In English mode, the panel SHALL NOT show the header.
+
+#### Scenario: Pinyin shown above candidates
+- **WHEN** the user types `shujuku` in Chinese mode
+- **THEN** the panel SHALL show the preedit (e.g. "shu ju ku") above the first candidate row
+
+#### Scenario: English mode has no header
+- **WHEN** the user types `he` in English mode
+- **THEN** the panel SHALL show only candidate rows
+
+### Requirement: Page Indicator
+When the Chinese candidate list has more than one page, the header SHALL show an up chevron if an earlier page exists and a down chevron if a later page exists. A single-page list SHALL show no chevrons.
+
+#### Scenario: First of several pages
+- **WHEN** the first page is shown and more pages exist
+- **THEN** the header SHALL show a down chevron and no up chevron
+
+#### Scenario: Middle page
+- **WHEN** a page other than the first is shown and more pages follow
+- **THEN** the header SHALL show both an up and a down chevron
+
+#### Scenario: Single page
+- **WHEN** all candidates fit on one page
+- **THEN** no chevrons SHALL be shown
 
 ### Requirement: Panel Placement
 The panel SHALL appear just below the caret. When there is not enough room below the caret on the current screen, the panel SHALL appear above the caret. The panel SHALL stay horizontally within the screen's visible area.

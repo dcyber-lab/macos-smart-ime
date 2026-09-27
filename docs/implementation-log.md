@@ -12,6 +12,11 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Candidate panel visual refinements
+
+- Softer highlight (accent tint with accent text instead of a solid accent fill; text lightened in dark mode for contrast), capsule 英/译 tags, and a Chinese-mode header showing the Rime preedit with up/down chevrons when more pages exist. `CompositionState` gained `isLastCandidatePage`, filled from `RimeMenu.is_last_page`.
+- The user reviewed before/after renders in light and dark before deployment. `scripts/ime/dev-cycle.sh` then passed 8/8 in TextEdit; Chinese panels grew by the 21 pt header (e.g. `nihao` 107×211 pt), English mode is unchanged (85×233 pt). 69 `swift test` cases pass.
+
 ### Deploy and smoke test without sudo
 
 - Every deploy needed the user to type a sudo password because the system-level bundle is `root:wheel`, and a user-level install alone is not launched on this machine.

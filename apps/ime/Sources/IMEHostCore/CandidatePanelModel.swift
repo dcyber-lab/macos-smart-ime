@@ -9,7 +9,25 @@ struct CandidatePanelRow: Equatable {
     let hasSeparatorBefore: Bool
 }
 
+struct CandidatePanelHeader: Equatable {
+    let text: String
+    let canPageUp: Bool
+    let canPageDown: Bool
+}
+
 enum CandidatePanelModel {
+    /// Chinese mode shows the preedit above the rows; English mode already shows the typed text as row 1.
+    static func header(for state: CompositionState) -> CandidatePanelHeader? {
+        guard state.mode == .chinese, !state.compositionText.isEmpty else {
+            return nil
+        }
+        return CandidatePanelHeader(
+            text: state.compositionText,
+            canPageUp: state.candidatePageIndex > 0,
+            canPageDown: !state.isLastCandidatePage
+        )
+    }
+
     /// Tags and separators only appear when Chinese and English candidates are mixed.
     static func rows(for state: CompositionState) -> [CandidatePanelRow] {
         let candidates = state.candidates
