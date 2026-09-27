@@ -27,6 +27,15 @@ if [[ "${1:-}" == "--system" ]]; then
   SYSTEM_INSTALL=true
 fi
 
+# Without sudo, a system install only works after scripts/ime/enable-dev-install.sh
+# made the installed bundle owned by the developer account.
+if [[ "$SYSTEM_INSTALL" == true && "$EUID" -ne 0 && ! -w "$TARGET_APP" ]]; then
+  echo "Cannot update $TARGET_APP without sudo." >&2
+  echo "Either run: sudo scripts/ime/install-host.sh --system" >&2
+  echo "or once:    sudo scripts/ime/enable-dev-install.sh (later installs need no sudo)" >&2
+  exit 1
+fi
+
 TARGET_UID=$(id -u "$TARGET_USER")
 
 run_for_target_user() {
@@ -57,7 +66,7 @@ fi
 mkdir -p "$TARGET_APP"
 rsync -a --delete "$SOURCE_APP/" "$TARGET_APP/"
 
-if [[ "$SYSTEM_INSTALL" == true ]]; then
+if [[ "$SYSTEM_INSTALL" == true && "$EUID" -eq 0 ]]; then
   chown -R root:wheel "$TARGET_APP"
 fi
 

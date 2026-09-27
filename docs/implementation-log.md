@@ -12,6 +12,12 @@
 - Follow-up: the Xcode app build was not re-run because `xcodebuild` fails to load its plug-ins on this machine until `xcodebuild -runFirstLaunch` is run; the English checklist in `docs/ime-manual-validation.md` still needs a GUI pass.
 - Follow-up: English candidates inside Chinese mode are being defined in a separate OpenSpec change.
 
+### Deploy and smoke test without sudo
+
+- Every deploy needed the user to type a sudo password because the system-level bundle is `root:wheel`, and a user-level install alone is not launched on this machine.
+- Added `scripts/ime/enable-dev-install.sh` (one-time sudo) to make the installed bundle owned by the developer account, and taught `install-host.sh --system` to update it without sudo when writable (it still fails fast with instructions otherwise). Rejected a passwordless sudoers rule because the script lives in a user-writable repository.
+- Added `scripts/ime/dev-cycle.sh` (build, install, smoke test). The smoke test now posts a notification and waits 3 seconds before taking over the keyboard, and exits non-zero on any failed check.
+
 ### Candidate panel hugs its content
 
 - The panel still looked fixed-size: a 150 pt minimum width made almost every Chinese list the same width with empty space on the right. Removed the minimum so the width follows the longest row, and tightened paddings (row height 26 pt instead of 28 pt). Added `testShortListsHugTheirContentWidth`; 61 `swift test` cases pass.

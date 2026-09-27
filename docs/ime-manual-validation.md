@@ -43,6 +43,23 @@ sudo scripts/ime/install-host.sh --system
 
 The system-wide install path should leave the bundle owned by `root:wheel`.
 
+### Development loop without sudo
+
+On a development machine, run once:
+
+```bash
+sudo scripts/ime/enable-dev-install.sh
+```
+
+This makes `/Library/Input Methods/SmartIMEHost.app` owned by the developer account. After that, build, install, and run the TextEdit smoke test with no password prompt:
+
+```bash
+scripts/ime/dev-cycle.sh            # build + install --system + smoke test
+scripts/ime/dev-cycle.sh --no-test  # build + install only
+```
+
+Trade-off: any process running as the developer account can modify the installed input method. A later `sudo scripts/ime/install-host.sh --system` restores `root:wheel` ownership and turns this mode off.
+
 To remove the install later:
 
 ```bash
