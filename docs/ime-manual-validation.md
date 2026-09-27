@@ -7,7 +7,7 @@ This document is the repository-owned checklist for installing and manually vali
 - Full Xcode is installed and active through `xcode-select`
 - `xcodegen` is installed
 - `librime` is installed through Homebrew: `brew install librime`
-- The repository includes the bundled minimal Rime data under `third_party/librime-data/minimal`
+- The repository includes the project Rime schema under `third_party/librime-data/smartime`
 
 ## Build
 
