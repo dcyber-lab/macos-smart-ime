@@ -1,5 +1,11 @@
 # Implementation Log
 
+## 2026-09-28
+
+### Cleanup before making the repository public
+
+- Removed the Notion page links from `README.md` and `AGENTS.md` and deleted `docs/notion-links.md`; they now live in the untracked `local/notion-links.md`, which `.gitignore` already covers. Replaced two absolute developer paths in `apps/ime/README.md` with relative links.
+
 ## 2026-09-27
 
 ### CI build

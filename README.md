@@ -11,12 +11,6 @@ Start with:
 - `docs/openspec-workflow.md`
 - `docs/implementation-log.md`
 
-The project is tracked in Notion:
-
-- Project page: `<removed>`
-- Design doc: `<removed>`
-- Task database: `<removed>`
-
 GitHub repository:
 
 - `https://github.com/dcyber-lab/macos-smart-ime`

@@ -55,9 +55,7 @@ Before creating a commit:
 
 ## Notion Sync Targets
 
-- Project page: `<removed>`
-- Design doc: `<removed>`
-- Task database: `<removed>`
+The Notion links (project page, design doc, task database) are not committed. Keep them in `local/notion-links.md`, which git ignores; skip the Notion sync steps when that file is absent.
 
 ## Preferred Project Layout
 
