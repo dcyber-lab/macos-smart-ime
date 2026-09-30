@@ -74,7 +74,7 @@ Owns explicit and async workflows:
 - Chinese candidates learn through librime's user dictionary (`smartime_pinyin.userdb`): every commit is recorded and recorded words rank first. This project does not reorder them.
 - English candidates learn through `CandidateHistory` (package `user-data`, target `UserData`), one instance per process created by `IMEInputController` and passed to both engines. It stores `~/Library/Application Support/SmartIMEHost/candidate-history.json`: lexicon keys of committed English words, and per typed input the picks of each English candidate and of Chinese as a whole. Scores are counts decaying with a 30-day half-life.
 - Ranking lives in `english-engine`. Word completions in both modes list the user's words first (`EnglishLexicon.completions(forPrefix:limit:preferring:)`); English mode keeps the typed text first. In Chinese mode a pick for the same input goes right after the first Chinese candidate and leads once it outscores Chinese (pinyin input also needs two picks); a leading non-pinyin English word steps back when Chinese outscores it. At most two entries sit beside the first Chinese candidate, so the Chinese page is never cut.
-- Recorded: English commits, and Chinese picks by `Space`, number key, or click only for inputs with English picks or an English candidate in first place. Never recorded: Chinese text, words outside the lexicon, `Return` commits. Bounded to 5,000 words and 2,000 inputs; written from a copy at most every 2 seconds on a utility queue; an unreadable file starts empty.
+- Recorded: English commits, and Chinese picks by `Space`, number key, or click only for inputs with English picks or an English candidate in first place. Never recorded in this file: Chinese text, words outside the lexicon, `Return` commits (Chinese words without a translation go to translation learning, below). Bounded to 5,000 words and 2,000 inputs; written from a copy at most every 2 seconds on a utility queue; an unreadable file starts empty.
 
 ## Candidate Panel
 
@@ -92,11 +92,34 @@ Owns explicit and async workflows:
 - IME rule: explicit, user-triggered, asynchronous, on-device actions such as this are allowed in the IME; AI, network calls, and long-running work stay out of the per-keystroke and composition path. The Companion app remains the planned home for features that must work in every app and with every input method.
 - Limits: only while SmartIMEHost is the active input source and in apps that report their selection to input methods; translation models are downloaded in System Settings.
 
+## Translation Learning
+
+- `IMEInputController` shares three things per process:
+  - `TranslationMisses` (`UserData`, `translation-misses.json`)
+  - `UserTranslations` (`EnglishEngine`, `user-translations.tsv`)
+  - `TranslationLearner` (`IMEHostCore`, main actor)
+- Counting: `EnglishAugmentedChineseEngine` counts a `Space`, number-key, or click commit of 2–6 Han characters that has no user or bundled translation and was never translated. Counts decay with a 30-day half-life, bounded to 2,000 words and 5,000 translated words.
+- Lookup: translations come from `UserTranslations` first, then the bundled table. The user file uses the supplement format (`chinese<TAB>english[<TAB>english]`, `#` comments) and is reloaded in `activateServer` when its modification date changed.
+- Learning: `activateServer` calls `TranslationLearner.runIfDue()`. A run is due when:
+  - learning is enabled
+  - at least `TranslationLearningInterval` has passed since the last run (default one day, minimum 60 s)
+  - no run is in progress
+  - some word has at least 3 commits
+
+  A background task then takes up to 50 such words, most used first. For each word, `AppleTermTranslator` translates zh-Hans → en and back on-device (`TranslationSession(installedSource:target:)`).
+- Kept: 1–4 words of ASCII letters, digits, spaces, hyphens, or apostrophes, whose round trip equals the word. Lexicon casing is applied ("Kernel space" → "kernel space"; names and acronyms stay as translated).
+- After the run:
+  - Kept translations are appended to `user-translations.tsv` under a `# Learned automatically` comment.
+  - Every tried word is marked as translated, so deleting a learned line removes it for good.
+  - Without installed translation languages nothing is marked, and the learner checks again within the hour.
+- Settings, read on every use: `TranslationLearningEnabled` (default true; off stops counting and learning) and `TranslationLearningInterval` (seconds).
+
 ## Data and Privacy Boundaries
 
 - Sensitive fields must not use context enhancement.
 - Password, secure text, and OTP-like fields are no-context zones.
 - Default processing is local.
+- Chinese text is stored only by librime's user dictionary and by translation learning (committed 2–6 character words that have no translation, local and bounded; `TranslationLearningEnabled` turns it off).
 - Any future AI processing must be explicit and must stay outside the IME real-time path.
 
 ## Context Strategy

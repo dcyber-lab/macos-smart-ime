@@ -147,6 +147,21 @@ Start from a fresh history as above, in Chinese mode unless noted.
 6. Confirm `candidate-history.json` holds only English words and typed inputs (no Chinese text) a few seconds after the last pick
 7. Delete the file, restart the input method, and confirm the orders above are back to the defaults
 
+## Translation Learning Checklist
+
+Requires macOS 26 and the English and Simplified Chinese translation languages (System Settings › General › Language & Region › Translation Languages). Use TextEdit in Chinese mode. Start fresh with `rm ~/Library/Application\ Support/SmartIMEHost/{translation-misses.json,user-translations.tsv}` and then quit the input method's process. To watch runs: `log stream --predicate 'process == "SmartIMEHost"' | grep "translation learning"`.
+
+1. Type `huiduhuanjing`, confirm 灰度环境 has no English candidate, and commit it with `Space`; repeat twice more (three commits)
+2. Switch to another app and back, and confirm the log shows "translation learning kept 1" (or "rejected 1")
+3. If kept, type `huiduhuanjing` and confirm its English appears after the Chinese candidates; `user-translations.tsv` has the line under "# Learned automatically"
+4. Commit two more words without a translation three times each, switch apps again, and confirm nothing runs (less than a day since the last run)
+5. Run `defaults write lab.dcyber.inputmethod.smartime TranslationLearningInterval -int 60`, wait a minute, switch apps, and confirm the two words are tried
+6. Add a line `内核<TAB>OS kernel` to `user-translations.tsv`, switch apps, type `neihe`, and confirm the only translation is `OS kernel`
+7. Delete the 灰度环境 line, switch apps, commit 灰度环境 three more times, and confirm it gets no translation and is not tried again
+8. Run `defaults write lab.dcyber.inputmethod.smartime TranslationLearningEnabled -bool false`, commit a new untranslated word, and confirm `translation-misses.json` does not gain it
+9. Clean up: `defaults delete lab.dcyber.inputmethod.smartime TranslationLearningInterval` and `defaults delete lab.dcyber.inputmethod.smartime TranslationLearningEnabled`
+10. Note how many words were kept versus rejected; the round-trip check has not been measured with the real translation models yet
+
 ## Selection Translation Checklist
 
 Requires macOS 26 and the English and Simplified Chinese translation languages (System Settings › General › Language & Region › Translation Languages). Use TextEdit or Notes with SmartIMEHost active.
