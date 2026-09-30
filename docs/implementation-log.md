@@ -19,6 +19,7 @@
   - Among the 3,000 most frequent rime-ice words, 123 changed, 110 of them through the supplement. The rest are CC-CEDICT reorders or release differences (必须 → must, have to). The bad ECDICT fills among them (执行时间 → executive time) were overridden in the supplement.
 - On a 138-term developer list written before the supplement, correct first translations rose from 73 to 137. The remaining miss is 栈, which is single-character and not translated. The supplement was filled in from this list's misses, so the gain overstates coverage of unseen terms.
 - Everyday senses stay second where a technical sense now leads (提交 → commit, submit; 协议 → protocol, agreement).
+- `testBundledTableContainsEverySupplementEntry` fails when the supplement is edited without regenerating `zh-en.tsv`.
 - Verification: the 82 `EnglishEngineTests` and `UserDataTests` cases and the 54 RimeBridge/IMEHostCore cases pass through `swiftc` with the local XCTest stand-in. The translation checks (steps 19–21 of the Chinese-mode checklist) still need a real client.
 
 ### Shifted punctuation in Chinese mode

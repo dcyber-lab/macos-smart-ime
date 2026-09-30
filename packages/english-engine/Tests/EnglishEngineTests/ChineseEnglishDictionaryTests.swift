@@ -35,6 +35,26 @@ final class ChineseEnglishDictionaryTests: XCTestCase {
         XCTAssertEqual(dictionary.translations(for: "源文件"), ["source file"])
     }
 
+    /// Fails when the supplement was edited without rerunning scripts/english/build-translations.py.
+    func testBundledTableContainsEverySupplementEntry() throws {
+        let supplement = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("../../Data/zh-en-supplement.tsv")
+        let lines = try String(contentsOf: supplement, encoding: .utf8)
+            .split(separator: "\n")
+            .filter { !$0.hasPrefix("#") }
+        let dictionary = ChineseEnglishDictionary.bundled
+
+        XCTAssertGreaterThan(lines.count, 900)
+        for line in lines {
+            let fields = line.split(separator: "\t").map(String.init)
+            XCTAssertEqual(
+                dictionary.translations(for: fields[0]), Array(fields.dropFirst()),
+                "\(fields[0]) is out of date in zh-en.tsv; rerun scripts/english/build-translations.py"
+            )
+        }
+    }
+
     func testBundledTableLoadsQuickly() throws {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "zh-en", withExtension: "tsv"))
         let content = try String(contentsOf: url, encoding: .utf8)
