@@ -18,6 +18,7 @@ Package.resolved
 *.log
 tmp/
 dist/
+__pycache__/
 
 # Secrets and local overrides
 .env
