@@ -128,6 +128,20 @@ Use a normal editable text field such as TextEdit, in Chinese mode.
 
 This milestone is not considered complete until steps 1 through 18 are verified in a real macOS text client.
 
+Picks change English placement (see the next checklist), so run this checklist on a fresh history: quit the input method's process after `rm ~/Library/Application\ Support/SmartIMEHost/candidate-history.json`.
+
+## Candidate Learning Checklist
+
+Start from a fresh history as above, in Chinese mode unless noted.
+
+1. Type `gith`, press `2` to commit `GitHub`; type `gith` again and confirm `GitHub` is first and `Space` commits it
+2. Type `shujuku`, pick `database`; type `shujuku` again and confirm `database` is second and `Space` still commits 数据库
+3. Pick `database` for `shujuku` twice more; confirm `database` is then first
+4. Type `hello`, press `2` to commit the first Chinese candidate; type `hello` again and confirm Chinese is first and `hello` second
+5. In English mode, type `dep`, pick `deployment`; type `dep` again and confirm `dep` is still first and `deployment` second
+6. Confirm `candidate-history.json` holds only English words and typed inputs (no Chinese text) a few seconds after the last pick
+7. Delete the file, restart the input method, and confirm the orders above are back to the defaults
+
 ## Selection Translation Checklist
 
 Requires macOS 26 and the English and Simplified Chinese translation languages (System Settings › General › Language & Region › Translation Languages). Use TextEdit or Notes with SmartIMEHost active.

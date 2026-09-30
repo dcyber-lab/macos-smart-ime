@@ -1,5 +1,15 @@
 # Implementation Log
 
+## 2026-09-30
+
+### English candidates learn from the user's picks
+
+- Implemented OpenSpec change `learn-candidate-choices`. New `UserData` target (`packages/user-data`) with `CandidateHistory`; `EnglishAugmentedChineseEngine` and `BasicEnglishEngine` rank with it and record commits; the host shares one instance per process.
+- Chinese ranking was already learning: probing the bundled librime with a copy of the user's real `smartime_pinyin.userdb` moved `he` → 合, `shi` → 时, `gj` → 根据, `sj` → 数据 to first place versus an empty user directory. Left unchanged.
+- Verified against real librime and the bundled data (scratch user directory): `gith` → GitHub moves from 2 to 1 after one pick; `shujuku` → database moves from 6 to 2 after one pick and to 1 after two more; picking Chinese for `hello` puts Chinese first; English-mode `dep` → deployment moves from 4 to 2. The stored file holds no Chinese text.
+- Cost with 5,000 learned words all matching the typed prefix: mean keystroke 0.37 ms versus 0.23 ms without history (librime included; engines built unoptimized).
+- This machine has only the Command Line Tools (no XCTest, and SwiftPM fails to load), so the 81 `EnglishEngineTests` and `UserDataTests` cases ran through `swiftc` with a local XCTest stand-in, and `IMEHostCore` was compiled against the bundled librime. `swift test`, the app build, and the smoke test run in CI (`package.sh`); the learning checklist in `docs/ime-manual-validation.md` still needs a pass in a real client.
+
 ## 2026-09-27
 
 ### CI build
