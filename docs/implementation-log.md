@@ -2,6 +2,25 @@
 
 ## 2026-09-30
 
+### Developer-term translations
+
+- Implemented OpenSpec change `add-tech-term-translations`. `neihekongj` → 内核空间 had no English candidate, because `zh-en.tsv` came only from CC-CEDICT's first two glosses. `build-translations.py` now builds three layers:
+  - the new hand-written `packages/english-engine/Data/zh-en-supplement.tsv` (974 developer terms)
+  - CC-CEDICT with its "(computing)" glosses first (内核 → kernel, core; 容器 → container)
+  - ECDICT `[计]` senses reversed, for headwords CC-CEDICT lacks (源文件 → source file)
+
+  The ECDICT loader moved to `scripts/english/ecdict_source.py`; `en-zh.tsv` regenerates byte-identical.
+- Rejected in the prototype:
+  - Reversing all ECDICT senses: 开心 → open core, 喜欢 → choose to.
+  - Promoting ECDICT `[计]` senses above CC-CEDICT: 问题 → sieve problem, 删除 → kill.
+  - Filtering ECDICT fills by the rime-ice vocabulary: that would have put GPL-derived selection into a committed file; without it the table is about 1.1 MB larger.
+- Table: 88,595 → 126,167 headwords (974 supplement, 88,143 CC-CEDICT 2026-09-30, 37,050 ECDICT), 2.2 → 3.3 MB.
+  - Parsing (`-O` build) takes a median 35.6 → 55.2 ms, once per process.
+  - Among the 3,000 most frequent rime-ice words, 123 changed, 110 of them through the supplement. The rest are CC-CEDICT reorders or release differences (必须 → must, have to). The bad ECDICT fills among them (执行时间 → executive time) were overridden in the supplement.
+- On a 138-term developer list written before the supplement, correct first translations rose from 73 to 137. The remaining miss is 栈, which is single-character and not translated. The supplement was filled in from this list's misses, so the gain overstates coverage of unseen terms.
+- Everyday senses stay second where a technical sense now leads (提交 → commit, submit; 协议 → protocol, agreement).
+- Verification: the 82 `EnglishEngineTests` and `UserDataTests` cases and the 54 RimeBridge/IMEHostCore cases pass through `swiftc` with the local XCTest stand-in. The translation checks (steps 19–21 of the Chinese-mode checklist) still need a real client.
+
 ### Shifted punctuation in Chinese mode
 
 - Shift+= typed "=" instead of "+" in Chinese mode. `RimeKeyTranslator` built the Rime key from `charactersIgnoringModifiers`, which InputMethodKit can fill with the unshifted key; librime commits "=" for keysym `=` even with the Shift mask (checked with the bundled librime). Symbols now come from `characters`, as in Squirrel; letters, and keys with Control, Option, or Command, still use `charactersIgnoringModifiers` so Caps Lock keeps typing pinyin and bindings such as Control+p still match.

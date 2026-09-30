@@ -54,8 +54,8 @@ The prototype kept ECDICT fills only for words in rime-ice's vocabulary, to keep
 
 ## Risks / Trade-offs
 
-- [Bigger table slows startup] → About 125,000 entries (3.4 MB), parsed once per process. The existing load-time test keeps its bound. Parse time is measured before and after.
-- [Supplement overrides an everyday word with its technical sense] → Only terms whose technical sense is the common one are overridden, and the everyday sense stays second.
+- [Bigger table slows startup] → 126,167 entries (3.3 MB), parsed once per process: a median 55 ms in an optimized build, up from 36 ms. The existing load-time test keeps its bound.
+- [Supplement puts a technical sense ahead of the everyday one (提交 → commit, submit)] → Chosen deliberately for the developer audience. The everyday sense stays second, so it remains one number key away.
 - [ECDICT fills contain odd translations (呼叫者 → call subscriber)] → They appear only for headwords that had no translation, after the Chinese candidates.
 - [CC-CEDICT is not pinned] → Unchanged from today. The build prints the release date, and the implementation log records it.
 

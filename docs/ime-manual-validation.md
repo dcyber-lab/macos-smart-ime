@@ -127,8 +127,11 @@ Use a normal editable text field such as TextEdit, in Chinese mode.
 16. Type `kube`, `json`, and `refac` and confirm `Kubernetes`, `JSON`, and `refactor` are offered
 17. Type `depl` and confirm `deployed 部署` shows its gloss in small gray text, while the translation `database` for `shujuku` shows none
 18. Switch to English mode, type `negot`, and confirm completions show glosses such as `negotiate 商议，谈判`
+19. Switch back to Chinese mode, type `neihekongj`, and confirm 内核空间 is first and `kernel space` appears after the Chinese candidates
+20. Type `neihe` and confirm the translations after 内核 are `kernel` then `core`
+21. Type `rongqi` and confirm `container` appears after 容器; type `cangku` and confirm `repository` then `warehouse` after 仓库
 
-This milestone is not considered complete until steps 1 through 18 are verified in a real macOS text client.
+This milestone is not considered complete until steps 1 through 21 are verified in a real macOS text client.
 
 Picks change English placement (see the next checklist), so run this checklist on a fresh history: quit the input method's process after `rm ~/Library/Application\ Support/SmartIMEHost/candidate-history.json`.
 

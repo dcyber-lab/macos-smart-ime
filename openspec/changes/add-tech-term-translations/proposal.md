@@ -25,7 +25,7 @@ A prototype on 138 common developer terms scored 73 correct in first place today
 ## Impact
 
 - `scripts/english/build-translations.py`: three-layer build; reads the pinned ECDICT (shared with `build-glosses.py`) and the supplement.
-- `packages/english-engine/Data/zh-en-supplement.tsv`: new, hand-written, several hundred terms.
-- `packages/english-engine/Sources/EnglishEngine/Resources/zh-en.tsv`: regenerated, about 88,600 → 125,000 entries (2.2 → 3.4 MB).
+- `packages/english-engine/Data/zh-en-supplement.tsv`: new, hand-written, 974 terms.
+- `packages/english-engine/Sources/EnglishEngine/Resources/zh-en.tsv`: regenerated, 88,595 → 126,167 entries (2.2 → 3.3 MB).
 - `packages/english-engine/Tests`: bundled-table assertions for developer terms and unchanged everyday words.
 - `packages/english-engine/DATA_LICENSE.md`, `docs/technical-design.md`, `docs/implementation-log.md`, `docs/ime-manual-validation.md`.
