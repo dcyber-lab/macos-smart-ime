@@ -2,6 +2,21 @@
 
 ## 2026-09-30
 
+### Learning missing translations
+
+- Implemented OpenSpec change `learn-missing-translations`:
+  - `TranslationMisses` (`UserData`) counts committed 2–6 character Chinese words that have no translation.
+  - `UserTranslations` (`EnglishEngine`) is a user-editable `user-translations.tsv` looked up before the bundled table.
+  - `TranslationLearner` (`IMEHostCore`) runs at most once a day on activation, translates up to 50 words with 3+ commits on-device (zh-Hans → en and back), and keeps those whose round trip matches.
+- Changed from the earlier idea of reading librime's `userdb`: exporting it goes through the levers API, which opens the LevelDB the live sessions hold (librime closes all sessions before its own sync). Counting in the engine also records only words without a translation.
+- `Usage` moved out of `CandidateHistory.swift` so both stores share it; `CandidateHistory` is unchanged.
+- Verified end to end with real librime (scratch user directory) and a fake translator:
+  - Three `Space` commits of 灰度环境 are counted; 数据库 (translated) is not.
+  - A run keeps "Staging environment" as `staging environment`, and `huiduhuanjing` then offers it after the Chinese candidates.
+  - Neither `neihekongj` → `kernel space` nor `neihe` → `kernel`, `core` is changed by this change.
+- Tests: 101 `EnglishEngine`/`UserData` cases and 71 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in, now with async `setUp` support, so `SelectionTranslationControllerTests` ran locally for the first time.
+- Not verified: the real Translation framework path. This Mac has no translation languages installed (`LanguageAvailability` reports `supported`), so the acceptance rate of the round-trip check is unknown. Step 10 of the translation learning checklist records it.
+
 ### Developer-term translations
 
 - Implemented OpenSpec change `add-tech-term-translations`. `neihekongj` → 内核空间 had no English candidate, because `zh-en.tsv` came only from CC-CEDICT's first two glosses. `build-translations.py` now builds three layers:
