@@ -24,6 +24,15 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
     /// Shared by every input controller in the process so picks in one app count everywhere.
     private static let candidateHistory = CandidateHistory(fileURL: IMEHostConfiguration.candidateHistoryURL())
+    private static let translationMisses = TranslationMisses(
+        fileURL: IMEHostConfiguration.translationMissesURL(),
+        isEnabled: { TranslationLearningSettings().isEnabled }
+    )
+    private static let userTranslations = UserTranslations(fileURL: IMEHostConfiguration.userTranslationsURL())
+    @MainActor private static let translationLearner = TranslationLearner(
+        misses: translationMisses,
+        userTranslations: userTranslations
+    )
 
     private let sessionStore = IMEHostSessionStore()
     private let chineseEngine: ChineseInputEngine?
@@ -52,7 +61,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                     defaultSchemaID: IMEHostConfiguration.defaultSchemaID
                 )
             )
-            chineseEngine = EnglishAugmentedChineseEngine(base: rimeEngine, history: Self.candidateHistory)
+            chineseEngine = EnglishAugmentedChineseEngine(
+                base: rimeEngine,
+                userTranslations: Self.userTranslations,
+                history: Self.candidateHistory,
+                misses: Self.translationMisses
+            )
         } catch {
             chineseEngine = nil
         }
@@ -170,6 +184,15 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         englishEngine?.reset()
         sessionStore.reset()
         withCandidatePanel { $0.hide() }
+    }
+
+    public override func activateServer(_ sender: Any!) {
+        super.activateServer(sender)
+        // Picks up hand edits of the user translation file, and learns missing translations once a day.
+        Self.userTranslations.reloadIfChanged()
+        MainActor.assumeIsolated {
+            Self.translationLearner.runIfDue()
+        }
     }
 
     public override func deactivateServer(_ sender: Any!) {
