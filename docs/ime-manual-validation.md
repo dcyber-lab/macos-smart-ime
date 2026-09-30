@@ -78,6 +78,8 @@ Use a normal editable text field such as TextEdit.
 10. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
 11. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
 12. Confirm Chinese text is inserted only for the committed cases
+13. With nothing composed, press Shift+`=` and confirm `+` is inserted (not `=`); press Shift+`/` and confirm `？`
+14. Type `nihao` and press Shift+`1`, and confirm `你好！` is inserted
 13. Type `yunyuansheng`, `neijuan`, and `fupan` and confirm 云原生, 内卷, and 复盘 are the first candidates (rime-ice vocabulary)
 
 This milestone is not considered complete until steps 5 through 13 are verified in a real macOS text client with the visible candidate panel.
