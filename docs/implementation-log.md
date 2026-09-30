@@ -1,5 +1,22 @@
 # Implementation Log
 
+## 2026-09-30
+
+### Shifted punctuation in Chinese mode
+
+- Shift+= typed "=" instead of "+" in Chinese mode. `RimeKeyTranslator` built the Rime key from `charactersIgnoringModifiers`, which InputMethodKit can fill with the unshifted key; librime commits "=" for keysym `=` even with the Shift mask (checked with the bundled librime). Symbols now come from `characters`, as in Squirrel; letters, and keys with Control, Option, or Command, still use `charactersIgnoringModifiers` so Caps Lock keeps typing pinyin and bindings such as Control+p still match.
+- While composing, Shift+1…9 was taken as a candidate number key, so `nihao` + Shift+1 committed 你好 and dropped the "！". Number keys now pick candidates only without Shift, Control, Option, or Command.
+- Verified with real librime through `RimeBridgeEngine` using InputMethodKit-shaped events: Shift+= → +, Shift+/ → ？, Shift+1 → ！, `nihao` + Shift+1 → 你好！. New `RimeBridgeTests` target (7 cases) and `CandidateKeyTests` (3); the RimeBridge and IMEHostCore suites (54 cases, minus the async selection-translation tests) pass through `swiftc` on this machine, which has no XCTest. Not yet checked by hand in a real client.
+- Known, not changed: in English mode a punctuation key after a word commits the word but the host consumes the key, so the punctuation itself is lost.
+
+### English candidates learn from the user's picks
+
+- Implemented OpenSpec change `learn-candidate-choices`. New `UserData` target (`packages/user-data`) with `CandidateHistory`; `EnglishAugmentedChineseEngine` and `BasicEnglishEngine` rank with it and record commits; the host shares one instance per process.
+- Chinese ranking was already learning: probing the bundled librime with a copy of the user's real `smartime_pinyin.userdb` moved `he` → 合, `shi` → 时, `gj` → 根据, `sj` → 数据 to first place versus an empty user directory. Left unchanged.
+- Verified against real librime and the bundled data (scratch user directory): `gith` → GitHub moves from 2 to 1 after one pick; `shujuku` → database moves from 6 to 2 after one pick and to 1 after two more; picking Chinese for `hello` puts Chinese first; English-mode `dep` → deployment moves from 4 to 2. The stored file holds no Chinese text.
+- Cost with 5,000 learned words all matching the typed prefix: mean keystroke 0.37 ms versus 0.23 ms without history (librime included; engines built unoptimized).
+- This machine has only the Command Line Tools (no XCTest, and SwiftPM fails to load), so the 81 `EnglishEngineTests` and `UserDataTests` cases ran through `swiftc` with a local XCTest stand-in, and `IMEHostCore` was compiled against the bundled librime. `swift test`, the app build, and the smoke test run in CI (`package.sh`); the learning checklist in `docs/ime-manual-validation.md` still needs a pass in a real client.
+
 ## 2026-09-27
 
 ### CI build

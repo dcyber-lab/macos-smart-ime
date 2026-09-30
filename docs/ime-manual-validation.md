@@ -78,6 +78,8 @@ Use a normal editable text field such as TextEdit.
 10. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
 11. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
 12. Confirm Chinese text is inserted only for the committed cases
+13. With nothing composed, press Shift+`=` and confirm `+` is inserted (not `=`); press Shift+`/` and confirm `？`
+14. Type `nihao` and press Shift+`1`, and confirm `你好！` is inserted
 13. Type `yunyuansheng`, `neijuan`, and `fupan` and confirm 云原生, 内卷, and 复盘 are the first candidates (rime-ice vocabulary)
 
 This milestone is not considered complete until steps 5 through 13 are verified in a real macOS text client with the visible candidate panel.
@@ -127,6 +129,20 @@ Use a normal editable text field such as TextEdit, in Chinese mode.
 18. Switch to English mode, type `negot`, and confirm completions show glosses such as `negotiate 商议，谈判`
 
 This milestone is not considered complete until steps 1 through 18 are verified in a real macOS text client.
+
+Picks change English placement (see the next checklist), so run this checklist on a fresh history: quit the input method's process after `rm ~/Library/Application\ Support/SmartIMEHost/candidate-history.json`.
+
+## Candidate Learning Checklist
+
+Start from a fresh history as above, in Chinese mode unless noted.
+
+1. Type `gith`, press `2` to commit `GitHub`; type `gith` again and confirm `GitHub` is first and `Space` commits it
+2. Type `shujuku`, pick `database`; type `shujuku` again and confirm `database` is second and `Space` still commits 数据库
+3. Pick `database` for `shujuku` twice more; confirm `database` is then first
+4. Type `hello`, press `2` to commit the first Chinese candidate; type `hello` again and confirm Chinese is first and `hello` second
+5. In English mode, type `dep`, pick `deployment`; type `dep` again and confirm `dep` is still first and `deployment` second
+6. Confirm `candidate-history.json` holds only English words and typed inputs (no Chinese text) a few seconds after the last pick
+7. Delete the file, restart the input method, and confirm the orders above are back to the defaults
 
 ## Selection Translation Checklist
 

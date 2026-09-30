@@ -63,6 +63,13 @@ Owns explicit and async workflows:
 - English word candidates carry a short Chinese gloss (`Candidate.annotation`) from `EnglishGlossary` (`en-zh.tsv`, generated from ECDICT by `scripts/english/build-glosses.py`, with the supplement's hand-written workplace glosses taking precedence; the 2,000 most common words are not glossed). Translation candidates carry none. The panel draws the gloss after the candidate in small secondary text.
 - Translations of the first Chinese candidate appear whenever it is a multi-character word (including unfinished or abbreviated pinyin). For 4+ letter non-pinyin input, the best common English completion is promoted to position 2.
 
+## Candidate Learning
+
+- Chinese candidates learn through librime's user dictionary (`smartime_pinyin.userdb`): every commit is recorded and recorded words rank first. This project does not reorder them.
+- English candidates learn through `CandidateHistory` (package `user-data`, target `UserData`), one instance per process created by `IMEInputController` and passed to both engines. It stores `~/Library/Application Support/SmartIMEHost/candidate-history.json`: lexicon keys of committed English words, and per typed input the picks of each English candidate and of Chinese as a whole. Scores are counts decaying with a 30-day half-life.
+- Ranking lives in `english-engine`. Word completions in both modes list the user's words first (`EnglishLexicon.completions(forPrefix:limit:preferring:)`); English mode keeps the typed text first. In Chinese mode a pick for the same input goes right after the first Chinese candidate and leads once it outscores Chinese (pinyin input also needs two picks); a leading non-pinyin English word steps back when Chinese outscores it. At most two entries sit beside the first Chinese candidate, so the Chinese page is never cut.
+- Recorded: English commits, and Chinese picks by `Space`, number key, or click only for inputs with English picks or an English candidate in first place. Never recorded: Chinese text, words outside the lexicon, `Return` commits. Bounded to 5,000 words and 2,000 inputs; written from a copy at most every 2 seconds on a utility queue; an unreadable file starts empty.
+
 ## Candidate Panel
 
 - `IMEHostCore` draws its own vertical candidate panel (`CandidatePanel`) instead of the fixed-height `IMKCandidates` panel. One borderless, non-activating `NSPanel` with an `NSVisualEffectView` background is shared by all input controllers in the process and sized to its rows on every update.

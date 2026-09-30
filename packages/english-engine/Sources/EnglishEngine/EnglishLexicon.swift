@@ -1,4 +1,5 @@
 import Foundation
+import UserData
 
 public final class EnglishLexicon: Sendable {
     public static let bundled = EnglishLexicon(
@@ -110,5 +111,27 @@ public final class EnglishLexicon: Sendable {
             return []
         }
         return content.split(whereSeparator: \.isNewline).map(String.init)
+    }
+}
+
+extension EnglishLexicon {
+    /// Completions with the user's own words first (most used first), then by corpus frequency.
+    func completions(forPrefix prefix: String, limit: Int, preferring history: CandidateHistory?) -> [String] {
+        let corpus = completions(forPrefix: prefix, limit: limit)
+        guard let history else {
+            return corpus
+        }
+        let learned = history.words(withPrefix: Self.key(for: prefix), limit: limit).compactMap(displayForm(of:))
+        var seen = Set<String>()
+        return Array((learned + corpus).filter { seen.insert($0).inserted }.prefix(limit))
+    }
+}
+
+extension CandidateHistory {
+    /// Records a committed word only when the lexicon knows it, so names and other typed strings are never stored.
+    func recordWord(_ word: String, in lexicon: EnglishLexicon) {
+        if lexicon.contains(word) {
+            recordWord(EnglishLexicon.key(for: word))
+        }
     }
 }

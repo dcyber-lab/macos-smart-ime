@@ -19,6 +19,12 @@ public enum IMEHostConfiguration {
             .path
     }
 
+    /// The user's candidate picks (`CandidateHistory`); deleting the file resets what English candidates learned.
+    public static func candidateHistoryURL() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/SmartIMEHost/candidate-history.json")
+    }
+
     public static func rimeUserDataDirectory() -> String {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/SmartIMEHost/Rime", isDirectory: true)

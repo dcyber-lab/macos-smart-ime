@@ -3,6 +3,7 @@ import AppKit
 import RimeBridge
 import EnglishEngine
 import SharedModels
+import UserData
 
 // Confined to the main thread: InputMethodKit creates and calls input controllers only there.
 public final class IMEInputController: IMKInputController, @unchecked Sendable {
@@ -20,6 +21,9 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         static let downArrow: UInt16 = 125
         static let upArrow: UInt16 = 126
     }
+
+    /// Shared by every input controller in the process so picks in one app count everywhere.
+    private static let candidateHistory = CandidateHistory(fileURL: IMEHostConfiguration.candidateHistoryURL())
 
     private let sessionStore = IMEHostSessionStore()
     private let chineseEngine: ChineseInputEngine?
@@ -48,12 +52,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                     defaultSchemaID: IMEHostConfiguration.defaultSchemaID
                 )
             )
-            chineseEngine = EnglishAugmentedChineseEngine(base: rimeEngine)
+            chineseEngine = EnglishAugmentedChineseEngine(base: rimeEngine, history: Self.candidateHistory)
         } catch {
             chineseEngine = nil
         }
 
-        englishEngine = BasicEnglishEngine()
+        englishEngine = BasicEnglishEngine(history: Self.candidateHistory)
 
         super.init(server: server, delegate: delegate, client: inputClient)
         NSLog("SmartIME: IMEInputController init – chineseEngine=%@, englishEngine=%@, bundle=%@",
@@ -95,7 +99,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
         // Selection by number keys or arrows
         if sessionStore.hasActiveComposition {
-            if let candidateIndex = candidateIndex(for: event.keyCode) {
+            if let candidateIndex = Self.candidateIndex(forKeyCode: event.keyCode, modifierFlags: event.modifierFlags) {
                 if sessionStore.state.mode == .chinese {
                     return apply(chineseEngine?.selectCandidate(at: candidateIndex), sender: sender)
                 } else if sessionStore.state.mode == .english {
@@ -305,7 +309,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         apply(update, sender: client())
     }
 
-    private func candidateIndex(for keyCode: UInt16) -> Int? {
+    /// Number keys pick candidates only when pressed alone: Shift+1 is "！", which librime commits after the
+    /// first candidate.
+    static func candidateIndex(forKeyCode keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) -> Int? {
+        guard modifierFlags.intersection([.shift, .control, .option, .command]).isEmpty else {
+            return nil
+        }
         switch keyCode {
         case KeyCode.one:
             return 0

@@ -61,7 +61,7 @@ public final class RimeBridgeEngine: ChineseInputEngine {
     }
 }
 
-private enum RimeKeyTranslator {
+enum RimeKeyTranslator {
     private static let shiftMask: Int32 = 1 << 0
     private static let controlMask: Int32 = 1 << 2
     private static let altMask: Int32 = 1 << 3
@@ -93,15 +93,30 @@ private enum RimeKeyTranslator {
             return TranslatedKey(keycode: special, mask: mask)
         }
 
-        let source = event.charactersIgnoringModifiers.isEmpty
-            ? event.characters
-            : event.charactersIgnoringModifiers
-
-        guard let scalar = source.unicodeScalars.first else {
+        guard let scalar = keySymbol(of: event, mask: mask) else {
             return nil
         }
 
         return TranslatedKey(keycode: Int32(scalar.value), mask: mask)
+    }
+
+    /// InputMethodKit can report Shift+= as "=" in `charactersIgnoringModifiers`, and librime then types "=",
+    /// so symbols come from `characters` ("+"), as in Squirrel. Letters keep `charactersIgnoringModifiers` so
+    /// Caps Lock does not turn pinyin into capitals, and Control, Option, and Command combinations keep it so
+    /// bindings such as Control+p still match.
+    private static func keySymbol(of event: InputKeyEvent, mask: Int32) -> Unicode.Scalar? {
+        let source = event.charactersIgnoringModifiers.isEmpty
+            ? event.characters
+            : event.charactersIgnoringModifiers
+        guard let scalar = source.unicodeScalars.first else {
+            return nil
+        }
+
+        let hasCommandModifier = mask & (controlMask | altMask | superMask) != 0
+        if !hasCommandModifier, !scalar.properties.isAlphabetic, let typed = event.characters.unicodeScalars.first {
+            return typed
+        }
+        return scalar
     }
 
     private static func modifierMask(from flags: UInt) -> Int32 {
