@@ -24,6 +24,10 @@ let package = Package(
             name: "EnglishEngine",
             targets: ["EnglishEngine"]
         ),
+        .library(
+            name: "UserData",
+            targets: ["UserData"]
+        ),
     ],
     targets: [
         .systemLibrary(
@@ -47,9 +51,21 @@ let package = Package(
             path: "packages/rime-bridge/Sources/RimeBridge"
         ),
         .target(
+            name: "UserData",
+            path: "packages/user-data/Sources/UserData"
+        ),
+        .testTarget(
+            name: "UserDataTests",
+            dependencies: [
+                "UserData",
+            ],
+            path: "packages/user-data/Tests/UserDataTests"
+        ),
+        .target(
             name: "EnglishEngine",
             dependencies: [
                 "SharedModels",
+                "UserData",
             ],
             path: "packages/english-engine/Sources/EnglishEngine",
             resources: [
@@ -70,6 +86,7 @@ let package = Package(
                 "SharedModels",
                 "RimeBridge",
                 "EnglishEngine",
+                "UserData",
             ],
             path: "apps/ime/Sources/IMEHostCore",
             linkerSettings: [
