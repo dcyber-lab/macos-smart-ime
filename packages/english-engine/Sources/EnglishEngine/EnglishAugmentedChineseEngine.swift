@@ -15,6 +15,8 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
     private static let maxSecondPlace = 2
     /// An English pick displaces Chinese for pinyin input only after this many picks.
     private static let minimumPicksToLeadPinyin = 2
+    /// Committed Chinese words of this many Han characters without a translation are counted for learning.
+    private static let missLengths = 2...6
 
     private enum Entry {
         case chinese(pageIndex: Int)
@@ -40,8 +42,10 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
     private let base: ChineseInputEngine
     private let lexicon: EnglishLexicon
     private let dictionary: ChineseEnglishDictionary
+    private let userTranslations: UserTranslations?
     private let glossary: EnglishGlossary
     private let history: CandidateHistory?
+    private let misses: TranslationMisses?
     private var baseState = CompositionState()
     private var entries: [Entry] = []
     private var highlight = Highlight.automatic
@@ -50,14 +54,18 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         base: ChineseInputEngine,
         lexicon: EnglishLexicon = .bundled,
         dictionary: ChineseEnglishDictionary = .bundled,
+        userTranslations: UserTranslations? = nil,
         glossary: EnglishGlossary = .bundled,
-        history: CandidateHistory? = nil
+        history: CandidateHistory? = nil,
+        misses: TranslationMisses? = nil
     ) {
         self.base = base
         self.lexicon = lexicon
         self.dictionary = dictionary
+        self.userTranslations = userTranslations
         self.glossary = glossary
         self.history = history
+        self.misses = misses
     }
 
     public func process(_ event: InputKeyEvent) -> InputSessionUpdate {
@@ -69,6 +77,7 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         let update = base.process(event)
         if event.keyCode == Self.spaceKeyCode, update.commitText != nil {
             recordChinesePick()
+            recordMissingTranslation(update.commitText)
         }
         return merge(update)
     }
@@ -82,6 +91,7 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
             let update = base.selectCandidate(at: pageIndex)
             if update.commitText != nil {
                 recordChinesePick()
+                recordMissingTranslation(update.commitText)
             }
             return merge(update)
         case nil:
@@ -275,6 +285,16 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         }
     }
 
+    /// Counts a committed Chinese word that has no translation, so the host can learn one.
+    private func recordMissingTranslation(_ text: String?) {
+        guard let misses, let text, Self.missLengths.contains(text.unicodeScalars.count),
+              text.unicodeScalars.allSatisfy({ (0x4E00...0x9FFF).contains($0.value) }),
+              translations(of: text).isEmpty else {
+            return
+        }
+        misses.record(text)
+    }
+
     /// librime shows non-pinyin input as syllable fragments ("good" -> "go o d"); show what was typed instead,
     /// unless part of it has already been converted to Chinese.
     private var showsRawInputAsPreedit: Bool {
@@ -298,6 +318,11 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         guard let first = baseState.candidates.first?.text, first.count >= 2 else {
             return []
         }
-        return dictionary.translations(for: first)
+        return translations(of: first)
+    }
+
+    /// The user's own translations replace the built-in ones.
+    private func translations(of word: String) -> [String] {
+        userTranslations?.translations(for: word) ?? dictionary.translations(for: word)
     }
 }

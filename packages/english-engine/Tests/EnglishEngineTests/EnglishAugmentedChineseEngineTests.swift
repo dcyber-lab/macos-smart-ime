@@ -453,6 +453,64 @@ final class EnglishAugmentedChineseEngineTests: XCTestCase {
         XCTAssertEqual(texts(type("help")), ["黑", "helper", "helpful", "help"])
     }
 
+    // MARK: User translations and missing translations
+
+    func testUserTranslationReplacesTheBuiltInOne() {
+        let user = UserTranslations()
+        user.addLearned("数据库", translations: ["DB"])
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexicon, dictionary: dictionary, userTranslations: user)
+        fake.candidatesByInput["shujuku"] = ["数据库", "书局"]
+
+        XCTAssertEqual(texts(type("shujuku")), ["数据库", "书局", "DB"])
+    }
+
+    func testUserTranslationFillsAWordWithoutOne() {
+        let user = UserTranslations()
+        user.addLearned("灰度环境", translations: ["staging environment"])
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexicon, dictionary: dictionary, userTranslations: user)
+        fake.candidatesByInput["huiduhuanjing"] = ["灰度环境"]
+
+        XCTAssertEqual(texts(type("huiduhuanjing")), ["灰度环境", "staging environment"])
+    }
+
+    func testCommittedWordWithoutTranslationIsCounted() {
+        let misses = missCountingEngine()
+        fake.candidatesByInput["huiduhuanjing"] = ["灰度环境", "灰度"]
+        fake.candidatesByInput["feishu"] = ["飞书", "非书"]
+
+        type("huiduhuanjing")
+        XCTAssertEqual(engine.process(key(49, " ")).commitText, "灰度环境")
+        type("feishu")
+        XCTAssertEqual(engine.selectCandidate(at: 1).commitText, "非书")
+
+        XCTAssertEqual(misses.candidates(minimumCount: 1, limit: 9).map(\.text).sorted(), ["灰度环境", "非书"])
+    }
+
+    func testTranslatedAndNonWordCommitsAreNotCounted() {
+        let misses = missCountingEngine()
+        fake.candidatesByInput["shujuku"] = ["数据库"]
+        fake.candidatesByInput["wox"] = ["我"]
+        fake.candidatesByInput["neihe"] = ["内核，"]
+        fake.candidatesByInput["qiyifenzhongdehuiyi"] = ["七一分钟的会议"]
+        fake.candidatesByInput["huidu"] = ["灰度"]
+
+        for input in ["shujuku", "wox", "neihe", "qiyifenzhongdehuiyi"] {
+            type(input)
+            XCTAssertNotNil(engine.process(key(49, " ")).commitText)
+        }
+        type("huidu")
+        XCTAssertEqual(engine.process(key(36, "\r")).commitText, "huidu", "Return commits the raw letters")
+
+        XCTAssertEqual(misses.candidates(minimumCount: 1, limit: 9), [])
+    }
+
+    @discardableResult
+    private func missCountingEngine() -> TranslationMisses {
+        let misses = TranslationMisses()
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexicon, dictionary: dictionary, misses: misses)
+        return misses
+    }
+
     @discardableResult
     private func learningEngine() -> CandidateHistory {
         let history = CandidateHistory()
