@@ -50,6 +50,14 @@ let package = Package(
             ],
             path: "packages/rime-bridge/Sources/RimeBridge"
         ),
+        .testTarget(
+            name: "RimeBridgeTests",
+            dependencies: [
+                "RimeBridge",
+                "SharedModels",
+            ],
+            path: "packages/rime-bridge/Tests/RimeBridgeTests"
+        ),
         .target(
             name: "UserData",
             path: "packages/user-data/Sources/UserData"

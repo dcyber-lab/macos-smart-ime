@@ -99,7 +99,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
         // Selection by number keys or arrows
         if sessionStore.hasActiveComposition {
-            if let candidateIndex = candidateIndex(for: event.keyCode) {
+            if let candidateIndex = Self.candidateIndex(forKeyCode: event.keyCode, modifierFlags: event.modifierFlags) {
                 if sessionStore.state.mode == .chinese {
                     return apply(chineseEngine?.selectCandidate(at: candidateIndex), sender: sender)
                 } else if sessionStore.state.mode == .english {
@@ -309,7 +309,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         apply(update, sender: client())
     }
 
-    private func candidateIndex(for keyCode: UInt16) -> Int? {
+    /// Number keys pick candidates only when pressed alone: Shift+1 is "！", which librime commits after the
+    /// first candidate.
+    static func candidateIndex(forKeyCode keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) -> Int? {
+        guard modifierFlags.intersection([.shift, .control, .option, .command]).isEmpty else {
+            return nil
+        }
         switch keyCode {
         case KeyCode.one:
             return 0
