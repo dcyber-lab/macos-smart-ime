@@ -1,0 +1,1011 @@
+# Hand-written Chinese-to-English translations of common developer terms.
+# Format: chinese<TAB>english[<TAB>english]. At most two translations; the first is shown first.
+# These entries replace CC-CEDICT and ECDICT for the same headword (scripts/english/build-translations.py).
+# Put the technical sense first and keep a common everyday sense second (仓库: repository, warehouse).
+# Single-character headwords are not allowed: the input method does not translate them.
+
+# Operating systems and kernels
+操作系统	operating system
+内核	kernel	core
+内核空间	kernel space
+用户空间	user space
+内核态	kernel mode
+用户态	user mode
+内核模块	kernel module
+系统调用	system call	syscall
+进程	process
+子进程	child process
+父进程	parent process
+守护进程	daemon
+僵尸进程	zombie process
+进程间通信	inter-process communication	IPC
+进程号	process ID	PID
+线程	thread
+多线程	multithreading
+主线程	main thread
+线程池	thread pool
+协程	coroutine
+调度	scheduling	dispatch
+调度器	scheduler
+上下文切换	context switch
+中断	interrupt	break off
+信号量	semaphore
+互斥锁	mutex
+互斥量	mutex
+自旋锁	spinlock
+读写锁	read-write lock
+死锁	deadlock
+竞态条件	race condition
+竞争条件	race condition
+原子操作	atomic operation
+内存屏障	memory barrier
+虚拟内存	virtual memory
+物理内存	physical memory
+内存	memory
+内存泄漏	memory leak
+内存泄露	memory leak
+内存溢出	out of memory
+内存分配	memory allocation
+内存管理	memory management
+页表	page table
+缺页	page fault
+缺页中断	page fault
+分页	pagination	paging
+交换分区	swap partition
+文件系统	file system
+文件描述符	file descriptor
+文件句柄	file handle
+句柄	handle
+挂载	mount
+卸载	uninstall	unmount
+驱动	driver	drive
+驱动程序	driver
+设备驱动	device driver
+重启	restart	reboot
+关机	shut down
+环境变量	environment variable
+超级用户	superuser
+管道	pipe	pipeline
+标准输入	standard input	stdin
+标准输出	standard output	stdout
+标准错误	standard error	stderr
+命令行	command line
+终端	terminal
+控制台	console
+定时任务	scheduled task	cron job
+虚拟化	virtualization
+虚拟机	virtual machine	VM
+宿主机	host machine
+快照	snapshot
+沙箱	sandbox
+沙盒	sandbox
+
+# Memory, data structures, and algorithms
+堆栈	stack
+堆内存	heap memory
+栈内存	stack memory
+栈溢出	stack overflow
+缓冲区	buffer
+缓冲区溢出	buffer overflow
+缓存	cache
+缓存命中	cache hit
+缓存行	cache line
+指针	pointer
+空指针	null pointer
+野指针	dangling pointer
+引用	reference	quote
+引用计数	reference counting
+垃圾回收	garbage collection
+垃圾收集	garbage collection
+数组	array
+链表	linked list
+队列	queue
+双端队列	deque
+优先队列	priority queue
+哈希表	hash table
+散列表	hash table
+哈希	hash
+哈希值	hash value
+哈希函数	hash function
+字典	dictionary
+映射	mapping	map
+集合	collection	gather
+元组	tuple
+二叉树	binary tree
+二叉搜索树	binary search tree
+红黑树	red-black tree
+平衡树	balanced tree
+节点	node
+根节点	root node
+叶子节点	leaf node
+父节点	parent node
+子节点	child node
+字符串	string
+字符	character
+整数	integer
+整型	integer
+浮点数	floating-point number	float
+浮点型	float
+布尔	Boolean
+布尔值	Boolean value
+枚举	enum	enumeration
+结构体	struct
+位运算	bitwise operation
+位图	bitmap
+字节	byte
+字节码	bytecode
+比特	bit
+数据结构	data structure
+算法	algorithm
+时间复杂度	time complexity
+空间复杂度	space complexity
+复杂度	complexity
+递归	recursion	recursive
+迭代	iteration	iterate
+排序	sort	sorting
+快速排序	quicksort
+归并排序	merge sort
+冒泡排序	bubble sort
+二分查找	binary search
+二分搜索	binary search
+深度优先	depth-first
+广度优先	breadth-first
+动态规划	dynamic programming
+贪心算法	greedy algorithm
+回溯	backtracking
+遍历	traverse	traversal
+索引	index
+下标	index	subscript
+偏移量	offset
+容量	capacity
+
+# Languages and compilers
+编程	programming
+编程语言	programming language
+程序员	programmer
+源代码	source code
+源码	source code
+代码	code
+代码库	codebase
+编译	compile	compilation
+编译器	compiler
+编译期	compile time
+编译时	compile time
+运行时	runtime
+解释器	interpreter
+链接器	linker
+静态链接	static linking
+动态链接	dynamic linking
+动态库	dynamic library
+静态库	static library
+共享库	shared library
+头文件	header file
+预处理	preprocessing
+宏定义	macro definition
+汇编	assembly
+汇编语言	assembly language
+机器码	machine code
+即时编译	just-in-time compilation	JIT
+语法	syntax	grammar
+语法糖	syntactic sugar
+语义	semantics
+词法分析	lexical analysis
+语法分析	parsing
+抽象语法树	abstract syntax tree	AST
+变量	variable
+全局变量	global variable
+局部变量	local variable
+常量	constant
+函数	function
+方法	method
+参数	parameter	argument
+形参	parameter
+实参	argument
+返回值	return value
+回调	callback
+回调函数	callback function
+匿名函数	anonymous function
+高阶函数	higher-order function
+闭包	closure
+对象	object	target
+实例	instance	example
+实例化	instantiate	instantiation
+构造函数	constructor
+构造器	constructor
+析构函数	destructor
+继承	inheritance	inherit
+多态	polymorphism
+封装	encapsulation	encapsulate
+抽象	abstraction	abstract
+抽象类	abstract class
+接口	interface
+泛型	generics
+模板	template
+类型	type
+类型推断	type inference
+类型转换	type conversion
+强类型	strongly typed
+弱类型	weakly typed
+静态类型	static typing
+动态类型	dynamic typing
+面向对象	object-oriented
+面向对象编程	object-oriented programming
+函数式编程	functional programming
+设计模式	design pattern
+单例	singleton
+单例模式	singleton pattern
+工厂模式	factory pattern
+观察者模式	observer pattern
+依赖注入	dependency injection
+控制反转	inversion of control
+命名空间	namespace
+作用域	scope
+模块	module
+包管理器	package manager
+依赖	dependency	depend on
+依赖项	dependency
+依赖包	dependency
+第三方库	third-party library
+框架	framework	frame
+注解	annotation
+注释	comment	annotation
+装饰器	decorator
+异常	exception	abnormal
+异常处理	exception handling
+抛出异常	throw an exception
+错误处理	error handling
+断言	assertion	assert
+空值	null
+异步	asynchronous	async
+同步	synchronous	sync
+并发	concurrency	concurrent
+并行	parallel
+阻塞	blocking	block
+非阻塞	non-blocking
+事件循环	event loop
+线程安全	thread-safe
+迭代器	iterator
+生成器	generator
+序列化	serialization	serialize
+反序列化	deserialization	deserialize
+正则表达式	regular expression	regex
+正则	regex
+表达式	expression
+语句	statement	sentence
+循环	loop	cycle
+条件语句	conditional statement
+标识符	identifier
+关键字	keyword
+运算符	operator
+操作符	operator
+重载	overload	overloading
+重写	override	rewrite
+属性	property	attribute
+字段	field
+成员变量	member variable
+静态方法	static method
+源文件	source file
+可执行文件	executable
+二进制	binary
+二进制文件	binary file
+配置文件	configuration file	config file
+脚本	script
+脚本语言	scripting language
+批处理	batch processing
+集成开发环境	IDE	integrated development environment
+编辑器	editor
+插件	plugin
+扩展	extension	extend
+调试	debug	debugging
+调试器	debugger
+断点	breakpoint
+堆栈跟踪	stack trace
+调用栈	call stack
+调用	call	invoke
+执行	execute	carry out
+初始化	initialize	initialization
+格式化	format	formatting
+代码补全	code completion
+语法高亮	syntax highlighting
+重构	refactor	refactoring
+硬编码	hard-code
+魔法数字	magic number
+样板代码	boilerplate code
+脚手架	scaffolding
+代码规范	coding standard
+代码风格	code style
+命名规范	naming convention
+驼峰命名	camel case
+死循环	infinite loop
+无限循环	infinite loop
+溢出	overflow
+越界	out of bounds
+数组越界	array index out of bounds
+空指针异常	null pointer exception
+
+# Software quality
+技术债	technical debt
+技术债务	technical debt
+向后兼容	backward compatible	backward compatibility
+向前兼容	forward compatible
+兼容性	compatibility
+可读性	readability
+可维护性	maintainability
+可扩展性	scalability	extensibility
+可用性	availability	usability
+高可用	high availability
+高可用性	high availability
+健壮性	robustness
+鲁棒性	robustness
+性能	performance
+性能优化	performance optimization
+优化	optimize	optimization
+瓶颈	bottleneck
+高并发	high concurrency
+
+# Databases and data
+数据库	database
+关系型数据库	relational database
+非关系型数据库	NoSQL database
+表结构	table schema
+主键	primary key
+外键	foreign key
+联合索引	composite index
+唯一索引	unique index
+事务	transaction	affairs
+回滚	rollback	roll back
+隔离级别	isolation level
+脏读	dirty read
+幻读	phantom read
+行锁	row lock
+表锁	table lock
+乐观锁	optimistic lock
+悲观锁	pessimistic lock
+存储过程	stored procedure
+触发器	trigger
+视图	view
+查询	query	inquire
+子查询	subquery
+慢查询	slow query
+连接池	connection pool
+对象池	object pool
+迁移	migrate	migration
+数据迁移	data migration
+分库分表	sharding
+分片	shard	sharding
+分区	partition	zone
+副本	replica	copy
+主从复制	primary-replica replication
+读写分离	read-write splitting
+数据同步	data synchronization
+数据仓库	data warehouse
+数据湖	data lake
+数据集	dataset
+数据源	data source
+数据模型	data model
+数据类型	data type
+元数据	metadata
+键值对	key-value pair
+键值存储	key-value store
+持久化	persistence	persist
+备份	backup	back up
+恢复	restore	recover
+一致性	consistency
+最终一致性	eventual consistency
+强一致性	strong consistency
+幂等	idempotent
+幂等性	idempotency
+大数据	big data
+数据分析	data analysis
+数据挖掘	data mining
+数据清洗	data cleaning
+数据可视化	data visualization
+数据管道	data pipeline
+流处理	stream processing
+实时计算	real-time computing
+离线计算	offline computing
+报表	report
+
+# Networking
+网络	network
+协议	protocol	agreement
+网络协议	network protocol
+传输层	transport layer
+网络层	network layer
+应用层	application layer
+数据链路层	data link layer
+物理层	physical layer
+客户端	client
+服务端	server
+服务器	server
+服务器端	server side
+浏览器	browser
+域名	domain name	domain
+域名解析	DNS resolution
+域名服务器	DNS server
+解析	parse	analyze
+端口	port
+端口号	port number
+网关	gateway
+路由	routing	route
+路由器	router
+路由表	routing table
+交换机	switch
+防火墙	firewall
+负载均衡	load balancing
+负载均衡器	load balancer
+反向代理	reverse proxy
+正向代理	forward proxy
+代理	proxy	agent
+代理服务器	proxy server
+带宽	bandwidth
+延迟	latency	delay
+时延	latency
+吞吐量	throughput
+丢包	packet loss
+丢包率	packet loss rate
+抖动	jitter	shake
+数据包	packet
+报文	message	packet
+握手	handshake
+三次握手	three-way handshake
+长连接	persistent connection
+短连接	short-lived connection
+连接	connection	connect
+断开连接	disconnect
+超时	timeout	time out
+重试	retry
+心跳	heartbeat
+请求	request
+响应	response	respond
+状态码	status code
+请求头	request header
+响应头	response header
+请求体	request body
+跨域	cross-origin
+轮询	polling
+长轮询	long polling
+推送	push	push notification
+套接字	socket
+广播	broadcast
+组播	multicast
+单播	unicast
+子网	subnet
+子网掩码	subnet mask
+网段	subnet	network segment
+内网	intranet	internal network
+外网	external network
+公网	public network
+局域网	LAN	local area network
+广域网	WAN	wide area network
+虚拟专用网	VPN	virtual private network
+网卡	network card	network adapter
+网络接口	network interface
+流量	traffic	flow
+限流	rate limiting
+熔断	circuit breaking	circuit breaker
+降级	downgrade	degradation
+容灾	disaster recovery
+灾备	disaster recovery
+证书	certificate
+内容分发网络	CDN	content delivery network
+边缘计算	edge computing
+
+# Cloud and containers
+云计算	cloud computing
+云原生	cloud native
+云服务	cloud service
+云服务器	cloud server
+公有云	public cloud
+私有云	private cloud
+混合云	hybrid cloud
+容器	container
+容器化	containerization	containerize
+容器编排	container orchestration
+镜像	image	mirror
+镜像源	mirror
+集群	cluster
+弹性伸缩	auto scaling
+扩容	scale out	scale up
+缩容	scale in	scale down
+水平扩展	horizontal scaling
+垂直扩展	vertical scaling
+微服务	microservice	microservices
+服务网格	service mesh
+服务发现	service discovery
+注册中心	service registry
+配置中心	configuration center
+消息队列	message queue
+消息中间件	message broker
+中间件	middleware
+生产者	producer
+消费者	consumer
+订阅	subscribe	subscription
+发布订阅	publish-subscribe	pub/sub
+对象存储	object storage
+块存储	block storage
+存储	storage	store
+存储桶	bucket
+无服务器	serverless
+虚拟私有云	VPC	virtual private cloud
+可用区	availability zone
+数据中心	data center
+机房	data center	server room
+物理机	physical machine
+裸金属	bare metal
+多租户	multi-tenant
+租户	tenant
+
+# Release and operations
+部署	deploy	deployment
+发布	release	publish
+上线	go live	launch
+下线	take offline
+灰度发布	canary release
+金丝雀发布	canary release
+蓝绿部署	blue-green deployment
+版本	version
+版本号	version number
+版本控制	version control
+热更新	hot update
+热修复	hotfix
+补丁	patch
+构建	build
+流水线	pipeline	assembly line
+持续集成	continuous integration	CI
+持续交付	continuous delivery
+持续部署	continuous deployment
+自动化	automation
+运维	operations	ops
+基础设施	infrastructure
+基础设施即代码	infrastructure as code
+配置管理	configuration management
+配置	configuration	configure
+默认值	default value
+功能开关	feature flag
+开关	switch	toggle
+环境	environment
+开发环境	development environment
+测试环境	test environment
+预发环境	staging environment
+预发布环境	staging environment
+生产环境	production environment	production
+线上	online	production
+工单	ticket	work order
+变更	change
+故障	failure	fault
+事故	incident	accident
+故障排查	troubleshooting
+故障转移	failover
+排查	troubleshoot	investigate
+根因	root cause
+根本原因	root cause
+复盘	postmortem	retrospective
+值班	on-call	on duty
+压测	load testing
+压力测试	stress testing
+性能测试	performance testing
+基准测试	benchmark
+崩溃	crash	collapse
+闪退	crash
+卡顿	lag	stutter
+卡死	freeze	hang
+报错	error
+警告	warning
+
+# Observability
+日志	log	logging
+日志级别	log level
+审计日志	audit log
+链路追踪	distributed tracing
+追踪	tracing	track
+监控	monitoring	monitor
+监控指标	monitoring metric
+指标	metric	target
+告警	alert	alarm
+报警	alarm	alert
+告警规则	alert rule
+仪表盘	dashboard
+仪表板	dashboard
+看板	kanban	dashboard
+可观测性	observability
+埋点	event tracking	instrumentation
+采样	sampling	sample
+采样率	sampling rate
+阈值	threshold
+错误率	error rate
+成功率	success rate
+响应时间	response time
+服务等级协议	SLA	service level agreement
+
+# Security
+安全	security	safety
+网络安全	cybersecurity	network security
+信息安全	information security
+漏洞	vulnerability	loophole
+安全漏洞	security vulnerability
+零日漏洞	zero-day vulnerability
+加密	encryption	encrypt
+解密	decryption	decrypt
+对称加密	symmetric encryption
+非对称加密	asymmetric encryption
+公钥	public key
+私钥	private key
+密钥	key	secret key
+秘钥	secret key
+密码	password	cipher
+签名	signature	sign
+数字签名	digital signature
+数字证书	digital certificate
+摘要	summary	digest
+认证	authentication	certification
+身份认证	authentication
+身份验证	authentication
+授权	authorization	authorize
+鉴权	authentication	authorization
+权限	permission
+访问控制	access control
+令牌	token
+访问令牌	access token
+刷新令牌	refresh token
+会话	session	conversation
+单点登录	single sign-on	SSO
+双因素认证	two-factor authentication	2FA
+多因素认证	multi-factor authentication	MFA
+登录	log in	login
+登出	log out
+注销	log out	deregister
+白名单	allowlist	whitelist
+黑名单	blocklist	blacklist
+注入	injection	inject
+注入攻击	injection attack
+跨站脚本	cross-site scripting	XSS
+跨站请求伪造	cross-site request forgery	CSRF
+拒绝服务	denial of service	DoS
+分布式拒绝服务	distributed denial of service	DDoS
+中间人攻击	man-in-the-middle attack
+钓鱼网站	phishing site
+钓鱼攻击	phishing attack
+木马	trojan	Trojan horse
+恶意软件	malware
+勒索软件	ransomware
+渗透测试	penetration testing
+数据脱敏	data masking
+脱敏	data masking
+审计	audit
+合规	compliance
+隐私	privacy
+
+# Version control and collaboration
+仓库	repository	warehouse
+版本库	repository
+代码仓库	code repository
+远程仓库	remote repository
+本地仓库	local repository
+分支	branch
+主分支	main branch
+特性分支	feature branch
+功能分支	feature branch
+合并	merge
+合并请求	merge request
+拉取请求	pull request
+冲突	conflict
+合并冲突	merge conflict
+提交	commit	submit
+提交记录	commit history
+变基	rebase
+暂存区	staging area
+工作区	working directory	workspace
+克隆	clone
+拉取	pull	fetch
+标签	tag	label
+代码审查	code review
+代码评审	code review
+评审	review
+审批	approval	approve
+开源	open source
+开源项目	open source project
+开源协议	open source license
+闭源	closed source
+许可证	license
+贡献者	contributor
+维护者	maintainer
+文档	documentation	document
+需求	requirement	demand
+需求文档	requirements document
+设计文档	design document
+技术方案	technical design
+冲刺	sprint
+敏捷开发	agile development
+待办事项	to-do	backlog
+缺陷	defect	bug
+复现	reproduce
+排期	schedule
+优先级	priority
+路线图	roadmap
+里程碑	milestone
+原型	prototype
+研发	R&D	research and development
+架构	architecture
+架构师	architect
+技术栈	tech stack
+全栈	full stack
+前端	frontend
+后端	backend
+全栈工程师	full-stack engineer
+开发者	developer
+开发人员	developer
+产品经理	product manager
+项目经理	project manager
+测试人员	tester
+运维工程师	operations engineer
+工作流	workflow
+
+# Testing
+测试	test	testing
+单元测试	unit test
+集成测试	integration test
+端到端测试	end-to-end test
+冒烟测试	smoke test
+回归测试	regression testing
+测试用例	test case
+用例	use case	test case
+测试覆盖率	test coverage
+覆盖率	coverage
+模拟	mock	simulate
+打桩	stubbing
+边界条件	boundary condition	edge case
+边界情况	edge case
+极端情况	corner case
+
+# Frontend, apps, and UI
+页面	page
+网页	web page
+网站	website
+网址	URL	web address
+链接	link
+超链接	hyperlink
+组件	component
+组件库	component library
+控件	control	widget
+样式	style
+样式表	style sheet
+层叠样式表	CSS	cascading style sheets
+布局	layout
+响应式	responsive
+响应式布局	responsive layout
+渲染	render	rendering
+服务端渲染	server-side rendering
+客户端渲染	client-side rendering
+状态管理	state management
+钩子	hook
+生命周期	lifecycle
+事件	event
+事件监听	event listener
+事件冒泡	event bubbling
+事件驱动	event-driven
+数据绑定	data binding
+双向绑定	two-way binding
+状态	state	status
+状态机	state machine
+打包	package	bundle
+打包工具	bundler
+压缩	compress	compression
+解压	decompress	extract
+懒加载	lazy loading
+预加载	preload
+动画	animation
+交互	interaction
+用户界面	user interface	UI
+用户体验	user experience	UX
+界面	interface
+弹窗	pop-up
+对话框	dialog box
+按钮	button
+输入框	input box	text field
+下拉框	dropdown
+下拉菜单	dropdown menu
+复选框	checkbox
+单选框	radio button
+滚动条	scroll bar
+导航栏	navigation bar
+侧边栏	sidebar
+工具栏	toolbar
+状态栏	status bar
+菜单栏	menu bar
+标签页	tab
+图标	icon
+字体	font
+主题	theme	topic
+深色模式	dark mode
+暗黑模式	dark mode
+浅色模式	light mode
+移动端	mobile
+小程序	mini program
+应用	app	application
+应用程序	application
+原生应用	native app
+跨平台	cross-platform
+安卓	Android
+分辨率	resolution
+屏幕	screen
+
+# APIs and everyday engineering words
+应用程序接口	API	application programming interface
+接口文档	API documentation
+接口调用	API call
+软件开发工具包	SDK	software development kit
+开发工具包	SDK	development kit
+网络钩子	webhook
+回调地址	callback URL
+字符编码	character encoding
+编码	encoding	code
+解码	decode	decoding
+转义	escape
+转义字符	escape character
+乱码	garbled text
+换行符	newline	line break
+空格	space
+制表符	tab
+占位符	placeholder
+通配符	wildcard
+时间戳	timestamp
+执行时间	execution time
+更新时间	update time
+创建时间	creation time
+时区	time zone
+唯一标识	unique identifier
+唯一标识符	unique identifier
+随机数	random number
+校验和	checksum
+校验	validate	check
+验证	verify	validate
+参数校验	parameter validation
+过滤	filter
+筛选	filter
+导入	import
+导出	export
+上传	upload
+下载	download
+任务	task
+任务队列	task queue
+定时器	timer
+计时器	timer
+资源	resource
+资源泄漏	resource leak
+命令	command
+指令	instruction	command
+选项	option
+标志位	flag
+消息	message	news
+通知	notification	notify
+过期	expire	expired
+刷新	refresh
+重置	reset
+清空	clear
+修改	modify	edit
+更新	update
+销毁	destroy
+释放	release	free
+分配	allocate	assign
+读取	read
+写入	write
+读写	read-write
+只读	read-only
+路径	path
+绝对路径	absolute path
+相对路径	relative path
+目录	directory	table of contents
+根目录	root directory
+文件夹	folder
+文件	file	document
+文件名	file name
+扩展名	file extension
+后缀	suffix
+前缀	prefix
+软链接	symbolic link	symlink
+硬链接	hard link
+符号链接	symbolic link
+压缩包	archive
+安装包	installer
+安装	install	installation
+升级	upgrade
+用户名	username
+账号	account
+账户	account
+管理员	administrator	admin
+用户	user
+主机	host	host computer
+访问	access	visit
+拓展	expand	extend
+
+# AI and machine learning
+人工智能	AI	artificial intelligence
+机器学习	machine learning
+深度学习	deep learning
+神经网络	neural network
+卷积神经网络	convolutional neural network	CNN
+循环神经网络	recurrent neural network	RNN
+大模型	large model	LLM
+大语言模型	large language model	LLM
+语言模型	language model
+模型	model
+训练	training	train
+预训练	pretraining	pretrained
+微调	fine-tuning	fine-tune
+推理	inference	reasoning
+训练集	training set
+测试集	test set
+验证集	validation set
+标注	annotation	label
+特征	feature	characteristic
+特征工程	feature engineering
+损失函数	loss function
+梯度	gradient
+梯度下降	gradient descent
+反向传播	backpropagation
+过拟合	overfitting
+欠拟合	underfitting
+正则化	regularization
+超参数	hyperparameter
+参数量	parameter count
+权重	weight
+激活函数	activation function
+注意力机制	attention mechanism
+自注意力	self-attention
+嵌入	embedding	embed
+向量	vector
+向量数据库	vector database
+提示词	prompt
+提示工程	prompt engineering
+提示词工程	prompt engineering
+上下文	context
+上下文窗口	context window
+智能体	agent
+检索增强生成	retrieval-augmented generation	RAG
+幻觉	hallucination
+分词	tokenization
+分词器	tokenizer
+词元	token
+生成式	generative
+生成式人工智能	generative AI
+多模态	multimodal
+强化学习	reinforcement learning
+监督学习	supervised learning
+无监督学习	unsupervised learning
+线性回归	linear regression
+逻辑回归	logistic regression
+分类	classification	category
+聚类	clustering
+准确率	accuracy
+精确率	precision
+召回率	recall
+自然语言处理	natural language processing	NLP
+计算机视觉	computer vision
+语音识别	speech recognition
+图像识别	image recognition
+知识图谱	knowledge graph
+推荐系统	recommendation system
+算力	computing power
+量化	quantization	quantify
+蒸馏	distillation
+知识蒸馏	knowledge distillation
+评测	evaluation	benchmark
+基准	benchmark	baseline
+
+# Hardware
+处理器	processor
+中央处理器	CPU	central processing unit
+图形处理器	GPU	graphics processing unit
+显卡	graphics card	GPU
+显存	video memory	VRAM
+芯片	chip
+硬盘	hard drive	hard disk
+固态硬盘	SSD	solid-state drive
+磁盘	disk
+主板	motherboard
+寄存器	register
+总线	bus
+固件	firmware
+嵌入式	embedded
+物联网	IoT	Internet of Things
