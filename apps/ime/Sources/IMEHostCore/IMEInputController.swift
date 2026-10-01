@@ -115,9 +115,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         shiftToggle.keyDown()
 
         if Self.returnKeys.contains(event.keyCode), !sessionStore.hasActiveComposition {
-            let readTitle = windowTitleReader()
+            // Reads the field before the app gets the key: a chat app sends and clears it on Return.
+            let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled(), readTitle = windowTitleReader()
             MainActor.assumeIsolated {
-                Self.intelligence.endSentence(readContext: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
+                Self.intelligence.endLine(app: app, secureInput: secureInput,
+                                          readField: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
         }
 
@@ -220,7 +222,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     }
 
     public override func deactivateServer(_ sender: Any!) {
-        MainActor.assumeIsolated { Self.intelligence.endSentence() }
+        // An unfinished sentence stays open: leaving to copy a link and coming back continues it.
         tearDownSession()
         super.deactivateServer(sender)
     }
@@ -310,9 +312,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             commit(committedText, using: sender)
             playCommitEffect(for: committedText)
             let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled(), readTitle = windowTitleReader()
+            let session = ObjectIdentifier(self).hashValue
             MainActor.assumeIsolated {
-                Self.intelligence.commit(committedText, app: app, secureInput: secureInput,
-                                         readContext: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
+                Self.intelligence.commit(committedText, app: app, session: session, secureInput: secureInput,
+                                         readField: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
             sessionStore.reset(committedText: committedText)
         }
@@ -361,7 +364,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             case .learning:
                 settings.isLearningEnabled.toggle()
                 if !settings.isLearningEnabled {
-                    Self.intelligence.endSentence()
+                    Self.intelligence.closeQuietly()
                 }
             case .journal:
                 settings.isJournalEnabled.toggle()
@@ -372,7 +375,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                 }
             case .excludeApp:
                 if let app {
-                    Self.intelligence.endSentence()
+                    Self.intelligence.closeQuietly()
                     settings.toggleExcluded(app)
                 }
             case .view:
@@ -393,10 +396,15 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         return { WindowTitleReader.focusedWindowTitle(bundleIdentifier: app) }
     }
 
-    /// Up to 400 characters before the cursor in the client's field, through the same IMK text
-    /// input calls selection translation uses. A round trip to the client app: only called after a
-    /// sentence ends, once the key has been handled.
-    private func textBeforeCursor() -> String? {
+    /// How many characters before the cursor each app answered for; Chromium-based apps (Electron:
+    /// SeaTalk, Slack, VS Code) return nothing for more than about 100.
+    @MainActor private static var fieldReadLimits: [String: Int] = [:]
+    private static let fieldReadSizes = [1_300, 100]
+
+    /// Text before the cursor in the client's field (a long sentence plus context), through the IMK
+    /// text input calls selection translation uses. A round trip to the client app: only called when a
+    /// sentence ends. Tries the larger size first and remembers what works for each app.
+    private func textBeforeCursor() -> FieldText? {
         guard let client = client() else {
             return nil
         }
@@ -404,8 +412,19 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         guard cursor.location != NSNotFound, cursor.location > 0 else {
             return nil
         }
-        let start = max(0, cursor.location - 400)
-        return client.attributedSubstring(from: NSRange(location: start, length: cursor.location - start))?.string
+        let app = clientBundleIdentifier ?? ""
+        let known = MainActor.assumeIsolated { Self.fieldReadLimits[app] }
+        for size in known.map({ [$0] }) ?? Self.fieldReadSizes {
+            let start = max(0, cursor.location - size)
+            let range = NSRange(location: start, length: cursor.location - start)
+            if let text = client.attributedSubstring(from: range)?.string, !text.isEmpty {
+                MainActor.assumeIsolated { Self.fieldReadLimits[app] = size }
+                return FieldText(text, startsMidway: start > 0)
+            }
+        }
+        // Nothing at any size (a terminal, say): try only the small read from now on.
+        MainActor.assumeIsolated { Self.fieldReadLimits[app] = Self.fieldReadSizes.last }
+        return nil
     }
 
     /// App names are looked up here; tokenizing, date detection, and writing run in the background.

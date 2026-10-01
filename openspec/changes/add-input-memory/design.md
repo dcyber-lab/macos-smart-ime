@@ -33,6 +33,8 @@ The user asked to also keep raw sentences, on by default, to judge whether histo
 
 ### 3. Privacy filter before anything is derived
 
+**Revised after live use:** sensitive spans are masked, not dropped. `PrivacyFilter.redact` replaces URLs, emails, tokens, and 6+ digit runs with 〔链接〕〔邮箱〕〔密钥〕〔数字〕 before the memory, the journal, context, or titles see the text. The user's chat message with a pipeline link was otherwise lost entirely. The original rule follows for reference.
+
 `PrivacyFilter.allows(sentence)` is false when the sentence contains any of:
 - 6+ consecutive digits (OTP, phone, card, ID);
 - an email address;
@@ -98,7 +100,17 @@ The user found the journal hard to read: each line had only an app and a time ("
 
 Window titles need Accessibility permission and are a separate change. Measured design notes for it are in `docs/intelligence-hub.md`.
 
-### 7. Defaults and storage
+### 7. Revised after live use: whole messages and sentence boundaries
+
+A SeaTalk message (`@mention` + Chinese + pasted link + "10mins") was journaled as "f注意时长，mins内完成". The input method only sees text it commits: pasted links, picked mentions, and digits the app inserts directly never pass through it. A reinstall mid-message also dropped the unfinished part from memory.
+
+- **`Return` reads the field first.** Without a composition, `Return` reads the field synchronously, before the key reaches the app; a chat app sends and clears the field on `Return`. The journal keeps the line the cursor ends, as the app has it, with earlier lines as context. If the input method committed nothing on that line (only pasted), the line is still journaled. This is the only read on the key path: one timed round trip, and it stops for an app after one over 100 ms.
+- **Punctuation reads the field after the key.** The sentence is taken from the field: from the previous boundary (newline, CJK or !?; punctuation, or a period followed by whitespace, so "v2.3" does not split) to the end.
+- **Consistency.** The field's sentence is used only if the last 8 characters the input method committed appear in it in order, with directly inserted text allowed between them. Otherwise the committed text is used.
+- **Chromium windows.** SeaTalk, Slack, and VS Code are Electron apps. Chromium answers `attributedSubstring(from:)` only within about 100 characters around the cursor and returns nothing for a larger range, so the first read in SeaTalk found nothing. The controller tries 1,300 characters, then 100, and remembers per app which size answered (or that none did, to avoid a second round trip). When the app reported only the end of a long sentence, committed characters missing from that window are put in front with "…", where pasted text may be missing (`IntelligenceRecorder.merged`). Reading whole Electron fields would take the Accessibility API on web content, which switches on Chromium's full accessibility mode; not done.
+- **Boundaries.** A sentence no longer ends on deactivation or a 10 s pause: leaving to copy a link and coming back continues it. It ends on punctuation, `Return`, a commit in another field (IMK input controller) or app, or 10 minutes without commits.
+
+### 8. Defaults and storage
 
 - `IntelligenceLearningEnabled` defaults to false. With it off, no file is created and the assembler drops commits.
 - `IntelligenceJournalEnabled` defaults to true and only matters while learning is on.

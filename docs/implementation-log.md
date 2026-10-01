@@ -33,6 +33,22 @@
   - The page splits sessions by window and lists sample titles and timings per app.
   - 8 new tests; 143 host and 120 data tests pass locally.
   - Ad-hoc signing means the grant may need renewing after updates.
+- A SeaTalk message (@mention, Chinese, pasted link, 10mins) was journaled as "f注意时长，mins内完成". Three causes:
+  - Reinstalling at 16:57 killed the process mid-message; the input method started 16:57:26 and the message was sent at 16:59.
+  - The input method never sees pasted text, picked mentions, or digits the app inserts.
+  - Any URL dropped the whole sentence.
+- Fixes:
+  - `Return` reads the field before the app sends and clears it, and journals the whole line.
+  - Punctuation takes the full sentence from the field. "v2.3" no longer splits; committed characters only have to appear in order.
+  - Sensitive spans are masked instead of the sentence being dropped.
+  - Leaving the field or pausing no longer ends a sentence; another field (IMK controller) or app does.
+  - 146 host and 120 data tests pass locally.
+- The journal metadata for the message was checked without reading its text (one 13-character entry with a window title and no context).
+- Second try in SeaTalk still journaled only the typed 这个.
+  - SeaTalk is Electron. Chromium answers the IMK substring call only within about 100 characters of the cursor and returns nil for the 1,300 requested.
+  - Field reads now fall back to 100 characters per app. A sentence seen only in part is completed with committed text and "…".
+  - Window titles were missing after the update: the ad-hoc signature changed and the Accessibility grant must be toggled again.
+  - 148 host tests pass locally.
 - Pending: live check (Intelligence Hub checklist).
 
 ### Intelligence hub direction (design only)

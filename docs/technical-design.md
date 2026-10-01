@@ -103,11 +103,17 @@ Owns explicit and async workflows:
   - under secure input (`IsSecureEventInputEnabled`);
   - in excluded apps: `PrivacyFilter.defaultExcludedApps` (password managers, terminals, launchers) unless listed in `IntelligenceAllowedApps`, plus `IntelligenceExcludedApps`.
 - `SentenceAssembler` joins commits into sentences. A sentence ends at 。！？；!?;. or a newline, after 10 s, on `Return` without a composition, on an app switch, or when the input method is deactivated. It keeps the last 5 sentences per app in memory.
-- When a sentence ends on punctuation or `Return`, the recorder reads up to 400 characters before the cursor (`selectedRange`, `attributedSubstring(from:)`) on the next main-actor turn. It keeps the last 300 before the sentence as the journal entry's `context`. Reads are timed per app and stop for an app after one over 100 ms.
+- The recorder reads up to 1,300 characters before the cursor (`selectedRange`, `attributedSubstring(from:)`):
+  - On `Return` without a composition, it reads synchronously before the app gets the key, and journals the line the cursor ends: the whole message, including pasted links, mentions, and digits.
+  - On sentence punctuation, it reads on the next main-actor turn and takes the sentence from the previous boundary.
+  - The field's text is used if the committed characters appear in it in order; up to 300 characters before it become `context`.
+  - Reads are timed per app and stop for an app after one over 100 ms.
+  - Chromium-based apps (Electron) answer only within about 100 characters of the cursor. The controller falls back from 1,300 to 100 characters and remembers the size per app. A long sentence seen only in part is completed with the committed text before the window, joined by "…".
+- A sentence ends on punctuation, `Return`, a commit in another field or app, or 10 minutes without commits; deactivation does not end it.
 - With 读取窗口标题 on (`IntelligenceWindowTitlesEnabled`, Accessibility granted), the same deferred step reads the focused window's title through `WindowTitleReader` (frontmost pid, `kAXFocusedWindowAttribute` → `kAXTitleAttribute`, 0.25 s messaging timeout).
   - The title is stored as the journal entry's `window`: 120 characters at most, dropped if it looks sensitive.
   - Title reads are timed in `windowStats` and stop for an app after one over 100 ms.
-- `PrivacyFilter.allowsSentence` drops a whole sentence that contains 6+ digits, an email, a URL, or a token-like string.
+- `PrivacyFilter.redact` masks URLs, emails, tokens, and 6+ digit runs (〔链接〕〔邮箱〕〔密钥〕〔数字〕) in sentences, context, and titles before anything is stored.
 - An allowed sentence goes to two stores in `UserData`:
   - `InputMemory` (`input-memory.json`): per-app decayed Han/English counts and salted HMAC-SHA256 sentence fingerprints with counts; no text.
   - `InputJournal` (`journal/YYYY-MM-DD.jsonl`), when 保存输入原文 is on: one JSON line per sentence with app and time, appended on a utility queue; pruned to `IntelligenceJournalRetentionDays` (default 30) once a day.

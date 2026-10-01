@@ -17,6 +17,7 @@
 - [x] 3.2 Learning page (HTML, 0600): summary plus searchable journal
 - [x] 3.3 学到了什么: insights computed in the background (design 5), with tests
 - [x] 3.4 Context before the cursor (deferred, timed, stops when slow), sessions on the page, launchers excluded (design 6), with tests
+- [x] 3.5 Masking instead of dropping; whole lines read on Return before the app; full sentences from the field; boundaries no longer end on deactivation or short pauses (design 7), with tests
 
 ## 4. Verification and Docs
 
