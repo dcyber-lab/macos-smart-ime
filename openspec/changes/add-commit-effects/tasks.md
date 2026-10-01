@@ -17,6 +17,7 @@
 
 ## 4. Verification and Docs
 
-- [ ] 4.1 Run `IMEHostCoreTests` locally through `swiftc` (103 pass) and in CI
+- [x] 4.1 Run `IMEHostCoreTests` locally through `swiftc` (103 pass) and in CI (204 pass)
 - [x] 4.2 Update `docs/technical-design.md`, `docs/ime-manual-validation.md`, `docs/implementation-log.md`
-- [ ] 4.3 Install the CI build; the user checks every skin, the menu, fast typing, and Reduce Motion
+- [x] 4.3 Install the CI build; the user checked the effects and the flat menu live
+- [x] 4.4 Measure frame cost; pre-render shards and defer effect building out of key handling

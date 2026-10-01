@@ -146,12 +146,16 @@ final class CandidatePanel {
         Self.playEffect(style: style, palette: palette, snapshot: snapshot, at: rowRect)
     }
 
+    /// Only the snapshot is taken while the key is being handled; building the fragments and their
+    /// bitmaps (up to about 5 ms for a long row) waits until the input method has answered the key.
     private static func playEffect(style: CommitEffectStyle, palette: CommitEffectPalette, snapshot: RowSnapshot, at screenRect: CGRect) {
-        let effect = CommitEffect(
-            style: style, palette: palette, rowSize: snapshot.size,
-            pixelColor: snapshot.color(at:), isText: snapshot.isText(at:), seed: UInt64.random(in: 1...UInt64.max)
-        )
-        CommitEffectOverlay.shared.play(effect, snapshot: snapshot, rowRect: screenRect)
+        Task { @MainActor in
+            let effect = CommitEffect(
+                style: style, palette: palette, rowSize: snapshot.size,
+                pixelColor: snapshot.color(at:), isText: snapshot.isText(at:), seed: UInt64.random(in: 1...UInt64.max)
+            )
+            CommitEffectOverlay.shared.play(effect, snapshot: snapshot, rowRect: screenRect)
+        }
     }
 
     static func roundedMask(radius: CGFloat) -> NSImage {

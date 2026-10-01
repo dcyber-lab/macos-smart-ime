@@ -5,6 +5,8 @@ struct RowSnapshot {
     let image: NSImage
     let text: NSImage
     let size: CGSize
+    /// Pixels per point.
+    let scale: CGFloat
     private let full: NSBitmapImageRep
     private let textOnly: NSBitmapImageRep
 
@@ -12,6 +14,7 @@ struct RowSnapshot {
         self.full = full
         self.textOnly = textOnly
         self.size = size
+        scale = CGFloat(full.pixelsWide) / max(size.width, 1)
         image = NSImage(size: size)
         image.addRepresentation(full)
         text = NSImage(size: size)
@@ -28,7 +31,6 @@ struct RowSnapshot {
     }
 
     private func pixel(_ rep: NSBitmapImageRep, _ point: CGPoint) -> NSColor? {
-        let scale = CGFloat(rep.pixelsWide) / max(size.width, 1)
         let x = Int(point.x * scale), y = Int(point.y * scale)
         guard x >= 0, y >= 0, x < rep.pixelsWide, y < rep.pixelsHigh else {
             return nil
@@ -38,9 +40,24 @@ struct RowSnapshot {
 }
 
 /// Draws a `CommitEffect` frame by frame over a row snapshot.
+///
+/// Each shard is rendered once into a small bitmap when the effect starts (clip, palette fill, sheen,
+/// text, edge), so a frame only draws those bitmaps with a transform and alpha, and dust only fills
+/// rectangles. That keeps a frame well under a millisecond on the main thread, which also handles keys.
 final class CommitEffectView: NSView {
+    private struct Sprite {
+        /// Bounds in row coordinates.
+        let rect: CGRect
+        let original: NSImage
+        /// The palette look; nil keeps the original.
+        let tinted: NSImage?
+    }
+
     private var effect: CommitEffect?
     private var snapshot: RowSnapshot?
+    /// Indexed like `effect.fragments`; nil for dust.
+    private var sprites: [Sprite?] = []
+    private var dustColors: [CGColor?] = []
     /// Where the row sits in this view.
     private var rowOrigin: CGPoint = .zero
     private var startTime: CFTimeInterval = 0
@@ -59,6 +76,8 @@ final class CommitEffectView: NSView {
         self.effect = effect
         self.snapshot = snapshot
         self.rowOrigin = rowOrigin
+        sprites = effect.fragments.map { $0.color == nil ? Self.sprite($0, style: effect.style, snapshot: snapshot) : nil }
+        dustColors = effect.fragments.map { $0.color?.cgColor }
         startTime = clock()
         startedAt = startTime
         startClock()
@@ -70,6 +89,8 @@ final class CommitEffectView: NSView {
         stopClock = nil
         effect = nil
         snapshot = nil
+        sprites = []
+        dustColors = []
         needsDisplay = true
     }
 
@@ -100,7 +121,7 @@ final class CommitEffectView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        guard let effect, let snapshot else {
+        guard let effect, let snapshot, let context = NSGraphicsContext.current?.cgContext else {
             return
         }
         let time = clock() - startTime
@@ -119,17 +140,27 @@ final class CommitEffectView: NSView {
         // Pieces still in place are drawn from the snapshot in one pass, so the intact part of a
         // dissolving row keeps its full resolution.
         let resting = NSBezierPath()
-        for fragment in effect.fragments {
+        for (index, fragment) in effect.fragments.enumerated() {
             guard let pose = effect.pose(of: fragment, at: time) else {
                 continue
             }
             let moving = effect.motionTime(of: fragment, at: time)
-            guard moving > 0 else {
+            if moving <= 0 {
                 resting.append(path(fragment.polygon))
-                continue
+            } else if let color = dustColors[index] {
+                // Dust squares do not rotate: one rectangle fill each.
+                let side = fragment.polygon[2].x - fragment.polygon[0].x
+                let height = fragment.polygon[2].y - fragment.polygon[0].y
+                let center = CGPoint(x: rowOrigin.x + fragment.centroid.x + pose.offset.dx, y: rowOrigin.y + fragment.centroid.y + pose.offset.dy)
+                context.setAlpha(pose.alpha)
+                context.setFillColor(color)
+                context.fill(CGRect(x: center.x - side * pose.scale / 2, y: center.y - height * pose.scale / 2,
+                                    width: side * pose.scale, height: height * pose.scale))
+            } else if let sprite = sprites[index] {
+                drawSprite(sprite, fragment: fragment, pose: pose, moving: moving)
             }
-            drawMoving(fragment, pose: pose, moving: moving, effect: effect, snapshot: snapshot, rowRect: rowRect)
         }
+        context.setAlpha(1)
         if !resting.isEmpty {
             NSGraphicsContext.saveGraphicsState()
             resting.addClip()
@@ -138,10 +169,7 @@ final class CommitEffectView: NSView {
         }
     }
 
-    private func drawMoving(
-        _ fragment: CommitEffectFragment, pose: CommitEffectPose, moving: TimeInterval,
-        effect: CommitEffect, snapshot: RowSnapshot, rowRect: CGRect
-    ) {
+    private func drawSprite(_ sprite: Sprite, fragment: CommitEffectFragment, pose: CommitEffectPose, moving: TimeInterval) {
         NSGraphicsContext.saveGraphicsState()
         defer { NSGraphicsContext.restoreGraphicsState() }
 
@@ -153,33 +181,74 @@ final class CommitEffectView: NSView {
         transform.translateX(by: -center.x, yBy: -center.y)
         transform.concat()
 
-        let shape = path(fragment.polygon)
-        if let color = fragment.color {
-            color.withAlphaComponent(color.alphaComponent * pose.alpha).setFill()
-            shape.fill()
+        let rect = sprite.rect.offsetBy(dx: rowOrigin.x, dy: rowOrigin.y)
+        guard let tinted = sprite.tinted else {
+            drawImage(sprite.original, in: rect, alpha: pose.alpha)
             return
         }
+        // Shards take on their palette color over the first 80 ms of flight.
+        let k = CGFloat(min(1, moving / 0.08))
+        if k < 1 {
+            drawImage(sprite.original, in: rect, alpha: pose.alpha * (1 - k))
+        }
+        drawImage(tinted, in: rect, alpha: pose.alpha * k)
+    }
 
-        shape.addClip()
-        if let tint = fragment.tint {
-            // Shards take on their palette color over the first 80 ms of flight.
-            let k = CGFloat(min(1, moving / 0.08))
-            if k < 1 {
-                drawImage(snapshot.image, in: rowRect, alpha: pose.alpha * (1 - k))
+    /// The shard as it looks in the row and, with a palette, as it looks in flight.
+    private static func sprite(_ fragment: CommitEffectFragment, style: CommitEffectStyle, snapshot: RowSnapshot) -> Sprite {
+        let xs = fragment.polygon.map(\.x), ys = fragment.polygon.map(\.y)
+        // One point of margin for the edge stroke.
+        let rect = CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
+            .insetBy(dx: -1, dy: -1).integral
+        let shape = NSBezierPath()
+        shape.move(to: fragment.polygon[0])
+        fragment.polygon.dropFirst().forEach { shape.line(to: $0) }
+        shape.close()
+        let rowRect = CGRect(origin: .zero, size: snapshot.size)
+
+        func render(_ body: () -> Void) -> NSImage {
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: max(1, Int(rect.width * snapshot.scale)), pixelsHigh: max(1, Int(rect.height * snapshot.scale)),
+                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+            )!
+            rep.size = rect.size
+            if let bitmap = NSGraphicsContext(bitmapImageRep: rep) {
+                // Flipped like the row, with the shard's corner at the origin. The bitmap context already
+                // maps points to pixels.
+                let context = NSGraphicsContext(cgContext: bitmap.cgContext, flipped: true)
+                NSGraphicsContext.saveGraphicsState()
+                NSGraphicsContext.current = context
+                context.cgContext.translateBy(x: 0, y: rect.height)
+                context.cgContext.scaleBy(x: 1, y: -1)
+                context.cgContext.translateBy(x: -rect.minX, y: -rect.minY)
+                shape.addClip()
+                body()
+                if style == .shatter {
+                    // A faint bright edge reads as glass.
+                    NSColor.white.withAlphaComponent(0.4).setStroke()
+                    shape.lineWidth = 1
+                    shape.stroke()
+                }
+                context.flushGraphics()
+                NSGraphicsContext.restoreGraphicsState()
             }
-            tint.withAlphaComponent(pose.alpha * k).setFill()
-            shape.fill()
-            NSGradient(starting: NSColor.white.withAlphaComponent(0.35 * pose.alpha * k), ending: .clear)?
-                .draw(in: shape.bounds, angle: 90)
-            drawImage(snapshot.text, in: rowRect, alpha: pose.alpha * k)
-        } else {
-            drawImage(snapshot.image, in: rowRect, alpha: pose.alpha)
+            let image = NSImage(size: rect.size)
+            image.addRepresentation(rep)
+            return image
         }
-        if effect.style == .shatter {
-            NSColor.white.withAlphaComponent(0.4 * pose.alpha).setStroke()
-            shape.lineWidth = 1
-            shape.stroke()
+
+        let original = render {
+            snapshot.image.draw(in: rowRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         }
+        let tinted = fragment.tint.map { tint in
+            render {
+                tint.setFill()
+                shape.fill()
+                NSGradient(starting: NSColor.white.withAlphaComponent(0.35), ending: .clear)?.draw(in: shape.bounds, angle: 90)
+                snapshot.text.draw(in: rowRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            }
+        }
+        return Sprite(rect: rect, original: original, tinted: tinted)
     }
 
     private func path(_ polygon: [CGPoint]) -> NSBezierPath {

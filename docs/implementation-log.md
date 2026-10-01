@@ -15,7 +15,12 @@
   - Optimized cost per commit is 2.6–3.8 ms: snapshot about 1 ms, dust sampling about 1 ms, overlay about 0.15 ms.
   - Frames drawn by the production view match the prototype.
 - Tests: 28 new cases (effect model, settings, committed row, row snapshots, menu); 103 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in.
-- The user confirmed the effects play live. The flat menu still needs a live check.
+- The user confirmed the effects and the flat menu live: choosing 随机 and 跟随强调色 wrote `CommitEffect = random` and `CommitEffectPalette = accent`.
+- Performance, measured at the user's request with the real `IMEHostCore` in an optimized build (120 Hz frames into a Retina-sized bitmap):
+  - The first version clipped and redrew the whole row image for each shard on every frame. On a 190 pt English row (72 shards, rainbow glass) that cost 5.0 ms per frame on average, 19 ms at p99, 33 ms at worst, and 371 ms of main-thread time per effect.
+  - Shards are now pre-rendered once into small bitmaps, and dust fills rectangles directly: 1.1 ms on average, 2.8 ms at p99, 2.9 ms at worst, and 81 ms per effect. A short Chinese row takes 0.13–0.37 ms per frame.
+  - Building the effect (up to 5 ms for a long row) runs on the next main-actor turn, so key handling pays about 2 ms per commit.
+  - The input method used 71 MB RSS after live use; each overlay's backing store is about 4 MB while an effect plays (three at most).
 
 ### Candidate panel and translation popup polish
 

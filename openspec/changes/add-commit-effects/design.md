@@ -16,7 +16,7 @@ The effect starts after `insertText` and works from a snapshot of the row. The p
 - polygon, initial velocity, spin, delay, lifetime, and end scale;
 - `pose(of:at:)` returns offset, rotation, scale, and alpha at a given time, or nil once the fragment is gone.
 
-It has no AppKit drawing and is unit-tested. `CommitEffectView` draws poses each frame from a display link (macOS 14+, with a 120 Hz timer as fallback).
+It has no AppKit drawing and is unit-tested. `CommitEffectView` draws poses each frame from a display link (macOS 14+, with a 120 Hz timer as fallback). When an effect starts, each shard is pre-rendered once into a small bitmap (clip, palette fill, sheen, text, edge), so a frame only draws bitmaps with a transform and alpha, and dust only fills rectangles. Clipping and redrawing the whole row image for every shard on every frame measured 5 ms per frame on average and 33 ms at worst for a 190 pt row; pre-rendering brings that to 1.1 ms and 2.9 ms. Building the effect runs on the next main-actor turn, so key handling only pays for the snapshot (about 2 ms in total).
 
 | Motion | Fragments | Physics | Length |
 |---|---|---|---|
@@ -49,6 +49,6 @@ The longest-prefix rule keeps 你 from matching a commit of 你好. The panel re
 
 ## Risks
 
-- Main-thread cost: one snapshot pair (about 1 ms) per commit, and per frame up to about 40 clipped image draws or about 400 small fills. This is measured in tests with an upper bound and checked live.
+- Main-thread cost: measured with the real `IMEHostCore` in an optimized build. In key handling it is about 2 ms per commit. Per frame it is under 1.1 ms on average and under 3 ms at p99, even for a long English row, so a key typed during an effect waits at most one such frame.
 - Input menu actions can only be verified live; submenu actions did not arrive, which is why the menu is flat.
 - Fragments over a new panel are briefly visible while typing fast; they fade within about 0.6 s.

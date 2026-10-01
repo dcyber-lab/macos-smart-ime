@@ -90,7 +90,10 @@ Owns explicit and async workflows:
 - `CommitEffect` is pure and seeded: fragments (triangles for 玻璃炸裂/碎裂下坠, 3 pt squares for 粒子消散) with velocity, spin, delay, and lifetime, and `pose(of:at:)` per frame. `CommitEffectView` draws poses from a display link over two row snapshots (as drawn, and text only via `CandidateListView.drawsHighlightFill`) in click-through overlay windows one level above the panel (`CommitEffectOverlay`, pool of three).
 - Palettes 彩虹/霓虹/马卡龙 recolor shards (random for glass, a left-to-right gradient otherwise) and keep text white; 跟随强调色 keeps the snapshot.
 - Settings in the defaults domain, read on every commit: `CommitEffect` (`shatter`, `crumble`, `dust`, `random`, `off`; default `shatter`) and `CommitEffectPalette` (`rainbow`, `neon`, `pastel`, `accent`, `random`; default `rainbow`). Reduce Motion turns effects off. The input menu (`IMEInputController.menu()`, built by `CommitEffectMenu`) lists the choices flat under the section titles 选词动效 and 碎片配色; choosing an item saves it and plays a preview below the pointer. Submenus are not used: the system showed them but never delivered their actions.
-- Cost on the main thread: about 3 ms once per commit (two snapshots about 1 ms, dust sampling about 1 ms, overlay setup), then one small redraw per frame for at most about 0.8 s.
+- Cost on the main thread:
+  - While the key is handled: about 2 ms (row snapshots and the start of the panel fade).
+  - Next run-loop turn: building fragments and pre-rendering each shard into a small bitmap, up to 5 ms for a long row.
+  - Each frame then only draws those bitmaps (dust fills rectangles). Measured optimized: about 0.1–0.4 ms per frame for a short Chinese row and about 0.5–1.1 ms (p99 under 3 ms) for a 190 pt English row; a whole effect costs 13–90 ms of main-thread time spread over 0.6–0.8 s.
 
 ## Selection Translation
 
