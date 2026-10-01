@@ -13,6 +13,8 @@ enum LearningPage {
         var summary: InputMemory.Summary
         var entries: [InputJournal.Entry]
         var insights: LearningInsights
+        /// Reads of the text before the cursor in this run of the input method, per app.
+        var contextStats: [String: IntelligenceRecorder.ContextStats] = [:]
         var appName: @Sendable (String) -> String
         var generatedAt: Date
     }
@@ -36,28 +38,56 @@ enum LearningPage {
         } else if input.entries.isEmpty {
             journal = "<p class=\"muted\">还没有记录。</p>"
         } else {
-            let rows = input.entries.map { entry in
-                "<tr data-text=\"\(escape((entry.text + " " + input.appName(entry.app)).lowercased()))\"><td class=\"nowrap\">\(time.string(from: entry.time))</td>"
-                    + "<td class=\"nowrap\">\(escape(input.appName(entry.app)))</td><td>\(escape(entry.text))</td></tr>"
+            let clock = DateFormatter()
+            clock.dateFormat = "HH:mm"
+            let groups = sessions(input.entries)
+            let blocks = groups.map { session -> String in
+                let first = session[0], last = session[session.count - 1]
+                let lines = session.map { entry -> String in
+                    let context = entry.context.map { "<div class=\"ctx\">前文：\(escape($0.count > 80 ? "…" + $0.suffix(80) : $0))</div>" } ?? ""
+                    let searchable = (entry.text + " " + (entry.context ?? "")).lowercased()
+                    return "<div class=\"line\" data-text=\"\(escape(searchable))\"><span class=\"muted nowrap\">\(clock.string(from: entry.time))</span> \(escape(entry.text))\(context)</div>"
+                }.joined()
+                return """
+                <section class="session" data-app="\(escape(input.appName(first.app).lowercased()))"><div class="session-head">\(escape(input.appName(first.app))) · \(time.string(from: first.time))\(first.time == last.time ? "" : "–" + clock.string(from: last.time)) · \(session.count) 句</div>\(lines)</section>
+                """
             }.joined(separator: "\n")
+            let summary = "共 \(input.entries.count) 条，\(groups.count) 段"
             journal = """
-            <input id="q" type="search" placeholder="搜索输入原文…" autofocus>
-            <p class="muted" id="count">共 \(input.entries.count) 条</p>
-            <table id="journal"><tr><th>时间</th><th>应用</th><th>内容</th></tr>
-            \(rows)
-            </table>
+            <input id="q" type="search" placeholder="搜索输入原文、前文或应用…" autofocus>
+            <p class="muted" id="count">\(summary)</p>
+            <div id="journal">
+            \(blocks)
+            </div>
             <script>
             const q = document.getElementById('q'), count = document.getElementById('count');
-            const rows = [...document.querySelectorAll('#journal tr[data-text]')];
+            const sessions = [...document.querySelectorAll('#journal .session')];
             q.addEventListener('input', () => {
               const term = q.value.trim().toLowerCase();
               let shown = 0;
-              for (const row of rows) { const hit = !term || row.dataset.text.includes(term); row.hidden = !hit; if (hit) shown++; }
-              count.textContent = term ? `匹配 ${shown} / \(input.entries.count) 条` : `共 \(input.entries.count) 条`;
+              for (const session of sessions) {
+                const appHit = term && session.dataset.app.includes(term);
+                let visible = 0;
+                for (const line of session.querySelectorAll('.line')) {
+                  const hit = !term || appHit || line.dataset.text.includes(term);
+                  line.hidden = !hit; if (hit) { visible++; shown++; }
+                }
+                session.hidden = visible === 0;
+              }
+              count.textContent = term ? `匹配 ${shown} / \(input.entries.count) 条` : '\(summary)';
             });
             </script>
             """
         }
+
+        let contextRows = input.contextStats.sorted { $0.value.reads > $1.value.reads }.map { app, stats in
+            "<tr><td>\(escape(input.appName(app)))</td><td>\(stats.reads)</td><td>\(stats.found)</td>"
+                + "<td>\(String(format: "%.1f", stats.averageMilliseconds)) ms</td><td>\(String(format: "%.1f", stats.slowestSeconds * 1000)) ms</td>"
+                + "<td>\(stats.isStopped ? "已停止（有一次超过 \(Int(IntelligenceRecorder.slowRead * 1000)) ms）" : "正常")</td></tr>"
+        }.joined()
+        let contextSection = contextRows.isEmpty
+            ? "<p class=\"muted\">本次运行还没有读取过。句子结束（标点或回车）后，会读一次光标前的文字。</p>"
+            : "<table><tr><th>应用</th><th>读取</th><th>读到</th><th>平均</th><th>最长</th><th>状态</th></tr>\(contextRows)</table>"
 
         let learned = insightsSection(input.insights, journalOn: input.isJournalEnabled || !input.entries.isEmpty, appName: input.appName, time: time)
         let fingerprints = input.summary.fingerprintCount == 0 ? "0 条" : "\(input.summary.fingerprintCount) 条（\(input.summary.oldestFingerprint.map(time.string(from:)) ?? "") — \(input.summary.newestFingerprint.map(time.string(from:)) ?? "")）"
@@ -76,6 +106,8 @@ enum LearningPage {
         .chips { display: flex; flex-wrap: wrap; gap: 6px; } .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
         .chip b { color: var(--muted); font-weight: 500; margin-left: 4px; } .next { color: var(--accent); font-size: 13px; }
         .card { border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px 12px; margin-top: 16px; }
+        .session { border-top: 1px solid var(--line); padding: 8px 0; } .session-head { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+        .line { padding: 2px 0; } .ctx { color: var(--muted); font-size: 12px; margin-left: 48px; }
         input[type=search] { width: 100%; padding: 8px 10px; font-size: 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); box-sizing: border-box; }
         </style></head><body>
         <h1>学习记录</h1>
@@ -92,7 +124,11 @@ enum LearningPage {
         <h2>句子指纹</h2>
         <p>\(fingerprints)。只存加盐哈希和次数，用于发现重复输入的句子，不含原文。</p>
         <h2>输入原文（最近 \(input.retentionDays) 天）</h2>
+        <p class="muted">同一应用里相隔不超过 10 分钟的句子归为一段。「前文」是句子结束时光标前的文字（应用支持时才有）。</p>
         \(journal)
+        <h2>读取前文的开销</h2>
+        <p class="muted">读取前文要和对应应用通信一次，只在句子结束、按键处理完之后进行。本次输入法运行期间的统计：</p>
+        \(contextSection)
         <h2>从不记录</h2>
         <p class="muted">密码框等安全输入、不学习的应用，以及含 6 位以上连续数字（验证码、卡号、手机号）、邮箱、网址或类似密钥字符串的句子。</p>
         </body></html>
@@ -152,6 +188,20 @@ enum LearningPage {
             cards.append(card("提到时间的句子", "<table>\(rows)</table>", next: "以后：打完这样的句子，会提示「✨ 加到日历」。"))
         }
         return "<h2>学到了什么</h2>" + cards.joined(separator: "\n")
+    }
+
+    /// Groups entries (newest first) into sessions: consecutive entries in the same app no more than
+    /// `gap` apart. Sessions come newest first, their entries oldest first, like a conversation.
+    static func sessions(_ entries: [InputJournal.Entry], gap: TimeInterval = 600) -> [[InputJournal.Entry]] {
+        var result: [[InputJournal.Entry]] = []
+        for entry in entries {
+            if let previous = result.last?.first, previous.app == entry.app, previous.time.timeIntervalSince(entry.time) <= gap {
+                result[result.count - 1].insert(entry, at: 0)
+            } else {
+                result.append([entry])
+            }
+        }
+        return result
     }
 
     static func escape(_ text: String) -> String {

@@ -2,28 +2,28 @@ import XCTest
 @testable import IMEHostCore
 import UserData
 
+@MainActor
 final class IntelligenceRecorderTests: XCTestCase {
     private var directory: URL!
     private var defaults: UserDefaults!
     private let suiteName = "IntelligenceRecorderTests"
     private var recorder: IntelligenceRecorder!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent("IntelligenceRecorderTests-\(UUID().uuidString)")
         defaults = UserDefaults(suiteName: suiteName)
         defaults.removePersistentDomain(forName: suiteName)
         recorder = IntelligenceRecorder(
             settings: IntelligenceSettings(defaults: defaults),
             memory: InputMemory(fileURL: directory.appendingPathComponent("input-memory.json")),
-            journal: InputJournal(directoryURL: directory.appendingPathComponent("journal"))
+            journal: InputJournal(directoryURL: directory.appendingPathComponent("journal")),
+            later: { $0() }
         )
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         defaults.removePersistentDomain(forName: suiteName)
         try? FileManager.default.removeItem(at: directory)
-        super.tearDown()
     }
 
     func testNothingIsLearnedUntilEnabled() {
@@ -114,10 +114,67 @@ final class IntelligenceRecorderTests: XCTestCase {
         XCTAssertEqual(settings.excludedApps, [])
     }
 
-    private func type(_ sentence: String, in app: String) {
-        recorder.commit(sentence, app: app, secureInput: false)
+    func testSentenceEndReadsTheTextBeforeItOnce() {
+        recorder.settings.isLearningEnabled = true
+        var reads = 0
+        let field = { () -> String? in reads += 1; return "发布计划\n这个功能下周上线。" }
+        recorder.commit("这个功能", app: "notes", secureInput: false, readContext: field)
+        recorder.commit("下周上线。", app: "notes", secureInput: false, readContext: field)
+
+        XCTAssertEqual(reads, 1, "only the commit that ends the sentence reads the client")
+        XCTAssertEqual(journalEntries().first?.context, "发布计划")
+        XCTAssertEqual(recorder.contextStats["notes"]?.reads, 1)
+        XCTAssertEqual(recorder.contextStats["notes"]?.found, 1)
+    }
+
+    func testSentencesClosedByAPauseOrSwitchAreNotRead() {
+        recorder.settings.isLearningEnabled = true
+        var reads = 0
+        recorder.commit("写到一半", app: "notes", secureInput: false, readContext: { reads += 1; return "x" })
+        recorder.endSentence()
+
+        XCTAssertEqual(reads, 0)
+        XCTAssertNil(journalEntries().first?.context)
+    }
+
+    func testSensitiveOrEmptyContextIsDropped() {
+        XCTAssertNil(IntelligenceRecorder.context(before: "收到。", in: "验证码 482913\n收到。"))
+        XCTAssertNil(IntelligenceRecorder.context(before: "收到。", in: "收到。"))
+        XCTAssertNil(IntelligenceRecorder.context(before: "收到。", in: nil))
+        XCTAssertEqual(IntelligenceRecorder.context(before: "B。", in: String(repeating: "长", count: 500) + "A。B。")?.count, IntelligenceRecorder.contextLimit)
+    }
+
+    func testASlowAppIsNotReadAgain() {
+        recorder.settings.isLearningEnabled = true
+        var reads = 0
+        let slow = { () -> String? in reads += 1; Thread.sleep(forTimeInterval: IntelligenceRecorder.slowRead + 0.05); return "前文" }
+        type("第一句。", in: "electron", readContext: slow)
+        type("第二句。", in: "electron", readContext: slow)
+
+        XCTAssertEqual(reads, 1)
+        XCTAssertEqual(recorder.contextStats["electron"]?.isStopped, true)
+        XCTAssertEqual(journalEntries().map(\.text), ["第二句。", "第一句。"], "sentences are still journaled")
+    }
+
+    func testJournalOffNeverReadsTheClient() {
+        recorder.settings.isLearningEnabled = true
+        recorder.settings.isJournalEnabled = false
+        var reads = 0
+        type("这个功能下周上线。", in: "notes", readContext: { reads += 1; return "x" })
+
+        XCTAssertEqual(reads, 0)
+    }
+
+    private func type(_ sentence: String, in app: String, readContext: (() -> String?)? = nil) {
+        recorder.commit(sentence, app: app, secureInput: false, readContext: readContext)
         recorder.endSentence()
     }
+
+    private func journalEntries() -> [InputJournal.Entry] {
+        recorder.journal.flush()
+        return recorder.journal.entries(days: 30)
+    }
+
 
     private func journalTexts() -> [String] {
         recorder.journal.flush()

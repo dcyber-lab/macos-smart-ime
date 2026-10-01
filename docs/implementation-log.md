@@ -20,6 +20,12 @@
   A month (3,000 sentences) takes 0.05–0.2 s in an optimized build. Prefiltering on a time of day took a sparse month from 0.6 s to 0.2 s; a colon or am/pm only counts next to digits.
 - CI failed one assertion: `NSDataDetector` parses Chinese dates only when Chinese is a preferred language. This Mac lists zh-Hans-SG; the CI runner and `-AppleLanguages '(en)'` do not, and nothing is found. The test now checks the parsed date only for the English sentence, and reminders (step 2) need their own Chinese time parser.
 - The user's journal was never read into the development session; insights were checked with synthetic sentences (7 new tests, 131 host tests pass locally).
+- The user found the journal lacking context (lines like 合了 or Alfred's lo with only an app and a time). Three changes need no new permission:
+  - The text before the cursor: up to 300 characters, read once a sentence ends on punctuation or Return, after the key. It is timed per app and stops for apps slower than 100 ms. The page shows reads, hits, and timings.
+  - Sessions on the page.
+  - Launchers excluded by default.
+  The text before the cursor was planned for the rewrite step; the user asked for it now. `IntelligenceRecorder` became `@MainActor` with an injectable `later` scheduler. 7 new tests; 138 host and 120 data tests pass locally.
+- Window titles (Accessibility) are deferred to their own change. The answer to the user's cost question is recorded in `docs/intelligence-hub.md`: the permission is free, while reads are round trips, so they stay off the key path with a timeout, and web content is not read so Chromium does not switch on full accessibility.
 - Pending: live check (Intelligence Hub checklist).
 
 ### Intelligence hub direction (design only)

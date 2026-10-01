@@ -16,6 +16,7 @@
 - [x] 3.1 智能中心 menu section: learning toggle, journal toggle, per-app exclusion, view, clear (with confirmation)
 - [x] 3.2 Learning page (HTML, 0600): summary plus searchable journal
 - [x] 3.3 学到了什么: insights computed in the background (design 5), with tests
+- [x] 3.4 Context before the cursor (deferred, timed, stops when slow), sessions on the page, launchers excluded (design 6), with tests
 
 ## 4. Verification and Docs
 

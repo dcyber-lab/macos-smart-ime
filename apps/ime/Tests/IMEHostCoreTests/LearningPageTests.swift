@@ -138,3 +138,43 @@ final class TimeOfDayTests: XCTestCase {
         }
     }
 }
+
+final class LearningSessionTests: XCTestCase {
+    private let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)
+
+    func testSessionsSplitByAppAndGap() {
+        let newestFirst: [InputJournal.Entry] = [
+            .init(time: t0 + 1_500, app: "ghostty", text: "现在可以装了吗"),
+            .init(time: t0 + 1_400, app: "ghostty", text: "我试试"),
+            .init(time: t0 + 300, app: "seatalk", text: "还在上班呢？"),
+            .init(time: t0 + 0, app: "seatalk", text: "合了"),
+            .init(time: t0 - 1_000, app: "seatalk", text: "早上好"),
+        ]
+
+        let sessions = LearningPage.sessions(newestFirst)
+
+        XCTAssertEqual(sessions.map { $0.map(\.text) }, [["我试试", "现在可以装了吗"], ["合了", "还在上班呢？"], ["早上好"]])
+    }
+
+    func testPageShowsSessionsContextAndReadCost() {
+        let entries: [InputJournal.Entry] = [
+            .init(time: t0 + 60, app: "notes", text: "下周上线。", context: "发布计划"),
+            .init(time: t0, app: "notes", text: "先回归。"),
+        ]
+        var stats = IntelligenceRecorder.ContextStats()
+        stats.reads = 2
+        stats.found = 1
+        stats.totalSeconds = 0.004
+        stats.slowestSeconds = 0.003
+        let html = LearningPage.html(.init(
+            isLearningEnabled: true, isJournalEnabled: true, retentionDays: 30, excludedApps: [],
+            summary: InputMemory().summary(), entries: entries,
+            insights: LearningInsights.compute(entries: entries, summary: InputMemory().summary()),
+            contextStats: ["notes": stats], appName: { $0 == "notes" ? "备忘录" : $0 }, generatedAt: t0
+        ))
+
+        XCTAssertTrue(html.contains("共 2 条，1 段"))
+        XCTAssertTrue(html.contains("前文：发布计划"))
+        XCTAssertTrue(html.contains("<td>备忘录</td><td>2</td><td>1</td><td>2.0 ms</td><td>3.0 ms</td><td>正常</td>"))
+    }
+}

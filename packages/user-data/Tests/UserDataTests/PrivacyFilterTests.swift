@@ -29,6 +29,7 @@ final class PrivacyFilterTests: XCTestCase {
         XCTAssertTrue(PrivacyFilter.allowsApp("com.tinyspeck.slackmacgap", userExcluded: []))
         XCTAssertFalse(PrivacyFilter.allowsApp("com.apple.Terminal", userExcluded: []))
         XCTAssertFalse(PrivacyFilter.allowsApp("com.1password.1password", userExcluded: []))
+        XCTAssertFalse(PrivacyFilter.allowsApp("com.runningwithcrayons.Alfred", userExcluded: []), "launcher search terms are not sentences")
         XCTAssertFalse(PrivacyFilter.allowsApp("com.tencent.xinWeChat", userExcluded: ["com.tencent.xinWeChat"]))
         XCTAssertTrue(PrivacyFilter.allowsApp("com.apple.Terminal", userExcluded: [], userAllowed: ["com.apple.Terminal"]))
         XCTAssertFalse(PrivacyFilter.allowsApp("com.apple.Terminal", userExcluded: ["com.apple.Terminal"], userAllowed: ["com.apple.Terminal"]))

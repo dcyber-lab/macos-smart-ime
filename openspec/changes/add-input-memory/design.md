@@ -88,7 +88,17 @@ The user asked what learning has learned. Collecting alone shows nothing, so the
 - The app names are looked up on the main thread. Tokenizing, detection, rendering, and writing run on a background queue. In an optimized build, a month (3,000 sentences) takes at most 0.2 s.
 - Insights are not stored. Nothing in this conversation's tooling reads the user's journal; tests use synthetic sentences.
 
-### 6. Defaults and storage
+### 6. Context: the text before the sentence, sessions, launchers
+
+The user found the journal hard to read: each line had only an app and a time ("合了", "我试试", Alfred's "lo"). Three changes need no new permission:
+
+- **Text before the cursor.** When a sentence ends while the client is focused (punctuation or `Return`), the journal entry also stores up to 300 characters before it. They are read through the IMK calls selection translation already uses (`selectedRange`, `attributedSubstring(from:)`). The read happens on the next main-actor turn, after the key has been handled; it is timed per app. An app whose read takes over 100 ms is not read again in that run. Context is stripped of the sentence itself and dropped if it looks sensitive. Sentences closed by a pause, an app switch, or deactivation are not read. The learning page reports reads, hits, and average and slowest time per app. This was planned for the rewrite step; the user moved it here.
+- **Sessions.** The page groups the journal into sessions: consecutive sentences in the same app no more than 10 minutes apart, shown oldest first like a conversation.
+- **Launchers excluded by default.** Alfred, Raycast, Spotlight, and LaunchBar join the default exclusions; their search terms are not sentences.
+
+Window titles need Accessibility permission and are a separate change. Measured design notes for it are in `docs/intelligence-hub.md`.
+
+### 7. Defaults and storage
 
 - `IntelligenceLearningEnabled` defaults to false. With it off, no file is created and the assembler drops commits.
 - `IntelligenceJournalEnabled` defaults to true and only matters while learning is on.

@@ -115,7 +115,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         shiftToggle.keyDown()
 
         if Self.returnKeys.contains(event.keyCode), !sessionStore.hasActiveComposition {
-            MainActor.assumeIsolated { Self.intelligence.endSentence() }
+            MainActor.assumeIsolated { Self.intelligence.endSentence(readContext: { [weak self] in self?.textBeforeCursor() }) }
         }
 
         if let handled = handleSelectionTranslationKey(event) {
@@ -307,7 +307,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             commit(committedText, using: sender)
             playCommitEffect(for: committedText)
             let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled()
-            MainActor.assumeIsolated { Self.intelligence.commit(committedText, app: app, secureInput: secureInput) }
+            MainActor.assumeIsolated {
+                Self.intelligence.commit(committedText, app: app, secureInput: secureInput,
+                                         readContext: { [weak self] in self?.textBeforeCursor() })
+            }
             sessionStore.reset(committedText: committedText)
         }
         syncPresentation()
@@ -373,12 +376,27 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
     }
 
+    /// Up to 400 characters before the cursor in the client's field, through the same IMK text
+    /// input calls selection translation uses. A round trip to the client app: only called after a
+    /// sentence ends, once the key has been handled.
+    private func textBeforeCursor() -> String? {
+        guard let client = client() else {
+            return nil
+        }
+        let cursor = client.selectedRange()
+        guard cursor.location != NSNotFound, cursor.location > 0 else {
+            return nil
+        }
+        let start = max(0, cursor.location - 400)
+        return client.attributedSubstring(from: NSRange(location: start, length: cursor.location - start))?.string
+    }
+
     /// App names are looked up here; tokenizing, date detection, and writing run in the background.
     @MainActor private static func openLearningPage() {
         let settings = intelligence.settings
         let summary = intelligence.memory.summary()
         let entries = intelligence.journal.entries(days: settings.retentionDays)
-        let apps = Set(summary.apps.map(\.bundleIdentifier) + entries.map(\.app))
+        let apps = Set(summary.apps.map(\.bundleIdentifier) + entries.map(\.app) + intelligence.contextStats.keys)
         let names = Dictionary(uniqueKeysWithValues: apps.map { ($0, AppNames.displayName(for: $0)) })
         let input = LearningPage.Input(
             isLearningEnabled: settings.isLearningEnabled,
@@ -388,6 +406,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             summary: summary,
             entries: entries,
             insights: LearningInsights(),
+            contextStats: intelligence.contextStats,
             appName: { names[$0] ?? $0 },
             generatedAt: Date()
         )

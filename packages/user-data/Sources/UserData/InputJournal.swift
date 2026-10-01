@@ -8,17 +8,21 @@ public final class InputJournal: @unchecked Sendable {
         public let time: Date
         public let app: String
         public let text: String
+        /// Text just before the sentence in the same field, when the app reports it.
+        public let context: String?
 
-        public init(time: Date, app: String, text: String) {
+        public init(time: Date, app: String, text: String, context: String? = nil) {
             self.time = time
             self.app = app
             self.text = text
+            self.context = context
         }
 
         enum CodingKeys: String, CodingKey {
             case time = "t"
             case app
             case text
+            case context = "ctx"
         }
     }
 
@@ -34,8 +38,8 @@ public final class InputJournal: @unchecked Sendable {
     }
 
     /// Appends in the background; never blocks the caller on disk.
-    public func append(_ text: String, app: String) {
-        let entry = Entry(time: clock(), app: app, text: text)
+    public func append(_ text: String, app: String, context: String? = nil) {
+        let entry = Entry(time: clock(), app: app, text: text, context: context)
         queue.async { [self] in
             write(entry)
         }

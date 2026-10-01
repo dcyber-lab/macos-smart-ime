@@ -78,3 +78,24 @@ final class InputJournalTests: XCTestCase {
 private final class JournalClock: @unchecked Sendable {
     var now = Date(timeIntervalSince1970: 1_790_000_000)
 }
+
+final class InputJournalContextTests: XCTestCase {
+    func testContextRoundTripsAndOldLinesStillRead() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("InputJournalContext-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let journal = InputJournal(directoryURL: directory)
+        journal.append("下周上线。", app: "notes", context: "发布计划：")
+        journal.flush()
+        // A line written before context existed.
+        let file = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)[0]
+        let handle = try FileHandle(forWritingTo: file)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data(#"{"t":"2026-10-01T08:00:00Z","app":"slack","text":"旧格式。"}"#.utf8 + [0x0A]))
+        try handle.close()
+
+        let entries = journal.entries(days: 30)
+        XCTAssertEqual(entries.map(\.text).sorted(), ["下周上线。", "旧格式。"])
+        XCTAssertEqual(entries.first { $0.text == "下周上线。" }?.context, "发布计划：")
+        XCTAssertNil(entries.first { $0.text == "旧格式。" }?.context)
+    }
+}

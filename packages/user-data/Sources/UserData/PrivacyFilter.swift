@@ -3,7 +3,8 @@ import Foundation
 /// Decides what the intelligence hub may learn. Rules apply before anything is derived or journaled,
 /// and a sentence that breaks one is dropped whole rather than masked.
 public enum PrivacyFilter {
-    /// Password managers and terminals, which hold secrets and commands.
+    /// Password managers and terminals, which hold secrets and commands, and launchers, whose
+    /// search terms are not sentences.
     public static let defaultExcludedApps: Set<String> = [
         "com.1password.1password",
         "com.agilebits.onepassword7",
@@ -14,6 +15,10 @@ public enum PrivacyFilter {
         "com.googlecode.iterm2",
         "dev.warp.Warp-Stable",
         "com.mitchellh.ghostty",
+        "com.runningwithcrayons.Alfred",
+        "com.raycast.macos",
+        "com.apple.Spotlight",
+        "at.obdev.LaunchBar",
     ]
 
     private static let sensitivePatterns = [

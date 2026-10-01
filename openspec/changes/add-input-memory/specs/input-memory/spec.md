@@ -78,6 +78,21 @@ Each part SHALL say which later feature will use it. The computation SHALL NOT r
 - **WHEN** the journal contains 3点开会 and 今天天气不错
 - **THEN** 3点开会 SHALL be listed under 提到时间的句子 and 今天天气不错 SHALL NOT
 
+### Requirement: Context and Sessions
+When a sentence ends with punctuation or `Return` while its app is focused, and the journal is on, the journal entry SHALL include up to 300 characters before it in the same field, when the app reports them. The read SHALL happen after the key has been handled. Reads SHALL stop for an app after one takes longer than 100 ms. Context that looks sensitive SHALL be dropped. The learning page SHALL group journal entries into sessions and show each entry's context and the per-app read cost.
+
+#### Scenario: Context in a document
+- **WHEN** the user types 这个功能下周上线。 under the line 发布计划 in Notes
+- **THEN** the journal entry SHALL have the context 发布计划
+
+#### Scenario: Slow app
+- **WHEN** reading the text before the cursor in an app takes 150 ms
+- **THEN** that app SHALL not be read again until the input method restarts, and its sentences SHALL still be journaled
+
+#### Scenario: Launcher
+- **WHEN** the user types lo in Alfred
+- **THEN** nothing SHALL be recorded unless the user allowed Alfred
+
 ### Requirement: No Cost While Typing
 Recording SHALL happen only when text is committed. The work SHALL be limited to appending to the sentence buffer and, at a sentence end, one fingerprint. Files SHALL be written off the main thread.
 
