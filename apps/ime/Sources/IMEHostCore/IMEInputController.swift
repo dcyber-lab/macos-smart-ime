@@ -115,7 +115,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         shiftToggle.keyDown()
 
         if Self.returnKeys.contains(event.keyCode), !sessionStore.hasActiveComposition {
-            MainActor.assumeIsolated { Self.intelligence.endSentence(readContext: { [weak self] in self?.textBeforeCursor() }) }
+            let readTitle = windowTitleReader()
+            MainActor.assumeIsolated {
+                Self.intelligence.endSentence(readContext: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
+            }
         }
 
         if let handled = handleSelectionTranslationKey(event) {
@@ -306,10 +309,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         if let committedText = update.commitText, !committedText.isEmpty {
             commit(committedText, using: sender)
             playCommitEffect(for: committedText)
-            let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled()
+            let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled(), readTitle = windowTitleReader()
             MainActor.assumeIsolated {
                 Self.intelligence.commit(committedText, app: app, secureInput: secureInput,
-                                         readContext: { [weak self] in self?.textBeforeCursor() })
+                                         readContext: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
             sessionStore.reset(committedText: committedText)
         }
@@ -340,7 +343,8 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         ).forEach(menu.addItem)
         menu.addItem(.separator())
         let currentApp = clientBundleIdentifier.map { (id: $0, name: AppNames.displayName(for: $0)) }
-        IntelligenceMenu.items(settings: IntelligenceSettings(), currentApp: currentApp, action: #selector(intelligenceMenuCommand(_:)))
+        IntelligenceMenu.items(settings: IntelligenceSettings(), currentApp: currentApp, isAccessibilityTrusted: WindowTitleReader.isTrusted,
+                               action: #selector(intelligenceMenuCommand(_:)))
             .forEach(menu.addItem)
         return menu
     }
@@ -361,6 +365,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                 }
             case .journal:
                 settings.isJournalEnabled.toggle()
+            case .windowTitles:
+                settings.isWindowTitlesEnabled.toggle()
+                if settings.isWindowTitlesEnabled, !WindowTitleReader.isTrusted {
+                    WindowTitleReader.requestTrust()
+                }
             case .excludeApp:
                 if let app {
                     Self.intelligence.endSentence()
@@ -374,6 +383,14 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             NSLog("SmartIME: intelligence menu %@ (learning %@, journal %@)", String(describing: command),
                   settings.isLearningEnabled ? "on" : "off", settings.isJournalEnabled ? "on" : "off")
         }
+    }
+
+    /// Reads the client app's focused window title when that setting is on; nil otherwise.
+    private func windowTitleReader() -> (() -> String?)? {
+        guard let app = clientBundleIdentifier, IntelligenceSettings().isWindowTitlesEnabled else {
+            return nil
+        }
+        return { WindowTitleReader.focusedWindowTitle(bundleIdentifier: app) }
     }
 
     /// Up to 400 characters before the cursor in the client's field, through the same IMK text
@@ -396,7 +413,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         let settings = intelligence.settings
         let summary = intelligence.memory.summary()
         let entries = intelligence.journal.entries(days: settings.retentionDays)
-        let apps = Set(summary.apps.map(\.bundleIdentifier) + entries.map(\.app) + intelligence.contextStats.keys)
+        let apps = Set(summary.apps.map(\.bundleIdentifier) + entries.map(\.app) + intelligence.contextStats.keys + intelligence.windowStats.keys)
         let names = Dictionary(uniqueKeysWithValues: apps.map { ($0, AppNames.displayName(for: $0)) })
         let input = LearningPage.Input(
             isLearningEnabled: settings.isLearningEnabled,
@@ -407,6 +424,9 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             entries: entries,
             insights: LearningInsights(),
             contextStats: intelligence.contextStats,
+            windowStats: intelligence.windowStats,
+            isWindowTitlesEnabled: settings.isWindowTitlesEnabled,
+            isAccessibilityTrusted: WindowTitleReader.isTrusted,
             appName: { names[$0] ?? $0 },
             generatedAt: Date()
         )

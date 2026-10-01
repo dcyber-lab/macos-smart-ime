@@ -42,10 +42,11 @@ TL;DR: The input method turns what the user commits into a local memory and offe
 
 - **Text before the cursor** (no extra permission, in step 1): through IMK, once per sentence, after the key. Timed per app; stops for apps slower than 100 ms. Shown on the learning page.
 - **Sessions**: the journal is shown as conversations (same app, gaps of 10 minutes or less).
-- **Window titles** (next change, needs Accessibility, off by default):
+- **Window titles** (`add-window-context`, needs Accessibility, off by default; menu 读取窗口标题):
   - The permission itself costs nothing. Each read is a round trip to the app, usually 0.1 to a few ms, but up to the 6 s default messaging timeout if the app hangs. So reads happen only on app switch or sentence end, off the key path, with a 0.25 s timeout.
   - The plan reads only the focused window's title, never web content: Chromium and Electron apps switch on full accessibility support, and use more CPU and memory, when assistive clients read their content.
-  - One generic call works for almost every app; how useful the title is varies. Browser page titles, editor file names, and terminal titles are informative. Chat apps such as WeChat and SeaTalk may only show the app name, and the conversation name or a browser URL would need per-app adapters that break with app updates. The learning page will show title samples per app before any adapter is written.
+  - One generic call works for almost every app; how useful the title is varies. Browser page titles, editor file names, and terminal titles are informative. Chat apps such as WeChat and SeaTalk may only show the app name, and the conversation name or a browser URL would need per-app adapters that break with app updates. The learning page shows sample titles per app before any adapter is written.
+  - The Accessibility grant is tied to the code signature. While builds are ad-hoc signed, an update may need the user to switch LinguaType off and on in the Accessibility list.
 - **Not planned**: reading what other people wrote in chat windows.
 
 ## Seeing what was learned

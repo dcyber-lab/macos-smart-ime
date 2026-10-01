@@ -156,6 +156,30 @@ final class IntelligenceRecorderTests: XCTestCase {
         XCTAssertEqual(journalEntries().map(\.text), ["第二句。", "第一句。"], "sentences are still journaled")
     }
 
+    func testWindowTitleIsJournaledWithTheSentence() {
+        recorder.settings.isLearningEnabled = true
+        type("这个功能下周上线。", in: "chrome", readContext: nil, readWindowTitle: { "Pull Request #14 · macos-smart-ime" })
+        type("验证码发你了。", in: "mail", readContext: nil, readWindowTitle: { "收件箱 – alex@example.com" })
+
+        let entries = journalEntries()
+        XCTAssertEqual(entries.first { $0.app == "chrome" }?.window, "Pull Request #14 · macos-smart-ime")
+        XCTAssertNil(entries.first { $0.app == "mail" }?.window, "a title with an email address is dropped")
+        XCTAssertEqual(recorder.windowStats["chrome"]?.found, 1)
+    }
+
+    func testSlowWindowTitlesStopWhileContextContinues() {
+        recorder.settings.isLearningEnabled = true
+        var titleReads = 0, contextReads = 0
+        let slowTitle = { () -> String? in titleReads += 1; Thread.sleep(forTimeInterval: IntelligenceRecorder.slowRead + 0.05); return "窗口" }
+        let context = { () -> String? in contextReads += 1; return "前文" }
+        type("第一句。", in: "electron", readContext: context, readWindowTitle: slowTitle)
+        type("第二句。", in: "electron", readContext: context, readWindowTitle: slowTitle)
+
+        XCTAssertEqual(titleReads, 1)
+        XCTAssertEqual(contextReads, 2)
+        XCTAssertEqual(recorder.windowStats["electron"]?.isStopped, true)
+    }
+
     func testJournalOffNeverReadsTheClient() {
         recorder.settings.isLearningEnabled = true
         recorder.settings.isJournalEnabled = false
@@ -165,8 +189,8 @@ final class IntelligenceRecorderTests: XCTestCase {
         XCTAssertEqual(reads, 0)
     }
 
-    private func type(_ sentence: String, in app: String, readContext: (() -> String?)? = nil) {
-        recorder.commit(sentence, app: app, secureInput: false, readContext: readContext)
+    private func type(_ sentence: String, in app: String, readContext: (() -> String?)? = nil, readWindowTitle: (() -> String?)? = nil) {
+        recorder.commit(sentence, app: app, secureInput: false, readContext: readContext, readWindowTitle: readWindowTitle)
         recorder.endSentence()
     }
 

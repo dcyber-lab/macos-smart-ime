@@ -9,6 +9,7 @@ struct IntelligenceSettings {
     static let retentionKey = "IntelligenceJournalRetentionDays"
     static let excludedAppsKey = "IntelligenceExcludedApps"
     static let allowedAppsKey = "IntelligenceAllowedApps"
+    static let windowTitlesKey = "IntelligenceWindowTitlesEnabled"
     static let defaultRetentionDays = 30
 
     let defaults: UserDefaults
@@ -27,6 +28,12 @@ struct IntelligenceSettings {
     var isJournalEnabled: Bool {
         get { defaults.object(forKey: Self.journalKey) as? Bool ?? true }
         nonmutating set { defaults.set(newValue, forKey: Self.journalKey) }
+    }
+
+    /// Reading the focused window's title (needs Accessibility access); off by default.
+    var isWindowTitlesEnabled: Bool {
+        get { defaults.object(forKey: Self.windowTitlesKey) as? Bool ?? false }
+        nonmutating set { defaults.set(newValue, forKey: Self.windowTitlesKey) }
     }
 
     var retentionDays: Int {

@@ -12,10 +12,13 @@ enum IntelligenceMenu {
         case excludeApp
         case view
         case clear
+        case windowTitles
     }
 
     static let learningTitle = "智能学习"
     static let journalTitle = "保存输入原文"
+    static let windowTitlesTitle = "读取窗口标题"
+    static let windowTitlesNeedsAccessTitle = "读取窗口标题（需授权辅助功能）"
     static let viewTitle = "查看学习记录…"
     static let clearTitle = "清除学习记录…"
 
@@ -24,7 +27,10 @@ enum IntelligenceMenu {
     }
 
     /// `currentApp` is the client being typed in, if known.
-    static func items(settings: IntelligenceSettings, currentApp: (id: String, name: String)?, action: Selector) -> [NSMenuItem] {
+    /// `isAccessibilityTrusted` decides whether the window title item asks for access.
+    static func items(
+        settings: IntelligenceSettings, currentApp: (id: String, name: String)?, isAccessibilityTrusted: Bool = true, action: Selector
+    ) -> [NSMenuItem] {
         let header = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         header.isEnabled = false
         var items = [header]
@@ -32,6 +38,9 @@ enum IntelligenceMenu {
         let learning = settings.isLearningEnabled
         items.append(item(learningTitle, .learning, action, isOn: learning))
         items.append(item(journalTitle, .journal, action, isOn: settings.isJournalEnabled, isEnabled: learning))
+        let titles = settings.isWindowTitlesEnabled
+        items.append(item(titles && !isAccessibilityTrusted ? windowTitlesNeedsAccessTitle : windowTitlesTitle, .windowTitles, action,
+                          isOn: titles, isEnabled: learning))
         if let currentApp {
             items.append(item(excludeTitle(currentApp.name), .excludeApp, action, isOn: settings.isExcluded(currentApp.id)))
         }
@@ -52,6 +61,7 @@ enum IntelligenceMenu {
         switch item.title {
         case learningTitle: return .learning
         case journalTitle: return .journal
+        case windowTitlesTitle, windowTitlesNeedsAccessTitle: return .windowTitles
         case viewTitle: return .view
         case clearTitle: return .clear
         default: return item.title.hasPrefix("不在「") ? .excludeApp : nil

@@ -226,6 +226,8 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 4a. The page starts with 学到了什么: type 麻烦大家帮忙回归一下 three times and 明天下午三点开会, reopen the page, and confirm the sentence appears under 重复说过的话 (3 次) and the meeting under 提到时间的句子
 4b. In Notes, type 发布计划, press Return, type 这个功能下周上线。; the page shows that sentence with 前文：发布计划, groups sentences into sessions, and lists Notes under 读取前文的开销 with a few ms
 4c. Type lo in Alfred or Raycast; it is not recorded
+4d. Choose 读取窗口标题: the system asks for Accessibility access and the Privacy & Security pane opens; switch on LinguaType (after an update, switch it off and on). The menu item drops 需授权辅助功能
+4e. Type a sentence in Chrome on two different tabs and in an editor; the page shows separate sessions with the window titles, and the 窗口标题 table shows sample titles and timings per app
 5. Type 验证码是 482913。 and a sentence in Terminal; neither appears after refreshing via 查看学习记录…
 6. Choose 不在「<app>」中学习 for the first app, type another sentence there, and confirm it is not recorded
 7. Turn off 保存输入原文, type a sentence, and confirm the journal does not gain it while the app's counts still grow

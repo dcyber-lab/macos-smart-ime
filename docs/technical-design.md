@@ -104,6 +104,9 @@ Owns explicit and async workflows:
   - in excluded apps: `PrivacyFilter.defaultExcludedApps` (password managers, terminals, launchers) unless listed in `IntelligenceAllowedApps`, plus `IntelligenceExcludedApps`.
 - `SentenceAssembler` joins commits into sentences. A sentence ends at 。！？；!?;. or a newline, after 10 s, on `Return` without a composition, on an app switch, or when the input method is deactivated. It keeps the last 5 sentences per app in memory.
 - When a sentence ends on punctuation or `Return`, the recorder reads up to 400 characters before the cursor (`selectedRange`, `attributedSubstring(from:)`) on the next main-actor turn. It keeps the last 300 before the sentence as the journal entry's `context`. Reads are timed per app and stop for an app after one over 100 ms.
+- With 读取窗口标题 on (`IntelligenceWindowTitlesEnabled`, Accessibility granted), the same deferred step reads the focused window's title through `WindowTitleReader` (frontmost pid, `kAXFocusedWindowAttribute` → `kAXTitleAttribute`, 0.25 s messaging timeout).
+  - The title is stored as the journal entry's `window`: 120 characters at most, dropped if it looks sensitive.
+  - Title reads are timed in `windowStats` and stop for an app after one over 100 ms.
 - `PrivacyFilter.allowsSentence` drops a whole sentence that contains 6+ digits, an email, a URL, or a token-like string.
 - An allowed sentence goes to two stores in `UserData`:
   - `InputMemory` (`input-memory.json`): per-app decayed Han/English counts and salted HMAC-SHA256 sentence fingerprints with counts; no text.

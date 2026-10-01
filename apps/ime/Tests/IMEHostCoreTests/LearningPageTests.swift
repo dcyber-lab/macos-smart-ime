@@ -156,6 +156,33 @@ final class LearningSessionTests: XCTestCase {
         XCTAssertEqual(sessions.map { $0.map(\.text) }, [["我试试", "现在可以装了吗"], ["合了", "还在上班呢？"], ["早上好"]])
     }
 
+    func testWindowChangesStartANewSession() {
+        let newestFirst: [InputJournal.Entry] = [
+            .init(time: t0 + 120, app: "chrome", text: "看下这个 PR", window: "PR #14"),
+            .init(time: t0 + 60, app: "chrome", text: "搜一下", window: "Google"),
+            .init(time: t0, app: "chrome", text: "再搜一下", window: "Google"),
+        ]
+        XCTAssertEqual(LearningPage.sessions(newestFirst).map(\.count), [1, 2])
+    }
+
+    func testPageShowsWindowTitlesAndAccessStatus() {
+        let entries: [InputJournal.Entry] = [.init(time: t0, app: "chrome", text: "看下这个 PR", window: "PR #14 · macos-smart-ime")]
+        var stats = IntelligenceRecorder.ContextStats()
+        stats.reads = 1
+        stats.found = 1
+        let html = LearningPage.html(.init(
+            isLearningEnabled: true, isJournalEnabled: true, retentionDays: 30, excludedApps: [],
+            summary: InputMemory().summary(), entries: entries,
+            insights: LearningInsights.compute(entries: entries, summary: InputMemory().summary()),
+            windowStats: ["chrome": stats], isWindowTitlesEnabled: true, isAccessibilityTrusted: false,
+            appName: { $0 == "chrome" ? "Google Chrome" : $0 }, generatedAt: t0
+        ))
+
+        XCTAssertTrue(html.contains("Google Chrome · PR #14 · macos-smart-ime"))
+        XCTAssertTrue(html.contains("辅助功能未授权"))
+        XCTAssertTrue(html.contains("<td>PR #14 · macos-smart-ime</td>"))
+    }
+
     func testPageShowsSessionsContextAndReadCost() {
         let entries: [InputJournal.Entry] = [
             .init(time: t0 + 60, app: "notes", text: "下周上线。", context: "发布计划"),

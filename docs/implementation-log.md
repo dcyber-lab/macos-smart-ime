@@ -26,6 +26,13 @@
   - Launchers excluded by default.
   The text before the cursor was planned for the rewrite step; the user asked for it now. `IntelligenceRecorder` became `@MainActor` with an injectable `later` scheduler. 7 new tests; 138 host and 120 data tests pass locally.
 - Window titles (Accessibility) are deferred to their own change. The answer to the user's cost question is recorded in `docs/intelligence-hub.md`: the permission is free, while reads are round trips, so they stay off the key path with a timeout, and web content is not read so Chromium does not switch on full accessibility.
+- Implemented OpenSpec change `add-window-context` at the user's request, accepting Accessibility access:
+  - 读取窗口标题 (off by default) reads the focused window's title after a sentence ends.
+  - The read uses one generic Accessibility call, title only, with a 0.25 s timeout, timed per app, and stops after a read over 100 ms.
+  - Titles are protected like sentences and stored with journal entries.
+  - The page splits sessions by window and lists sample titles and timings per app.
+  - 8 new tests; 143 host and 120 data tests pass locally.
+  - Ad-hoc signing means the grant may need renewing after updates.
 - Pending: live check (Intelligence Hub checklist).
 
 ### Intelligence hub direction (design only)

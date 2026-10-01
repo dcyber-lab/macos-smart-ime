@@ -6,11 +6,12 @@ import UserData
 /// Called on commit only, never per keystroke.
 ///
 /// When a sentence ends while the client is still focused (punctuation, `Return`), the journal entry
-/// also gets the text just before it in the same field. That read is a round trip to the client app,
-/// so it runs after the key has been handled, is timed, and stops for an app once a read is slow.
+/// also gets the text just before it in the same field and, when enabled, the focused window's title.
+/// Each read is a round trip to the client app, so it runs after the key has been handled, is timed,
+/// and stops for an app once a read is slow.
 @MainActor
 final class IntelligenceRecorder {
-    /// Per-app outcome of reading the text before the cursor, for the learning page.
+    /// Per-app outcome of reading the text before the cursor or the window title, for the learning page.
     struct ContextStats: Equatable {
         var reads = 0
         var found = 0
@@ -24,16 +25,19 @@ final class IntelligenceRecorder {
 
     nonisolated static let slowRead: TimeInterval = 0.1
     nonisolated static let contextLimit = 300
+    nonisolated static let windowTitleLimit = 120
 
     let settings: IntelligenceSettings
     let memory: InputMemory
     let journal: InputJournal
     private(set) var contextStats: [String: ContextStats] = [:]
+    private(set) var windowStats: [String: ContextStats] = [:]
     private let assembler = SentenceAssembler()
     private let clock: () -> Date
     private let later: (@escaping @MainActor () -> Void) -> Void
     /// Set for the duration of a commit that can read the client.
     private var readContext: (() -> String?)?
+    private var readWindowTitle: (() -> String?)?
 
     /// `later` runs work after the current key has been handled; tests pass `{ $0() }`.
     init(
@@ -51,23 +55,28 @@ final class IntelligenceRecorder {
         }
     }
 
-    /// `readContext` returns the text before the cursor in the client; it is only called when this
-    /// commit ends a sentence that goes to the journal.
-    func commit(_ text: String, app: String?, secureInput: Bool, readContext: (() -> String?)? = nil) {
+    /// `readContext` returns the text before the cursor in the client and `readWindowTitle` the focused
+    /// window's title; they are only called when this commit ends a sentence that goes to the journal.
+    func commit(
+        _ text: String, app: String?, secureInput: Bool,
+        readContext: (() -> String?)? = nil, readWindowTitle: (() -> String?)? = nil
+    ) {
         guard settings.isLearningEnabled, !secureInput, let app, settings.allows(app: app) else {
             // Leaving an allowed app still closes what was typed there.
             assembler.endSentence()
             return
         }
         self.readContext = readContext
-        defer { self.readContext = nil }
+        self.readWindowTitle = readWindowTitle
+        defer { (self.readContext, self.readWindowTitle) = (nil, nil) }
         assembler.commit(text, app: app, at: clock())
     }
 
     /// `Return` without a composition (pass `readContext`), or the input method losing focus (do not).
-    func endSentence(readContext: (() -> String?)? = nil) {
+    func endSentence(readContext: (() -> String?)? = nil, readWindowTitle: (() -> String?)? = nil) {
         self.readContext = readContext
-        defer { self.readContext = nil }
+        self.readWindowTitle = readWindowTitle
+        defer { (self.readContext, self.readWindowTitle) = (nil, nil) }
         assembler.endSentence()
     }
 
@@ -81,6 +90,7 @@ final class IntelligenceRecorder {
         memory.clear()
         journal.clear()
         contextStats = [:]
+        windowStats = [:]
     }
 
     private func learn(_ sentence: SentenceAssembler.Sentence) {
@@ -91,25 +101,46 @@ final class IntelligenceRecorder {
         guard settings.isJournalEnabled else {
             return
         }
-        guard let read = readContext, contextStats[sentence.app]?.isStopped != true else {
-            journal.append(sentence.text, app: sentence.app)
+        let app = sentence.app
+        let readText = contextStats[app]?.isStopped == true ? nil : self.readContext
+        let readTitle = windowStats[app]?.isStopped == true ? nil : self.readWindowTitle
+        guard readText != nil || readTitle != nil else {
+            journal.append(sentence.text, app: app)
             return
         }
         later { [weak self] in
             guard let self else { return }
-            let start = Date()
-            let before = read()
-            let seconds = Date().timeIntervalSince(start)
-            let context = Self.context(before: sentence.text, in: before)
-            var stats = contextStats[sentence.app] ?? ContextStats()
-            stats.reads += 1
-            stats.found += context == nil ? 0 : 1
-            stats.totalSeconds += seconds
-            stats.slowestSeconds = max(stats.slowestSeconds, seconds)
-            stats.isStopped = stats.isStopped || seconds > Self.slowRead
-            contextStats[sentence.app] = stats
-            journal.append(sentence.text, app: sentence.app, context: context)
+            let context = readText.flatMap { read in
+                Self.timed(read, into: &contextStats[app, default: ContextStats()]) { Self.context(before: sentence.text, in: $0) }
+            }
+            let window = readTitle.flatMap { read in
+                Self.timed(read, into: &windowStats[app, default: ContextStats()]) { Self.windowTitle($0) }
+            }
+            journal.append(sentence.text, app: app, context: context, window: window)
         }
+    }
+
+    /// Runs one read, cleans its result, and records how it went.
+    private static func timed(_ read: () -> String?, into stats: inout ContextStats, clean: (String?) -> String?) -> String? {
+        let start = Date()
+        let value = clean(read())
+        let seconds = Date().timeIntervalSince(start)
+        stats.reads += 1
+        stats.found += value == nil ? 0 : 1
+        stats.totalSeconds += seconds
+        stats.slowestSeconds = max(stats.slowestSeconds, seconds)
+        stats.isStopped = stats.isStopped || seconds > slowRead
+        return value
+    }
+
+    /// A window title kept for the journal: trimmed, at most `windowTitleLimit` characters, dropped if
+    /// empty or if it looks sensitive (an email in a mail window, a URL, a code).
+    nonisolated static func windowTitle(_ reported: String?) -> String? {
+        guard let title = reported?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty,
+              PrivacyFilter.allowsSentence(title) else {
+            return nil
+        }
+        return String(title.prefix(windowTitleLimit))
     }
 
     /// The text before `sentence` in what the client reported: the sentence itself and surrounding

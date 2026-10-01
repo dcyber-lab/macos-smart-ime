@@ -15,6 +15,10 @@ enum LearningPage {
         var insights: LearningInsights
         /// Reads of the text before the cursor in this run of the input method, per app.
         var contextStats: [String: IntelligenceRecorder.ContextStats] = [:]
+        /// Window title reads in this run, per app.
+        var windowStats: [String: IntelligenceRecorder.ContextStats] = [:]
+        var isWindowTitlesEnabled = false
+        var isAccessibilityTrusted = false
         var appName: @Sendable (String) -> String
         var generatedAt: Date
     }
@@ -48,8 +52,9 @@ enum LearningPage {
                     let searchable = (entry.text + " " + (entry.context ?? "")).lowercased()
                     return "<div class=\"line\" data-text=\"\(escape(searchable))\"><span class=\"muted nowrap\">\(clock.string(from: entry.time))</span> \(escape(entry.text))\(context)</div>"
                 }.joined()
+                let window = first.window.map { " · " + escape($0) } ?? ""
                 return """
-                <section class="session" data-app="\(escape(input.appName(first.app).lowercased()))"><div class="session-head">\(escape(input.appName(first.app))) · \(time.string(from: first.time))\(first.time == last.time ? "" : "–" + clock.string(from: last.time)) · \(session.count) 句</div>\(lines)</section>
+                <section class="session" data-app="\(escape((input.appName(first.app) + " " + (first.window ?? "")).lowercased()))"><div class="session-head">\(escape(input.appName(first.app)))\(window) · \(time.string(from: first.time))\(first.time == last.time ? "" : "–" + clock.string(from: last.time)) · \(session.count) 句</div>\(lines)</section>
                 """
             }.joined(separator: "\n")
             let summary = "共 \(input.entries.count) 条，\(groups.count) 段"
@@ -80,11 +85,27 @@ enum LearningPage {
             """
         }
 
-        let contextRows = input.contextStats.sorted { $0.value.reads > $1.value.reads }.map { app, stats in
-            "<tr><td>\(escape(input.appName(app)))</td><td>\(stats.reads)</td><td>\(stats.found)</td>"
-                + "<td>\(String(format: "%.1f", stats.averageMilliseconds)) ms</td><td>\(String(format: "%.1f", stats.slowestSeconds * 1000)) ms</td>"
-                + "<td>\(stats.isStopped ? "已停止（有一次超过 \(Int(IntelligenceRecorder.slowRead * 1000)) ms）" : "正常")</td></tr>"
-        }.joined()
+        func costRows(_ stats: [String: IntelligenceRecorder.ContextStats], extra: (String) -> String = { _ in "" }) -> String {
+            stats.sorted { $0.value.reads > $1.value.reads }.map { app, stats in
+                "<tr><td>\(escape(input.appName(app)))</td><td>\(stats.reads)</td><td>\(stats.found)</td>"
+                    + "<td>\(String(format: "%.1f", stats.averageMilliseconds)) ms</td><td>\(String(format: "%.1f", stats.slowestSeconds * 1000)) ms</td>"
+                    + "<td>\(stats.isStopped ? "已停止（有一次超过 \(Int(IntelligenceRecorder.slowRead * 1000)) ms）" : "正常")</td>\(extra(app))</tr>"
+            }.joined()
+        }
+        let contextRows = costRows(input.contextStats)
+        let windowSamples = Dictionary(grouping: input.entries.filter { $0.window != nil }, by: \.app).mapValues { entries in
+            var seen: [String] = []
+            for title in entries.compactMap(\.window) where !seen.contains(title) && seen.count < 3 { seen.append(title) }
+            return seen
+        }
+        let windowRows = costRows(input.windowStats) { app in
+            "<td>\((windowSamples[app] ?? []).map(escape).joined(separator: "<br>"))</td>"
+        }
+        let windowStatus = !input.isWindowTitlesEnabled ? "关（菜单 › 读取窗口标题）"
+            : input.isAccessibilityTrusted ? "开，辅助功能已授权" : "开，但辅助功能未授权：系统设置 › 隐私与安全性 › 辅助功能 里打开 LinguaType（每次更新后可能需要重新打开）"
+        let windowSection = "<p>\(windowStatus)</p>" + (windowRows.isEmpty
+            ? "<p class=\"muted\">本次运行还没有读取过。</p>"
+            : "<table><tr><th>应用</th><th>读取</th><th>读到</th><th>平均</th><th>最长</th><th>状态</th><th>标题示例</th></tr>\(windowRows)</table>")
         let contextSection = contextRows.isEmpty
             ? "<p class=\"muted\">本次运行还没有读取过。句子结束（标点或回车）后，会读一次光标前的文字。</p>"
             : "<table><tr><th>应用</th><th>读取</th><th>读到</th><th>平均</th><th>最长</th><th>状态</th></tr>\(contextRows)</table>"
@@ -129,6 +150,9 @@ enum LearningPage {
         <h2>读取前文的开销</h2>
         <p class="muted">读取前文要和对应应用通信一次，只在句子结束、按键处理完之后进行。本次输入法运行期间的统计：</p>
         \(contextSection)
+        <h2>窗口标题</h2>
+        <p class="muted">只读当前窗口的标题，不读窗口内容。用来区分同一应用里的不同会话、文档和网页；聊天应用的标题可能只有应用名。</p>
+        \(windowSection)
         <h2>从不记录</h2>
         <p class="muted">密码框等安全输入、不学习的应用，以及含 6 位以上连续数字（验证码、卡号、手机号）、邮箱、网址或类似密钥字符串的句子。</p>
         </body></html>
@@ -190,12 +214,13 @@ enum LearningPage {
         return "<h2>学到了什么</h2>" + cards.joined(separator: "\n")
     }
 
-    /// Groups entries (newest first) into sessions: consecutive entries in the same app no more than
-    /// `gap` apart. Sessions come newest first, their entries oldest first, like a conversation.
+    /// Groups entries (newest first) into sessions: consecutive entries in the same app and window no
+    /// more than `gap` apart. Sessions come newest first, their entries oldest first, like a conversation.
     static func sessions(_ entries: [InputJournal.Entry], gap: TimeInterval = 600) -> [[InputJournal.Entry]] {
         var result: [[InputJournal.Entry]] = []
         for entry in entries {
-            if let previous = result.last?.first, previous.app == entry.app, previous.time.timeIntervalSince(entry.time) <= gap {
+            if let previous = result.last?.first, previous.app == entry.app, previous.window == entry.window,
+               previous.time.timeIntervalSince(entry.time) <= gap {
                 result[result.count - 1].insert(entry, at: 0)
             } else {
                 result.append([entry])

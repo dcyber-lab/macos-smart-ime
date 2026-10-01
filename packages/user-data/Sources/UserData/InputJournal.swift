@@ -10,12 +10,15 @@ public final class InputJournal: @unchecked Sendable {
         public let text: String
         /// Text just before the sentence in the same field, when the app reports it.
         public let context: String?
+        /// Title of the focused window, when window titles are on and allowed.
+        public let window: String?
 
-        public init(time: Date, app: String, text: String, context: String? = nil) {
+        public init(time: Date, app: String, text: String, context: String? = nil, window: String? = nil) {
             self.time = time
             self.app = app
             self.text = text
             self.context = context
+            self.window = window
         }
 
         enum CodingKeys: String, CodingKey {
@@ -23,6 +26,7 @@ public final class InputJournal: @unchecked Sendable {
             case app
             case text
             case context = "ctx"
+            case window = "win"
         }
     }
 
@@ -38,8 +42,8 @@ public final class InputJournal: @unchecked Sendable {
     }
 
     /// Appends in the background; never blocks the caller on disk.
-    public func append(_ text: String, app: String, context: String? = nil) {
-        let entry = Entry(time: clock(), app: app, text: text, context: context)
+    public func append(_ text: String, app: String, context: String? = nil, window: String? = nil) {
+        let entry = Entry(time: clock(), app: app, text: text, context: context, window: window)
         queue.async { [self] in
             write(entry)
         }
