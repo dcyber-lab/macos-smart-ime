@@ -120,11 +120,13 @@ final class IntelligenceRecorder {
         }
     }
 
-    /// Runs one read, cleans its result, and records how it went.
+    /// Runs one read, cleans its result, and records how it went. Only the read (the round trip to the
+    /// app) is timed; cleaning runs locally and must not make an app look slow.
     private static func timed(_ read: () -> String?, into stats: inout ContextStats, clean: (String?) -> String?) -> String? {
         let start = Date()
-        let value = clean(read())
+        let reported = read()
         let seconds = Date().timeIntervalSince(start)
+        let value = clean(reported)
         stats.reads += 1
         stats.found += value == nil ? 0 : 1
         stats.totalSeconds += seconds
