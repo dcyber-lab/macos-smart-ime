@@ -48,6 +48,22 @@ TL;DR: The input method turns what the user commits into a local memory and offe
 | 4 | `add-rewrite-suggestions` | "转成英文" in English-dominant apps; polish actions for selected text with Foundation Models | 1, 2 |
 | 5 | `add-personal-terms` | Terms typed in pieces become words; per-app candidate order (English first in code editors) | 1 |
 
+## AI providers (measured 2026-10-01, for change 4)
+
+The same rewrite prompt ("这个功能下周上线，麻烦大家帮忙回归一下" → English) was sent through each provider:
+
+| Provider | Account | Latency | Note |
+|---|---|---|---|
+| Apple Foundation Models | none | — | Supports Chinese; unavailable until Apple Intelligence is enabled |
+| `claude -p --model haiku` | Claude subscription | 8.6 s | Loads the user's hooks and plugins |
+| same, with `--setting-sources project --tools "" --strict-mcp-config --no-session-persistence`, empty working dir | Claude subscription | 4–6 s | No tools, no saved session |
+| `claude -p --bare` | API key only | — | Refuses subscription login |
+| `codex exec --skip-git-repo-check --ephemeral -s read-only` | ChatGPT subscription | 11 s | Agent with read-only file access |
+
+- Both CLIs work for explicit, confirmed actions with a "思考中…" state. None is fast enough for anything while typing.
+- A cloud provider sends the current sentence or selection off the Mac. That needs the user to amend the local-only decision for confirmed actions only; learned memory and the journal never leave.
+- Launch the CLI by absolute path (the input method has no login-shell `PATH`), pass the text as an argument array, use a timeout, and cancel on dismiss.
+
 ## Open risks
 
 - The journal is a plain file during the trial. Encrypting it with a Keychain key is deferred: with ad-hoc signing every update changes the code signature and would prompt for Keychain access mid-typing. Revisit with Developer ID signing or if the journal is kept.

@@ -131,3 +131,19 @@ private final class TestClock: @unchecked Sendable {
         date += days * 24 * 60 * 60
     }
 }
+
+final class CandidateHistoryClearTests: XCTestCase {
+    func testClearForgetsAndDeletesTheFile() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("CandidateHistoryClear-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let history = CandidateHistory(fileURL: url)
+        history.recordWord("github")
+        history.flush()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+
+        history.clear()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        XCTAssertEqual(history.words(withPrefix: "git", limit: 5), [])
+    }
+}

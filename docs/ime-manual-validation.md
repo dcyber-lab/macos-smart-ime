@@ -217,6 +217,17 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 8. Turn on System Settings › Accessibility › Display › Reduce motion: commits play no effect; turn it off again
 9. Repeat step 1 in dark appearance
 
+## Intelligence Hub Checklist
+
+1. Open the input menu: under 智能中心, 智能学习 is unchecked, 保存输入原文 is grayed out, and 不在「<current app>」中学习 names the app you are typing in
+2. Turn on 智能学习; 保存输入原文 becomes available and checked
+3. Type 这个功能下周上线。 in one app and Please review it. in another
+4. Choose 查看学习记录…: a page opens in the browser with both apps' Chinese/English mix, 2 fingerprints, and both sentences; searching 上线 leaves only the first
+5. Type 验证码是 482913。 and a sentence in Terminal; neither appears after refreshing via 查看学习记录…
+6. Choose 不在「<app>」中学习 for the first app, type another sentence there, and confirm it is not recorded
+7. Turn off 保存输入原文, type a sentence, and confirm the journal does not gain it while the app's counts still grow
+8. Choose 清除学习记录…, confirm the alert, and check that `~/Library/Application Support/SmartIMEHost/` no longer has `input-memory.json`, `journal/`, `candidate-history.json`, or `translation-misses.json`
+
 ## Known Limits In This Milestone
 
 - This checklist validates both the Chinese `librime` path and the basic English completion path

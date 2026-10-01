@@ -112,6 +112,17 @@ public final class CandidateHistory: @unchecked Sendable {
         return Choices(chinese: record.chinese.score(at: now), english: english)
     }
 
+    /// Forgets everything and deletes the file.
+    public func clear() {
+        withLock { stored = Stored() }
+        guard let fileURL else {
+            return
+        }
+        Self.saveQueue.sync {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+    }
+
     // MARK: Persistence
 
     /// Writes pending changes now instead of after the batching delay.

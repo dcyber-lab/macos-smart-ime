@@ -2,6 +2,17 @@
 
 ## 2026-10-01
 
+### Input memory (intelligence hub, step 1)
+
+- Implemented OpenSpec change `add-input-memory`:
+  - `UserData`: `PrivacyFilter`, `SentenceFingerprint`, `InputMemory`, `InputJournal`, `PrivateFiles`, and `clear()` on `CandidateHistory` and `TranslationMisses`.
+  - `IMEHostCore`: `SentenceAssembler`, `IntelligenceSettings`, `IntelligenceRecorder`, `IntelligenceMenu`, `LearningPage`, and the controller wiring (bundle ID cached per activation, `Return`/deactivation end sentences, daily journal pruning).
+- Learning is off by default; with it on, the journal is on by default (the user's choice), 30 days, plain 0600 files excluded from backups.
+- Cost per commit in an optimized build: 0.4 µs with learning off, 3.5 µs on, 3.9 µs with the journal; worst single commit 0.54 ms.
+- Tests: 38 new cases. Locally 123 `RimeBridge`/`IMEHostCore` and 119 `EnglishEngine`/`UserData` cases pass through `swiftc` with the XCTest stand-in.
+- Also measured AI providers for the rewrite step: `claude -p` (Haiku, subscription) took 4–6 s without user settings and 8.6 s with them; `codex exec` took 11 s; Apple Foundation Models needs Apple Intelligence. Recorded in `docs/intelligence-hub.md`.
+- Pending: live check (Intelligence Hub checklist).
+
 ### Intelligence hub direction (design only)
 
 - The user wants the input method to be an AI entry point that learns from typing and helps proactively. Decisions:

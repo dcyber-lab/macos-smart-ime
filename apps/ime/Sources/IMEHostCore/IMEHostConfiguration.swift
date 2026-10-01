@@ -37,6 +37,26 @@ public enum IMEHostConfiguration {
             .appendingPathComponent("Library/Application Support/SmartIMEHost/user-translations.tsv")
     }
 
+    /// Intelligence hub statistics (`InputMemory`): per-app language counts and sentence fingerprints.
+    public static func inputMemoryURL() -> URL {
+        supportDirectory().appendingPathComponent("input-memory.json")
+    }
+
+    /// The optional input journal (`InputJournal`), one file per day.
+    public static func inputJournalDirectoryURL() -> URL {
+        supportDirectory().appendingPathComponent("journal", isDirectory: true)
+    }
+
+    /// The page 查看学习记录 writes and opens.
+    public static func learningPageURL() -> URL {
+        supportDirectory().appendingPathComponent("learning-summary.html")
+    }
+
+    private static func supportDirectory() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/SmartIMEHost", isDirectory: true)
+    }
+
     public static func rimeUserDataDirectory() -> String {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/SmartIMEHost/Rime", isDirectory: true)
