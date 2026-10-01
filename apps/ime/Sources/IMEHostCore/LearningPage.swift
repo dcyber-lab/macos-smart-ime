@@ -12,7 +12,8 @@ enum LearningPage {
         var excludedApps: [String]
         var summary: InputMemory.Summary
         var entries: [InputJournal.Entry]
-        var appName: (String) -> String
+        var insights: LearningInsights
+        var appName: @Sendable (String) -> String
         var generatedAt: Date
     }
 
@@ -58,6 +59,7 @@ enum LearningPage {
             """
         }
 
+        let learned = insightsSection(input.insights, journalOn: input.isJournalEnabled || !input.entries.isEmpty, appName: input.appName, time: time)
         let fingerprints = input.summary.fingerprintCount == 0 ? "0 条" : "\(input.summary.fingerprintCount) 条（\(input.summary.oldestFingerprint.map(time.string(from:)) ?? "") — \(input.summary.newestFingerprint.map(time.string(from:)) ?? "")）"
 
         return """
@@ -71,10 +73,14 @@ enum LearningPage {
         h1 { font-size: 24px; } h2 { font-size: 17px; margin-top: 28px; }
         table { border-collapse: collapse; width: 100%; } th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
         th { color: var(--muted); font-weight: 500; } .muted { color: var(--muted); } .nowrap { white-space: nowrap; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; } .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+        .chip b { color: var(--muted); font-weight: 500; margin-left: 4px; } .next { color: var(--accent); font-size: 13px; }
+        .card { border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px 12px; margin-top: 16px; }
         input[type=search] { width: 100%; padding: 8px 10px; font-size: 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); box-sizing: border-box; }
         </style></head><body>
         <h1>学习记录</h1>
-        <p class="muted">生成于 \(time.string(from: input.generatedAt))。所有内容只保存在这台 Mac 上。</p>
+        <p class="muted">生成于 \(time.string(from: input.generatedAt))。所有内容只保存在这台 Mac 上，在本机按规则统计得出。</p>
+        \(learned)
         <h2>设置</h2>
         <table>
         <tr><td>智能学习</td><td>\(on(input.isLearningEnabled))</td></tr>
@@ -91,6 +97,61 @@ enum LearningPage {
         <p class="muted">密码框等安全输入、不学习的应用，以及含 6 位以上连续数字（验证码、卡号、手机号）、邮箱、网址或类似密钥字符串的句子。</p>
         </body></html>
         """
+    }
+
+    /// "学到了什么": the insights, each with the hub step that will act on it.
+    private static func insightsSection(_ insights: LearningInsights, journalOn: Bool, appName: (String) -> String, time: DateFormatter) -> String {
+        func chips(_ counts: [LearningInsights.Count]) -> String {
+            "<div class=\"chips\">" + counts.map { "<span class=\"chip\">\(escape($0.text))<b>\($0.count)</b></span>" }.joined() + "</div>"
+        }
+        func card(_ title: String, _ body: String, next: String?) -> String {
+            "<div class=\"card\"><h3>\(title)</h3>\(body)\(next.map { "<p class=\"next\">\($0)</p>" } ?? "")</div>"
+        }
+        var cards: [String] = []
+
+        if insights.sentenceCount > 0 {
+            let apps = insights.topApps.map { "\(escape(appName($0.text))) \($0.count) 句" }.joined(separator: "、")
+            let hours = insights.busiestHours.map(\.text).joined(separator: "、")
+            cards.append(card("概览", "<p>\(insights.dayCount) 天里记了 \(insights.sentenceCount) 句。最常在 \(apps) 打字；最活跃的时段是 \(hours)。</p>", next: nil))
+        }
+        if !insights.appLanguages.isEmpty {
+            let names: [LearningInsights.Language: String] = [.chinese: "中文为主", .english: "英文为主", .mixed: "中英混写"]
+            let rows = insights.appLanguages.map {
+                "<tr><td>\(escape(appName($0.app)))</td><td>\(names[$0.language] ?? "")</td><td>\(Int(($0.chineseShare * 100).rounded()))%</td></tr>"
+            }.joined()
+            cards.append(card("各应用的写作语言", "<table><tr><th>应用</th><th>判断</th><th>中文占比</th></tr>\(rows)</table>",
+                              next: "以后：在英文为主的应用里打完一句中文，会提示「✨ 转成英文」。"))
+        }
+        guard journalOn else {
+            cards.append(card("更多洞察", "<p class=\"muted\">常用词、重复的话和提到时间的句子需要输入原文。打开菜单里的「保存输入原文」后可见。</p>", next: nil))
+            return "<h2>学到了什么</h2>" + cards.joined(separator: "\n")
+        }
+        if insights.sentenceCount == 0 {
+            cards.append(card("还在学习", "<p class=\"muted\">还没有记录。多打几句后再来看。</p>", next: nil))
+            return "<h2>学到了什么</h2>" + cards.joined(separator: "\n")
+        }
+        if !insights.chineseWords.isEmpty || !insights.englishWords.isEmpty {
+            cards.append(card("你的常用词", (insights.chineseWords.isEmpty ? "" : chips(insights.chineseWords))
+                + (insights.englishWords.isEmpty ? "" : "<p></p>" + chips(insights.englishWords)),
+                next: "以后：这些词会更靠前出现在候选里。"))
+        }
+        if !insights.newWords.isEmpty {
+            cards.append(card("可能的新词", "<p class=\"muted\">总是一个字一个字打出来、但经常连在一起的字。</p>" + chips(insights.newWords),
+                              next: "以后：几次之后自动变成整词，一次打出。"))
+        }
+        if !insights.repeatedSentences.isEmpty {
+            let rows = insights.repeatedSentences.map { "<tr><td>\(escape($0.text))</td><td class=\"nowrap\">\($0.count) 次</td></tr>" }.joined()
+            cards.append(card("重复说过的话", "<table>\(rows)</table>", next: "以后：第三次打同一句话时，会提示「✨ 存成短语」。"))
+        }
+        if !insights.schedules.isEmpty {
+            let date = DateFormatter()
+            date.dateFormat = "M月d日 HH:mm"
+            let rows = insights.schedules.map {
+                "<tr><td>\(escape($0.text))</td><td class=\"nowrap\">\(escape($0.mention))\($0.when.map { " → " + date.string(from: $0) } ?? "")</td></tr>"
+            }.joined()
+            cards.append(card("提到时间的句子", "<table>\(rows)</table>", next: "以后：打完这样的句子，会提示「✨ 加到日历」。"))
+        }
+        return "<h2>学到了什么</h2>" + cards.joined(separator: "\n")
     }
 
     static func escape(_ text: String) -> String {

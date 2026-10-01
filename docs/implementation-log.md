@@ -12,6 +12,13 @@
 - Tests: 38 new cases. Locally 123 `RimeBridge`/`IMEHostCore` and 119 `EnglishEngine`/`UserData` cases pass through `swiftc` with the XCTest stand-in.
 - Also measured AI providers for the rewrite step: `claude -p` (Haiku, subscription) took 4–6 s without user settings and 8.6 s with them; `codex exec` took 11 s; Apple Foundation Models needs Apple Intelligence. Recorded in `docs/intelligence-hub.md`.
 - Live feedback: in Ghostty the per-app item was checked and disabled, because default exclusions were locked. The user types to AI tools in the terminal, so default exclusions can now be lifted (`IntelligenceAllowedApps`); the sentence rules still apply.
+- The user asked what learning has learned. The learning page now opens with 学到了什么 (`LearningInsights`), computed in the background from the journal and memory. Each section names the step that will act on it:
+  - overview and each app's writing language;
+  - frequent words (`NLTokenizer`) and possible new words;
+  - repeated sentences;
+  - sentences naming a time (time-of-day rule, then `NSDataDetector` or "N点").
+  A month (3,000 sentences) takes 0.05–0.2 s in an optimized build. Prefiltering on a time of day took a sparse month from 0.6 s to 0.2 s; a colon or am/pm only counts next to digits.
+- The user's journal was never read into the development session; insights were checked with synthetic sentences (7 new tests, 131 host tests pass locally).
 - Pending: live check (Intelligence Hub checklist).
 
 ### Intelligence hub direction (design only)

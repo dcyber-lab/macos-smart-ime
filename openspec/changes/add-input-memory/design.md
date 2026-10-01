@@ -72,7 +72,23 @@ The input menu is flat (submenu actions are not delivered; see `add-commit-effec
   - the journal: the last 30 days of sentences, newest first, with app and time, and a search box that filters in the page (no network, no scripts loaded from outside).
 - **清除学习记录…**: activates the input method app, shows an `NSAlert` to confirm, then deletes `input-memory.json`, the `journal/` directory, `learning-summary.html`, `candidate-history.json`, and `translation-misses.json`, and resets the in-memory stores.
 
-### 5. Defaults and storage
+### 5. 学到了什么: insights computed when the page opens
+
+The user asked what learning has learned. Collecting alone shows nothing, so the learning page opens with insights computed locally from the journal and the memory. They use rules only: `NLTokenizer` for Chinese words and `NSDataDetector` for dates. Each section names the later hub step that will act on it:
+
+| Insight | Rule | Later step |
+|---|---|---|
+| Overview | sentence and day counts, busiest hours, top apps | — |
+| App writing language | Chinese share ≥ 70% Chinese, ≤ 30% English, else mixed (apps with 20+ units) | rewrite suggestions |
+| Frequent words | Chinese words of 2+ characters and English words of 3+ letters, stopwords removed, count ≥ 2 | personal terms |
+| Possible new words | adjacent single Han characters seen together 3+ times (灵 + 译 → 灵译) | personal terms |
+| Repeated sentences | normalized sentences of 6+ characters seen 2+ times | quick phrases |
+| Sentences naming a time | the sentence must have a time of day (下午, 三点, 14:30, 3pm); then a detected date, or a "N点" rule; bare dates are ignored | calendar reminders |
+
+- The app names are looked up on the main thread. Tokenizing, detection, rendering, and writing run on a background queue. In an optimized build, a month (3,000 sentences) takes at most 0.2 s.
+- Insights are not stored. Nothing in this conversation's tooling reads the user's journal; tests use synthetic sentences.
+
+### 6. Defaults and storage
 
 - `IntelligenceLearningEnabled` defaults to false. With it off, no file is created and the assembler drops commits.
 - `IntelligenceJournalEnabled` defaults to true and only matters while learning is on.

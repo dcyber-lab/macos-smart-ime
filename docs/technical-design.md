@@ -113,6 +113,7 @@ Owns explicit and async workflows:
   - 智能学习 and 保存输入原文 toggle the settings.
   - 不在「App」中学习 toggles the current app's exclusion; for a default exclusion it toggles an override.
   - 查看学习记录… writes `learning-summary.html` (`LearningPage`, 0600, self-contained, HTML-escaped, with a journal search box) and opens it.
+  - The page opens with 学到了什么 (`LearningInsights`), computed in the background with rules only: overview, each app's writing language, frequent words (`NLTokenizer`), possible new words (single characters that keep appearing together), repeated sentences, and sentences naming a time of day (`NSDataDetector` plus a "N点" rule). A month of typing takes at most 0.2 s.
   - 清除学习记录… confirms with an `NSAlert`, then clears `InputMemory`, `InputJournal`, `CandidateHistory`, and `TranslationMisses`.
 
 ## Selection Translation

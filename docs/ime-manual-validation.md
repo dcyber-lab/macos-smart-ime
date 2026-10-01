@@ -223,6 +223,7 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 2. Turn on 智能学习; 保存输入原文 becomes available and checked
 3. Type 这个功能下周上线。 in one app and Please review it. in another
 4. Choose 查看学习记录…: a page opens in the browser with both apps' Chinese/English mix, 2 fingerprints, and both sentences; searching 上线 leaves only the first
+4a. The page starts with 学到了什么: type 麻烦大家帮忙回归一下 three times and 明天下午三点开会, reopen the page, and confirm the sentence appears under 重复说过的话 (3 次) and the meeting under 提到时间的句子
 5. Type 验证码是 482913。 and a sentence in Terminal; neither appears after refreshing via 查看学习记录…
 6. Choose 不在「<app>」中学习 for the first app, type another sentence there, and confirm it is not recorded
 7. Turn off 保存输入原文, type a sentence, and confirm the journal does not gain it while the app's counts still grow

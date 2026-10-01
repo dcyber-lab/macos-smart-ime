@@ -373,21 +373,33 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
     }
 
+    /// App names are looked up here; tokenizing, date detection, and writing run in the background.
     @MainActor private static func openLearningPage() {
         let settings = intelligence.settings
-        let html = LearningPage.html(LearningPage.Input(
+        let summary = intelligence.memory.summary()
+        let entries = intelligence.journal.entries(days: settings.retentionDays)
+        let apps = Set(summary.apps.map(\.bundleIdentifier) + entries.map(\.app))
+        let names = Dictionary(uniqueKeysWithValues: apps.map { ($0, AppNames.displayName(for: $0)) })
+        let input = LearningPage.Input(
             isLearningEnabled: settings.isLearningEnabled,
             isJournalEnabled: settings.isJournalEnabled,
             retentionDays: settings.retentionDays,
             excludedApps: settings.effectiveExcludedApps.map(AppNames.displayName(for:)).sorted(),
-            summary: intelligence.memory.summary(),
-            entries: intelligence.journal.entries(days: settings.retentionDays),
-            appName: AppNames.displayName(for:),
+            summary: summary,
+            entries: entries,
+            insights: LearningInsights(),
+            appName: { names[$0] ?? $0 },
             generatedAt: Date()
-        ))
+        )
         let url = IMEHostConfiguration.learningPageURL()
-        PrivateFiles.write(Data(html.utf8), to: url)
-        NSWorkspace.shared.open(url)
+        DispatchQueue.global(qos: .userInitiated).async {
+            var page = input
+            page.insights = LearningInsights.compute(entries: entries, summary: summary)
+            PrivateFiles.write(Data(LearningPage.html(page).utf8), to: url)
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(url)
+            }
+        }
     }
 
     @MainActor private static func confirmAndClearLearning() {

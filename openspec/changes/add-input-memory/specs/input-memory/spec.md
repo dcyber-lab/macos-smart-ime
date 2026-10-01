@@ -59,6 +59,25 @@ The input menu SHALL offer 智能学习 (on/off), 保存输入原文 (on/off), �
 - **WHEN** the user chooses 查看学习记录…
 - **THEN** a local page SHALL open with settings, excluded apps, per-app language mix, fingerprint counts, and, when the journal is on, the recent sentences with a search box
 
+### Requirement: What Was Learned
+The learning page SHALL open with a 学到了什么 section, computed on the Mac when the page opens. It SHALL contain:
+- an overview;
+- each app's writing language;
+- frequent words;
+- possible new words;
+- repeated sentences;
+- sentences that name a time of day.
+
+Each part SHALL say which later feature will use it. The computation SHALL NOT run on the thread that handles keys.
+
+#### Scenario: Repeated sentence
+- **WHEN** the journal contains 麻烦大家帮忙回归一下 three times
+- **THEN** the page SHALL list it under 重复说过的话 with 3 次 and mention 存成短语
+
+#### Scenario: Time without a date word
+- **WHEN** the journal contains 3点开会 and 今天天气不错
+- **THEN** 3点开会 SHALL be listed under 提到时间的句子 and 今天天气不错 SHALL NOT
+
 ### Requirement: No Cost While Typing
 Recording SHALL happen only when text is committed. The work SHALL be limited to appending to the sentence buffer and, at a sentence end, one fingerprint. Files SHALL be written off the main thread.
 

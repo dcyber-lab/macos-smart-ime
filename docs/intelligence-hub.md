@@ -38,6 +38,10 @@ TL;DR: The input method turns what the user commits into a local memory and offe
 4. **Suggestion (IME UI)**: one chip next to the caret. `Tab` accepts, any other key dismisses. Rate-limited, and each dismissal makes that kind rarer in that app.
 5. **Action**: replace the sentence, create an event or reminder, save a phrase, or update candidates. Each is reversible or confirmable.
 
+## Seeing what was learned
+
+查看学习记录 opens a local page that starts with 学到了什么: frequent words, possible new words, repeated sentences, sentences naming a time, and each app's writing language. Each section names the step that will act on it, so the value of each later step is visible before it ships.
+
 ## Delivery: five OpenSpec changes
 
 | # | Change | Delivers | Depends on |
