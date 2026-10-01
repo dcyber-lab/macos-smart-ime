@@ -44,6 +44,11 @@
   - Leaving the field or pausing no longer ends a sentence; another field (IMK controller) or app does.
   - 146 host and 120 data tests pass locally.
 - The journal metadata for the message was checked without reading its text (one 13-character entry with a window title and no context).
+- Second try in SeaTalk still journaled only the typed 这个.
+  - SeaTalk is Electron. Chromium answers the IMK substring call only within about 100 characters of the cursor and returns nil for the 1,300 requested.
+  - Field reads now fall back to 100 characters per app. A sentence seen only in part is completed with committed text and "…".
+  - Window titles were missing after the update: the ad-hoc signature changed and the Accessibility grant must be toggled again.
+  - 148 host tests pass locally.
 - Pending: live check (Intelligence Hub checklist).
 
 ### Intelligence hub direction (design only)

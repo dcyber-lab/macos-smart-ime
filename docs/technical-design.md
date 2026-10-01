@@ -108,6 +108,7 @@ Owns explicit and async workflows:
   - On sentence punctuation, it reads on the next main-actor turn and takes the sentence from the previous boundary.
   - The field's text is used if the committed characters appear in it in order; up to 300 characters before it become `context`.
   - Reads are timed per app and stop for an app after one over 100 ms.
+  - Chromium-based apps (Electron) answer only within about 100 characters of the cursor. The controller falls back from 1,300 to 100 characters and remembers the size per app. A long sentence seen only in part is completed with the committed text before the window, joined by "…".
 - A sentence ends on punctuation, `Return`, a commit in another field or app, or 10 minutes without commits; deactivation does not end it.
 - With 读取窗口标题 on (`IntelligenceWindowTitlesEnabled`, Accessibility granted), the same deferred step reads the focused window's title through `WindowTitleReader` (frontmost pid, `kAXFocusedWindowAttribute` → `kAXTitleAttribute`, 0.25 s messaging timeout).
   - The title is stored as the journal entry's `window`: 120 characters at most, dropped if it looks sensitive.

@@ -1,6 +1,19 @@
 import Foundation
 import UserData
 
+/// Text read from before the cursor in the client's field. `startsMidway` is set when the app
+/// returned less than the whole field before the cursor (Chromium and Electron apps report only about
+/// 100 characters around it).
+struct FieldText: Equatable, Sendable {
+    let text: String
+    let startsMidway: Bool
+
+    init(_ text: String, startsMidway: Bool = false) {
+        self.text = text
+        self.startsMidway = startsMidway
+    }
+}
+
 /// Feeds committed text into the input memory and journal, under the privacy rules: nothing while
 /// learning is off, in excluded apps, or under secure input; sensitive spans (links, emails, codes,
 /// tokens) are masked. Called on commit and on `Return` only, never per keystroke.
@@ -43,9 +56,9 @@ final class IntelligenceRecorder {
     /// How the sentence being closed ended, set around calls into the assembler.
     private enum Ending {
         case quiet
-        case punctuation(readField: (() -> String?)?)
+        case punctuation(readField: (() -> FieldText?)?)
         /// The field as read just before `Return` reached the app.
-        case returnKey(field: String?)
+        case returnKey(field: FieldText?)
     }
 
     private var ending = Ending.quiet
@@ -72,7 +85,7 @@ final class IntelligenceRecorder {
     /// `session` identifies the input field (the IMK input controller).
     func commit(
         _ text: String, app: String?, session: Int = 0, secureInput: Bool,
-        readField: (() -> String?)? = nil, readWindowTitle: (() -> String?)? = nil
+        readField: (() -> FieldText?)? = nil, readWindowTitle: (() -> String?)? = nil
     ) {
         guard isRecording(app: app, secureInput: secureInput), let app else {
             // Typing elsewhere still closes what was typed in an allowed app.
@@ -88,15 +101,15 @@ final class IntelligenceRecorder {
     /// `Return` without a composition. Reads the field now, before the app handles the key, and journals
     /// the line it ends, even when the input method committed none of it (a pasted link, say).
     func endLine(
-        app: String?, secureInput: Bool, readField: (() -> String?)? = nil, readWindowTitle: (() -> String?)? = nil
+        app: String?, secureInput: Bool, readField: (() -> FieldText?)? = nil, readWindowTitle: (() -> String?)? = nil
     ) {
         guard isRecording(app: app, secureInput: secureInput), let app else {
             closeQuietly()
             return
         }
-        var field: String?
+        var field: FieldText?
         if settings.isJournalEnabled, let readField, contextStats[app]?.isStopped != true {
-            field = Self.timed(readField, into: &contextStats[app, default: ContextStats()]) { $0 }
+            field = Self.timed(readField, into: &contextStats[app, default: ContextStats()]) { !$0.text.isEmpty }
         }
         ending = .returnKey(field: field)
         self.readWindowTitle = readWindowTitle
@@ -145,21 +158,21 @@ final class IntelligenceRecorder {
             let fromField = field.flatMap { Self.line(endingAt: $0) }.flatMap { Self.consistent($0, with: sentence.text) }
             later { [weak self] in
                 guard let self else { return }
-                record(fromField?.text ?? sentence.text, app: app, context: fromField?.context, window: title(readTitle, app: app))
+                record(Self.text(fromField, assembled: sentence.text), app: app, context: fromField?.context, window: title(readTitle, app: app))
             }
         case .punctuation(let readField):
             let readField = contextStats[app]?.isStopped == true ? nil : readField
             later { [weak self] in
                 guard let self else { return }
-                let field = readField.flatMap { read in Self.timed(read, into: &contextStats[app, default: ContextStats()]) { $0 } }
+                let field = readField.flatMap { read in Self.timed(read, into: &contextStats[app, default: ContextStats()]) { !$0.text.isEmpty } }
                 let fromField = field.flatMap { Self.sentence(endingAt: $0) }.flatMap { Self.consistent($0, with: sentence.text) }
-                record(fromField?.text ?? sentence.text, app: app, context: fromField?.context, window: title(readTitle, app: app))
+                record(Self.text(fromField, assembled: sentence.text), app: app, context: fromField?.context, window: title(readTitle, app: app))
             }
         }
     }
 
     private func title(_ read: (() -> String?)?, app: String) -> String? {
-        read.flatMap { read in Self.timed(read, into: &windowStats[app, default: ContextStats()]) { Self.windowTitle($0) } }
+        read.flatMap { read in Self.windowTitle(Self.timed(read, into: &windowStats[app, default: ContextStats()]) { !$0.isEmpty }) }
     }
 
     /// Masks, then learns: statistics always, the journal when it is on.
@@ -175,15 +188,13 @@ final class IntelligenceRecorder {
         }
     }
 
-    /// Runs one read, cleans its result, and records how it went. Only the read (the round trip to the
-    /// app) is timed; cleaning runs locally and must not make an app look slow.
-    private static func timed(_ read: () -> String?, into stats: inout ContextStats, clean: (String?) -> String?) -> String? {
+    /// Runs one read and records how it went. Only the read (the round trip to the app) is timed.
+    private static func timed<T>(_ read: () -> T?, into stats: inout ContextStats, isFound: (T) -> Bool) -> T? {
         let start = Date()
-        let reported = read()
+        let value = read()
         let seconds = Date().timeIntervalSince(start)
-        let value = clean(reported)
         stats.reads += 1
-        stats.found += (value?.isEmpty ?? true) ? 0 : 1
+        stats.found += value.map(isFound) == true ? 1 : 0
         stats.totalSeconds += seconds
         stats.slowestSeconds = max(stats.slowestSeconds, seconds)
         stats.isStopped = stats.isStopped || seconds > slowRead
@@ -195,20 +206,52 @@ final class IntelligenceRecorder {
     struct FieldSentence: Equatable {
         let text: String
         let context: String?
+        /// The sentence starts where the app's text did, so earlier parts of it may be missing.
+        var startsMidway = false
+    }
+
+    /// The sentence to journal: the field's when it matched, completed with what the input method
+    /// committed before the app's window when the app reported only the end of a long sentence.
+    nonisolated static func text(_ field: FieldSentence?, assembled: String) -> String {
+        guard let field else {
+            return assembled
+        }
+        return field.startsMidway ? merged(field.text, after: assembled) : field.text
+    }
+
+    /// `windowText` is the end of a sentence; `assembled` is everything the input method committed for
+    /// it. Committed characters found in the window (matched from the end) are dropped from `assembled`;
+    /// the rest came before the window and is put in front, with "…" where text may be missing.
+    nonisolated static func merged(_ windowText: String, after assembled: String) -> String {
+        let committed = Array(assembled)
+        let window = Array(windowText)
+        var i = committed.count - 1, j = window.count - 1
+        while i >= 0, j >= 0 {
+            if committed[i].isWhitespace {
+                i -= 1
+            } else {
+                if committed[i] == window[j] {
+                    i -= 1
+                }
+                j -= 1
+            }
+        }
+        let head = i >= 0 ? String(committed[...i]).trimmingCharacters(in: .whitespaces) : ""
+        return head.isEmpty ? "…" + windowText : head + " … " + windowText
     }
 
     /// The line the cursor ends (`Return`): the text after the last newline, and up to `contextLimit`
     /// characters of what comes before it.
-    nonisolated static func line(endingAt field: String) -> FieldSentence? {
-        let trimmed = String(field.reversed().drop { $0 == " " || $0 == "\t" }.reversed())
+    nonisolated static func line(endingAt field: FieldText) -> FieldSentence? {
+        let trimmed = String(field.text.reversed().drop { $0 == " " || $0 == "\t" }.reversed())
         let start = trimmed.lastIndex(of: "\n").map { trimmed.index(after: $0) } ?? trimmed.startIndex
-        return split(trimmed, at: start)
+        return split(trimmed, at: start, startsMidway: field.startsMidway)
     }
 
     /// The sentence that just ended with punctuation: from the previous sentence end or newline to the
     /// end of the field, and up to `contextLimit` characters before it.
-    nonisolated static func sentence(endingAt field: String) -> FieldSentence? {
-        let trimmed = field.trimmingCharacters(in: .whitespacesAndNewlines)
+    nonisolated static func sentence(endingAt field: FieldText) -> FieldSentence? {
+        let trimmed = field.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let last = trimmed.indices.last else {
             return nil
         }
@@ -221,7 +264,7 @@ final class IntelligenceRecorder {
                 break
             }
         }
-        return split(trimmed, at: start)
+        return split(trimmed, at: start, startsMidway: field.startsMidway)
     }
 
     /// A newline, CJK or !?; punctuation, or a period followed by whitespace ("v2.3" and "e.g" do not end a sentence).
@@ -240,13 +283,14 @@ final class IntelligenceRecorder {
         return next == text.endIndex || text[next].isWhitespace
     }
 
-    private nonisolated static func split(_ text: String, at start: String.Index) -> FieldSentence? {
+    private nonisolated static func split(_ text: String, at start: String.Index, startsMidway: Bool) -> FieldSentence? {
         let sentence = text[start...].trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sentence.isEmpty else {
             return nil
         }
         let before = String(text[..<start].trimmingCharacters(in: .whitespacesAndNewlines).suffix(contextLimit))
-        return FieldSentence(text: String(sentence.prefix(sentenceLimit)), context: before.isEmpty ? nil : before)
+        return FieldSentence(text: String(sentence.prefix(sentenceLimit)), context: before.isEmpty ? nil : before,
+                             startsMidway: startsMidway && start == text.startIndex)
     }
 
     /// The field's sentence, if it is the one the user typed: the last characters the input method

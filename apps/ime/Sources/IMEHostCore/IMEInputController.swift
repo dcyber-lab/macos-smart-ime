@@ -396,10 +396,15 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         return { WindowTitleReader.focusedWindowTitle(bundleIdentifier: app) }
     }
 
-    /// Up to 1,300 characters before the cursor in the client's field (a long sentence plus its
-    /// context), through the IMK text input calls selection translation uses. A round trip to the
-    /// client app: only called when a sentence ends.
-    private func textBeforeCursor() -> String? {
+    /// How many characters before the cursor each app answered for; Chromium-based apps (Electron:
+    /// SeaTalk, Slack, VS Code) return nothing for more than about 100.
+    @MainActor private static var fieldReadLimits: [String: Int] = [:]
+    private static let fieldReadSizes = [1_300, 100]
+
+    /// Text before the cursor in the client's field (a long sentence plus context), through the IMK
+    /// text input calls selection translation uses. A round trip to the client app: only called when a
+    /// sentence ends. Tries the larger size first and remembers what works for each app.
+    private func textBeforeCursor() -> FieldText? {
         guard let client = client() else {
             return nil
         }
@@ -407,8 +412,19 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         guard cursor.location != NSNotFound, cursor.location > 0 else {
             return nil
         }
-        let start = max(0, cursor.location - 1_300)
-        return client.attributedSubstring(from: NSRange(location: start, length: cursor.location - start))?.string
+        let app = clientBundleIdentifier ?? ""
+        let known = MainActor.assumeIsolated { Self.fieldReadLimits[app] }
+        for size in known.map({ [$0] }) ?? Self.fieldReadSizes {
+            let start = max(0, cursor.location - size)
+            let range = NSRange(location: start, length: cursor.location - start)
+            if let text = client.attributedSubstring(from: range)?.string, !text.isEmpty {
+                MainActor.assumeIsolated { Self.fieldReadLimits[app] = size }
+                return FieldText(text, startsMidway: start > 0)
+            }
+        }
+        // Nothing at any size (a terminal, say): try only the small read from now on.
+        MainActor.assumeIsolated { Self.fieldReadLimits[app] = Self.fieldReadSizes.last }
+        return nil
     }
 
     /// App names are looked up here; tokenizing, date detection, and writing run in the background.

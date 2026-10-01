@@ -50,8 +50,8 @@ final class IntelligenceRecorderTests: XCTestCase {
         recorder.settings.isLearningEnabled = true
         recorder.settings.isJournalEnabled = false
         var reads = 0
-        type("这个功能下周上线。", in: "notes", readField: { reads += 1; return "x" })
-        recorder.endLine(app: "notes", secureInput: false, readField: { reads += 1; return "x" })
+        type("这个功能下周上线。", in: "notes", readField: { reads += 1; return FieldText("x") })
+        recorder.endLine(app: "notes", secureInput: false, readField: { reads += 1; return FieldText("x") })
 
         XCTAssertNotNil(recorder.memory.profile(for: "notes"))
         XCTAssertTrue(journalTexts().isEmpty)
@@ -117,7 +117,7 @@ final class IntelligenceRecorderTests: XCTestCase {
         recorder.commit("mins内完成", app: "seatalk", secureInput: false)
         recorder.endLine(app: "seatalk", secureInput: false, readField: {
             reads += 1
-            return "@DE-N-CDN 我们这边的pipeline报错，可以帮忙看看吗 https://space.example.io/p/f361f7a1e7fc9a478ed583b3ea4a9b659ebfd3c0 注意时长，10mins 内完成"
+            return FieldText("@DE-N-CDN 我们这边的pipeline报错，可以帮忙看看吗 https://space.example.io/p/f361f7a1e7fc9a478ed583b3ea4a9b659ebfd3c0 注意时长，10mins 内完成")
         })
 
         XCTAssertEqual(reads, 1)
@@ -127,7 +127,7 @@ final class IntelligenceRecorderTests: XCTestCase {
 
     func testReturnAfterOnlyPastingStillJournalsTheLine() {
         recorder.settings.isLearningEnabled = true
-        recorder.endLine(app: "seatalk", secureInput: false, readField: { "上一条\n看这个 https://example.com/x" })
+        recorder.endLine(app: "seatalk", secureInput: false, readField: { FieldText("上一条\n看这个 https://example.com/x") })
 
         XCTAssertEqual(journalEntries().map(\.text), ["看这个 〔链接〕"])
         XCTAssertEqual(journalEntries().first?.context, "上一条")
@@ -136,7 +136,7 @@ final class IntelligenceRecorderTests: XCTestCase {
     func testPunctuationTakesTheFullSentenceAndItsContextFromTheField() {
         recorder.settings.isLearningEnabled = true
         var reads = 0
-        let field = { () -> String? in reads += 1; return "发布计划\n第1步。版本 2.3 已发布，10 点开会。" }
+        let field = { () -> FieldText? in reads += 1; return FieldText("发布计划\n第1步。版本 2.3 已发布，10 点开会。") }
         recorder.commit("已发布，", app: "notes", secureInput: false, readField: field)
         recorder.commit("点开会。", app: "notes", secureInput: false, readField: field)
 
@@ -147,7 +147,7 @@ final class IntelligenceRecorderTests: XCTestCase {
 
     func testAFieldThatDoesNotMatchFallsBackToWhatWasTyped() {
         recorder.settings.isLearningEnabled = true
-        type("这个功能下周上线。", in: "notes", readField: { "完全不相关的内容。" })
+        type("这个功能下周上线。", in: "notes", readField: { FieldText("完全不相关的内容。") })
 
         XCTAssertEqual(journalTexts(), ["这个功能下周上线。"])
     }
@@ -155,7 +155,7 @@ final class IntelligenceRecorderTests: XCTestCase {
     func testASlowAppIsNotReadAgain() {
         recorder.settings.isLearningEnabled = true
         var reads = 0
-        let slow = { () -> String? in reads += 1; Thread.sleep(forTimeInterval: IntelligenceRecorder.slowRead + 0.05); return nil }
+        let slow = { () -> FieldText? in reads += 1; Thread.sleep(forTimeInterval: IntelligenceRecorder.slowRead + 0.05); return nil }
         type("第一句。", in: "electron", readField: slow)
         type("第二句。", in: "electron", readField: slow)
 
@@ -165,16 +165,38 @@ final class IntelligenceRecorderTests: XCTestCase {
     }
 
     func testFieldParsing() {
-        XCTAssertEqual(IntelligenceRecorder.line(endingAt: "甲\n乙 丙  "), .init(text: "乙 丙", context: "甲"))
-        XCTAssertNil(IntelligenceRecorder.line(endingAt: "甲\n"))
-        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: "一。二！三？"), .init(text: "三？", context: "一。二！"))
-        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: "只有一句。"), .init(text: "只有一句。", context: nil))
-        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: String(repeating: "长", count: 500) + "。短句。")?.context?.count, IntelligenceRecorder.contextLimit)
+        XCTAssertEqual(IntelligenceRecorder.line(endingAt: FieldText("甲\n乙 丙  ")), .init(text: "乙 丙", context: "甲"))
+        XCTAssertNil(IntelligenceRecorder.line(endingAt: FieldText("甲\n")))
+        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: FieldText("一。二！三？")), .init(text: "三？", context: "一。二！"))
+        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: FieldText("只有一句。")), .init(text: "只有一句。", context: nil))
+        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: FieldText(String(repeating: "长", count: 500) + "。短句。"))?.context?.count, IntelligenceRecorder.contextLimit)
         XCTAssertNotNil(IntelligenceRecorder.consistent(.init(text: "@a 帮忙看看 10mins 内完成", context: nil), with: "帮忙看看mins内完成"))
         XCTAssertNil(IntelligenceRecorder.consistent(.init(text: "别的", context: nil), with: "这个功能下周上线"))
-        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: "版本 v2.3 发布了。e.g. 这样。")?.text, "这样。")
-        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: "Done. Ship v2.3 now.")?.text, "Ship v2.3 now.")
+        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: FieldText("版本 v2.3 发布了。e.g. 这样。"))?.text, "这样。")
+        XCTAssertEqual(IntelligenceRecorder.sentence(endingAt: FieldText("Done. Ship v2.3 now."))?.text, "Ship v2.3 now.")
         XCTAssertNotNil(IntelligenceRecorder.consistent(.init(text: "版本 2.3 已发布，10 点开会。", context: nil), with: "已发布，点开会。"))
+    }
+
+    func testALongChatMessageIsCompletedFromWhatWasTyped() {
+        recorder.settings.isLearningEnabled = true
+        // Typed through the input method; the link and digits went straight to the app.
+        recorder.commit("我们这边的pipeline报错，可以帮忙看看吗", app: "seatalk", secureInput: false)
+        recorder.commit("注意时长，", app: "seatalk", secureInput: false)
+        recorder.commit("mins内完成", app: "seatalk", secureInput: false)
+        // Chromium reported only the last part of the field.
+        recorder.endLine(app: "seatalk", secureInput: false, readField: {
+            FieldText("看看吗 https://example.io/p/f361f7a1e7fc9a478ed583b3ea4a9b659ebfd3c0 注意时长，10mins 内完成", startsMidway: true)
+        })
+
+        XCTAssertEqual(journalTexts(), ["我们这边的pipeline报错，可以帮忙 … 看看吗 〔链接〕 注意时长，10mins 内完成"])
+    }
+
+    func testMergeMarksWhereTextMayBeMissing() {
+        XCTAssertEqual(IntelligenceRecorder.merged("内完成这个", after: "这个"), "…内完成这个")
+        XCTAssertEqual(IntelligenceRecorder.merged("看看吗 链接 10 内完成", after: "可以帮忙看看吗内完成"), "可以帮忙 … 看看吗 链接 10 内完成")
+        XCTAssertEqual(IntelligenceRecorder.text(.init(text: "整句。", context: nil), assembled: "整句。"), "整句。")
+        XCTAssertEqual(IntelligenceRecorder.line(endingAt: FieldText("尾巴", startsMidway: true))?.startsMidway, true)
+        XCTAssertEqual(IntelligenceRecorder.line(endingAt: FieldText("上一行\n这一行", startsMidway: true))?.startsMidway, false)
     }
 
     // MARK: Window titles
@@ -194,7 +216,7 @@ final class IntelligenceRecorderTests: XCTestCase {
         recorder.settings.isLearningEnabled = true
         var titleReads = 0, fieldReads = 0
         let slowTitle = { () -> String? in titleReads += 1; Thread.sleep(forTimeInterval: IntelligenceRecorder.slowRead + 0.05); return "窗口" }
-        let field = { () -> String? in fieldReads += 1; return nil }
+        let field = { () -> FieldText? in fieldReads += 1; return nil }
         type("第一句。", in: "electron", readField: field, readWindowTitle: slowTitle)
         type("第二句。", in: "electron", readField: field, readWindowTitle: slowTitle)
 
@@ -234,7 +256,7 @@ final class IntelligenceRecorderTests: XCTestCase {
     // MARK: Helpers
 
     /// Commits a whole sentence (ending in punctuation) as one piece, in its own field.
-    private func type(_ sentence: String, in app: String, readField: (() -> String?)? = nil, readWindowTitle: (() -> String?)? = nil) {
+    private func type(_ sentence: String, in app: String, readField: (() -> FieldText?)? = nil, readWindowTitle: (() -> String?)? = nil) {
         recorder.commit(sentence, app: app, session: sentence.hashValue, secureInput: false, readField: readField, readWindowTitle: readWindowTitle)
         recorder.closeQuietly()
     }
