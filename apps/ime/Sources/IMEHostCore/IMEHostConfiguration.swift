@@ -19,6 +19,24 @@ public enum IMEHostConfiguration {
             .path
     }
 
+    /// The user's candidate picks (`CandidateHistory`); deleting the file resets what English candidates learned.
+    public static func candidateHistoryURL() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/SmartIMEHost/candidate-history.json")
+    }
+
+    /// Chinese words committed without a translation (`TranslationMisses`); deleting it resets translation learning.
+    public static func translationMissesURL() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/SmartIMEHost/translation-misses.json")
+    }
+
+    /// The user's own and learned Chinese-to-English translations (`UserTranslations`), editable by hand.
+    public static func userTranslationsURL() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/SmartIMEHost/user-translations.tsv")
+    }
+
     public static func rimeUserDataDirectory() -> String {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/SmartIMEHost/Rime", isDirectory: true)

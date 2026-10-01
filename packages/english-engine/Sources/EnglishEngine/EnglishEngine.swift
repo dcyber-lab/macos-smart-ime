@@ -1,18 +1,21 @@
 import Foundation
 import SharedModels
+import UserData
 
 public final class BasicEnglishEngine: EnglishInputEngine {
     private static let maxCandidates = 9
 
     private let lexicon: EnglishLexicon
     private let glossary: EnglishGlossary
+    private let history: CandidateHistory?
     private var buffer: String = ""
     private var candidates: [Candidate] = []
     private var highlightedIndex: Int?
 
-    public init(lexicon: EnglishLexicon = .bundled, glossary: EnglishGlossary = .bundled) {
+    public init(lexicon: EnglishLexicon = .bundled, glossary: EnglishGlossary = .bundled, history: CandidateHistory? = nil) {
         self.lexicon = lexicon
         self.glossary = glossary
+        self.history = history
     }
 
     public func process(_ event: InputKeyEvent) -> InputSessionUpdate {
@@ -34,7 +37,7 @@ public final class BasicEnglishEngine: EnglishInputEngine {
             if !buffer.isEmpty {
                 let commitText = buffer
                 clearBuffer()
-                return update(handled: true, commitText: commitText)
+                return update(handled: true, commitText: committed(commitText))
             }
             return update(handled: false)
         }
@@ -46,7 +49,7 @@ public final class BasicEnglishEngine: EnglishInputEngine {
                 let index = highlightedIndex ?? 0
                 let commitText = candidates.indices.contains(index) ? candidates[index].text : buffer
                 clearBuffer()
-                return update(handled: true, commitText: commitText + " ")
+                return update(handled: true, commitText: committed(commitText) + " ")
             }
             return update(handled: false)
         }
@@ -63,7 +66,7 @@ public final class BasicEnglishEngine: EnglishInputEngine {
             let commitText = buffer
             clearBuffer()
             // We return handled: false so the host can process the current event after our commit
-            return update(handled: false, commitText: commitText)
+            return update(handled: false, commitText: committed(commitText))
         }
 
         return update(handled: false)
@@ -73,7 +76,7 @@ public final class BasicEnglishEngine: EnglishInputEngine {
         if candidates.indices.contains(index) {
             let commitText = candidates[index].text
             clearBuffer()
-            return update(handled: true, commitText: commitText)
+            return update(handled: true, commitText: committed(commitText))
         }
         return update(handled: true)
     }
@@ -87,6 +90,11 @@ public final class BasicEnglishEngine: EnglishInputEngine {
 
     public func reset() {
         clearBuffer()
+    }
+
+    private func committed(_ word: String) -> String {
+        history?.recordWord(word, in: lexicon)
+        return word
     }
 
     private func clearBuffer() {
@@ -108,7 +116,7 @@ public final class BasicEnglishEngine: EnglishInputEngine {
     private func refreshCandidates() {
         highlightedIndex = nil
         let completions = lexicon
-            .completions(forPrefix: buffer, limit: Self.maxCandidates)
+            .completions(forPrefix: buffer, limit: Self.maxCandidates, preferring: history)
             .filter { $0 != buffer }
             .prefix(Self.maxCandidates - 1)
         guard !completions.isEmpty else {

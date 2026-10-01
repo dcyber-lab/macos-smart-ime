@@ -1,6 +1,7 @@
 import XCTest
 @testable import EnglishEngine
 import SharedModels
+import UserData
 
 final class EnglishAugmentedChineseEngineTests: XCTestCase {
     private let lexicon = EnglishLexicon(wordsByFrequency: [
@@ -339,6 +340,182 @@ final class EnglishAugmentedChineseEngineTests: XCTestCase {
 
         XCTAssertEqual(update.commitText, "hello")
         XCTAssertEqual(fake.processedKeyCodes.last, 36)
+    }
+
+    // MARK: Learning
+
+    func testPickedCompletionLeadsNonPinyinInput() {
+        let history = learningEngine()
+        fake.candidatesByInput["gith"] = ["个", "各"]
+        type("gith")
+        XCTAssertEqual(engine.selectCandidate(at: 1).commitText, "github")
+
+        XCTAssertEqual(texts(type("gith")), ["github", "个", "各"])
+        XCTAssertEqual(engine.process(key(49, " ")).commitText, "github")
+        XCTAssertEqual(history.words(withPrefix: "git", limit: 9), ["github"])
+    }
+
+    func testOnePickDoesNotDisplaceChineseForPinyin() {
+        learningEngine()
+        fake.candidatesByInput["shujuku"] = ["数据库", "书局", "数据"]
+        type("shujuku")
+        XCTAssertEqual(engine.selectCandidate(at: 3).commitText, "database")
+
+        XCTAssertEqual(texts(type("shujuku")), ["数据库", "database", "书局", "数据"])
+        XCTAssertEqual(engine.process(key(49, " ")).commitText, "数据库")
+    }
+
+    func testTwoPicksLeadForPinyin() {
+        learningEngine()
+        fake.candidatesByInput["shujuku"] = ["数据库", "书局", "数据"]
+        type("shujuku")
+        engine.selectCandidate(at: 3)
+        type("shujuku")
+        XCTAssertEqual(engine.selectCandidate(at: 1).commitText, "database")
+
+        XCTAssertEqual(texts(type("shujuku")), ["database", "数据库", "书局", "数据"])
+        XCTAssertEqual(engine.process(key(49, " ")).commitText, "database")
+    }
+
+    func testPickingChineseTakesTheLeadBack() {
+        learningEngine()
+        fake.candidatesByInput["shujuku"] = ["数据库", "书局"]
+        for index in [2, 1] {
+            type("shujuku")
+            engine.selectCandidate(at: index) // database, twice
+        }
+        for _ in 0..<2 {
+            XCTAssertEqual(texts(type("shujuku")).first, "database")
+            XCTAssertEqual(engine.selectCandidate(at: 1).commitText, "数据库")
+        }
+
+        XCTAssertEqual(texts(type("shujuku")), ["数据库", "database", "书局"])
+    }
+
+    func testPickingChineseDemotesLeadingEnglishWord() {
+        let history = learningEngine()
+        fake.candidatesByInput["hello"] = ["何乐", "喝了"]
+        type("hello")
+        XCTAssertEqual(engine.selectCandidate(at: 1).commitText, "何乐")
+
+        XCTAssertEqual(texts(type("hello")), ["何乐", "hello", "喝了", "gladly"])
+        XCTAssertEqual(engine.process(key(49, " ")).commitText, "何乐")
+        XCTAssertEqual(history.choices(for: "hello").chinese, 1, accuracy: 0.001, "Space on a leading Chinese candidate is not recorded")
+    }
+
+    func testLearnedWordsLeadCompletions() {
+        let history = learningEngine()
+        fake.candidatesByInput["deplo"] = ["的"]
+        XCTAssertEqual(texts(type("deplo")), ["的", "deploy", "deployed", "deployment"])
+        engine.reset()
+
+        history.recordWord("deployment")
+
+        XCTAssertEqual(texts(type("deplo")), ["的", "deployment", "deploy", "deployed"])
+    }
+
+    func testOrdinaryChineseTypingIsNotRecorded() {
+        let history = learningEngine()
+        fake.candidatesByInput["women"] = ["我们", "我门"]
+        type("women")
+        engine.process(key(49, " "))
+        type("women")
+        engine.selectCandidate(at: 1)
+
+        XCTAssertEqual(history.choices(for: "women"), .empty)
+    }
+
+    func testReturnIsNotRecorded() {
+        let history = learningEngine()
+        fake.candidatesByInput["hello"] = ["何乐"]
+        type("hello")
+        XCTAssertEqual(engine.process(key(36, "\r")).commitText, "hello")
+
+        XCTAssertEqual(history.choices(for: "hello"), .empty)
+        XCTAssertEqual(texts(type("hello")).first, "hello")
+    }
+
+    func testPickThatNoLongerFitsIsIgnored() {
+        let history = learningEngine()
+        history.recordChoice(input: "shujuku", english: "databank")
+        fake.candidatesByInput["shujuku"] = ["数据库", "书局"]
+
+        XCTAssertEqual(texts(type("shujuku")), ["数据库", "书局", "database"])
+    }
+
+    func testWordLeftOutOfSecondPlaceStillFollowsChinese() {
+        let history = learningEngine()
+        for pick in ["helper", "helper", "helpful", nil, nil, nil] {
+            history.recordChoice(input: "help", english: pick)
+        }
+        fake.candidatesByInput["help"] = ["黑"]
+
+        XCTAssertEqual(texts(type("help")), ["黑", "helper", "helpful", "help"])
+    }
+
+    // MARK: User translations and missing translations
+
+    func testUserTranslationReplacesTheBuiltInOne() {
+        let user = UserTranslations()
+        user.addLearned("数据库", translations: ["DB"])
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexicon, dictionary: dictionary, userTranslations: user)
+        fake.candidatesByInput["shujuku"] = ["数据库", "书局"]
+
+        XCTAssertEqual(texts(type("shujuku")), ["数据库", "书局", "DB"])
+    }
+
+    func testUserTranslationFillsAWordWithoutOne() {
+        let user = UserTranslations()
+        user.addLearned("灰度环境", translations: ["staging environment"])
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexicon, dictionary: dictionary, userTranslations: user)
+        fake.candidatesByInput["huiduhuanjing"] = ["灰度环境"]
+
+        XCTAssertEqual(texts(type("huiduhuanjing")), ["灰度环境", "staging environment"])
+    }
+
+    func testCommittedWordWithoutTranslationIsCounted() {
+        let misses = missCountingEngine()
+        fake.candidatesByInput["huiduhuanjing"] = ["灰度环境", "灰度"]
+        fake.candidatesByInput["feishu"] = ["飞书", "非书"]
+
+        type("huiduhuanjing")
+        XCTAssertEqual(engine.process(key(49, " ")).commitText, "灰度环境")
+        type("feishu")
+        XCTAssertEqual(engine.selectCandidate(at: 1).commitText, "非书")
+
+        XCTAssertEqual(misses.candidates(minimumCount: 1, limit: 9).map(\.text).sorted(), ["灰度环境", "非书"])
+    }
+
+    func testTranslatedAndNonWordCommitsAreNotCounted() {
+        let misses = missCountingEngine()
+        fake.candidatesByInput["shujuku"] = ["数据库"]
+        fake.candidatesByInput["wox"] = ["我"]
+        fake.candidatesByInput["neihe"] = ["内核，"]
+        fake.candidatesByInput["qiyifenzhongdehuiyi"] = ["七一分钟的会议"]
+        fake.candidatesByInput["huidu"] = ["灰度"]
+
+        for input in ["shujuku", "wox", "neihe", "qiyifenzhongdehuiyi"] {
+            type(input)
+            XCTAssertNotNil(engine.process(key(49, " ")).commitText)
+        }
+        type("huidu")
+        XCTAssertEqual(engine.process(key(36, "\r")).commitText, "huidu", "Return commits the raw letters")
+
+        XCTAssertEqual(misses.candidates(minimumCount: 1, limit: 9), [])
+    }
+
+    @discardableResult
+    private func missCountingEngine() -> TranslationMisses {
+        let misses = TranslationMisses()
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexicon, dictionary: dictionary, misses: misses)
+        return misses
+    }
+
+    @discardableResult
+    private func learningEngine() -> CandidateHistory {
+        let history = CandidateHistory()
+        engine = EnglishAugmentedChineseEngine(base: fake, lexicon: lexicon, dictionary: dictionary, history: history)
+        return history
     }
 
     // MARK: Helpers

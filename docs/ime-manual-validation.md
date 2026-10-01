@@ -78,9 +78,12 @@ Use a normal editable text field such as TextEdit.
 10. Type a candidate sequence again and press `1` to confirm the first visible candidate can be chosen by number key
 11. Type another candidate sequence and press `Escape` to confirm the composition is cleared without committing text
 12. Confirm Chinese text is inserted only for the committed cases
-13. Type `yunyuansheng`, `neijuan`, and `fupan` and confirm 云原生, 内卷, and 复盘 are the first candidates (rime-ice vocabulary)
+13. With nothing composed, press Shift+`=` and confirm `+` is inserted (not `=`); press Shift+`/` and confirm `？`
+14. Type `nihao` and press Shift+`1`, and confirm `你好！` is inserted
+15. With nothing composed, type Shift+`h` then `ello` and confirm the composition shows `Hello` with no candidates; press `Space` and confirm `Hello` is inserted
+16. Type `yunyuansheng`, `neijuan`, and `fupan` and confirm 云原生, 内卷, and 复盘 are the first candidates (rime-ice vocabulary)
 
-This milestone is not considered complete until steps 5 through 13 are verified in a real macOS text client with the visible candidate panel.
+This milestone is not considered complete until steps 5 through 16 are verified in a real macOS text client with the visible candidate panel.
 
 ## Basic English Mode Checklist
 
@@ -125,8 +128,40 @@ Use a normal editable text field such as TextEdit, in Chinese mode.
 16. Type `kube`, `json`, and `refac` and confirm `Kubernetes`, `JSON`, and `refactor` are offered
 17. Type `depl` and confirm `deployed 部署` shows its gloss in small gray text, while the translation `database` for `shujuku` shows none
 18. Switch to English mode, type `negot`, and confirm completions show glosses such as `negotiate 商议，谈判`
+19. Switch back to Chinese mode, type `neihekongj`, and confirm 内核空间 is first and `kernel space` appears after the Chinese candidates
+20. Type `neihe` and confirm the translations after 内核 are `kernel` then `core`
+21. Type `rongqi` and confirm `container` appears after 容器; type `cangku` and confirm `repository` then `warehouse` after 仓库
 
-This milestone is not considered complete until steps 1 through 18 are verified in a real macOS text client.
+This milestone is not considered complete until steps 1 through 21 are verified in a real macOS text client.
+
+Picks change English placement (see the next checklist), so run this checklist on a fresh history: quit the input method's process after `rm ~/Library/Application\ Support/SmartIMEHost/candidate-history.json`.
+
+## Candidate Learning Checklist
+
+Start from a fresh history as above, in Chinese mode unless noted.
+
+1. Type `gith`, press `2` to commit `GitHub`; type `gith` again and confirm `GitHub` is first and `Space` commits it
+2. Type `shujuku`, pick `database`; type `shujuku` again and confirm `database` is second and `Space` still commits 数据库
+3. Pick `database` for `shujuku` twice more; confirm `database` is then first
+4. Type `hello`, press `2` to commit the first Chinese candidate; type `hello` again and confirm Chinese is first and `hello` second
+5. In English mode, type `dep`, pick `deployment`; type `dep` again and confirm `dep` is still first and `deployment` second
+6. Confirm `candidate-history.json` holds only English words and typed inputs (no Chinese text) a few seconds after the last pick
+7. Delete the file, restart the input method, and confirm the orders above are back to the defaults
+
+## Translation Learning Checklist
+
+Requires macOS 26 and the English and Simplified Chinese translation languages (System Settings › General › Language & Region › Translation Languages). Use TextEdit in Chinese mode. Start fresh with `rm ~/Library/Application\ Support/SmartIMEHost/{translation-misses.json,user-translations.tsv}` and then quit the input method's process. To watch runs: `log stream --predicate 'process == "SmartIMEHost"' | grep "translation learning"`.
+
+1. Type `huiduhuanjing`, confirm 灰度环境 has no English candidate, and commit it with `Space`; repeat twice more (three commits)
+2. Switch to another app and back, and confirm the log shows "translation learning kept 1" (or "rejected 1")
+3. If kept, type `huiduhuanjing` and confirm its English appears after the Chinese candidates; `user-translations.tsv` has the line under "# Learned automatically"
+4. Commit two more words without a translation three times each, switch apps again, and confirm nothing runs (less than a day since the last run)
+5. Run `defaults write lab.dcyber.inputmethod.smartime TranslationLearningInterval -int 60`, wait a minute, switch apps, and confirm the two words are tried
+6. Add a line `内核<TAB>OS kernel` to `user-translations.tsv`, switch apps, type `neihe`, and confirm the only translation is `OS kernel`
+7. Delete the 灰度环境 line, switch apps, commit 灰度环境 three more times, and confirm it gets no translation and is not tried again
+8. Run `defaults write lab.dcyber.inputmethod.smartime TranslationLearningEnabled -bool false`, commit a new untranslated word, and confirm `translation-misses.json` does not gain it
+9. Clean up: `defaults delete lab.dcyber.inputmethod.smartime TranslationLearningInterval` and `defaults delete lab.dcyber.inputmethod.smartime TranslationLearningEnabled`
+10. Note how many words were kept versus rejected; the round-trip check has not been measured with the real translation models yet
 
 ## Selection Translation Checklist
 

@@ -12,16 +12,12 @@ see packages/english-engine/DATA_LICENSE.md.
 """
 
 import argparse
-import csv
-import hashlib
 import re
 import sys
-import urllib.request
 from pathlib import Path
 
-ECDICT_COMMIT = "bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b"
-ECDICT_URL = f"https://raw.githubusercontent.com/skywind3000/ECDICT/{ECDICT_COMMIT}/ecdict.csv"
-ECDICT_SHA256 = "1a6947e04785db63613a92e14903cdae7954f7e84860b10e68e5c7cbb3f9c3cf"
+from ecdict_source import ecdict_rows
+
 MAX_SENSES = 2
 SHORT_SENSE_LENGTH = 6
 # Everyone knows "the" or "good", and ECDICT orders their senses poorly; gloss only less common words.
@@ -67,18 +63,6 @@ def gloss(translation: str) -> str | None:
     return "，".join(dict.fromkeys(chosen))
 
 
-def read_ecdict(path: Path | None) -> str:
-    if path is not None:
-        data = path.read_bytes()
-    else:
-        print(f"downloading ECDICT {ECDICT_COMMIT[:10]}", file=sys.stderr)
-        with urllib.request.urlopen(ECDICT_URL) as response:
-            data = response.read()
-    if hashlib.sha256(data).hexdigest() != ECDICT_SHA256:
-        sys.exit("error: ecdict.csv does not match the pinned SHA-256")
-    return data.decode("utf-8")
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Regenerate en-zh.tsv from ECDICT and the supplement.")
     parser.add_argument("--ecdict", type=Path)
@@ -98,10 +82,9 @@ def main() -> int:
                 inflectable.add(key(display))
     wanted = {key(w) for w in words[SKIP_MOST_COMMON:]} | set(supplement)
 
-    csv.field_size_limit(10**8)
     # Only the exact lowercase entry counts: "gets" must not pick up the acronym "GETS".
     rows: dict[str, dict] = {}
-    for row in csv.DictReader(read_ecdict(args.ecdict).splitlines()):
+    for row in ecdict_rows(args.ecdict):
         if row["word"] in wanted and row["translation"]:
             rows[row["word"]] = row
 

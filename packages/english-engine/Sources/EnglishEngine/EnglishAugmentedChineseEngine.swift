@@ -1,5 +1,6 @@
 import Foundation
 import SharedModels
+import UserData
 
 /// Wraps a Chinese engine and merges English word and translation candidates into its candidate list.
 public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
@@ -10,11 +11,26 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
     private static let minimumInputLength = 3
     private static let minimumPromotionLength = 4
     private static let minimumRareWordLength = 5
+    /// Picks beside the first Chinese candidate; more would push Chinese candidates off the page.
+    private static let maxSecondPlace = 2
+    /// An English pick displaces Chinese for pinyin input only after this many picks.
+    private static let minimumPicksToLeadPinyin = 2
+    /// Committed Chinese words of this many Han characters without a translation are counted for learning.
+    private static let missLengths = 2...6
 
     private enum Entry {
         case chinese(pageIndex: Int)
         case english(Candidate)
+
+        var isEnglish: Bool {
+            if case .english = self {
+                return true
+            }
+            return false
+        }
     }
+
+    private typealias EnglishOption = (text: String, source: CandidateSource)
 
     private enum Highlight {
         /// Index 0 when it is English, otherwise whatever the wrapped engine highlights.
@@ -26,7 +42,10 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
     private let base: ChineseInputEngine
     private let lexicon: EnglishLexicon
     private let dictionary: ChineseEnglishDictionary
+    private let userTranslations: UserTranslations?
     private let glossary: EnglishGlossary
+    private let history: CandidateHistory?
+    private let misses: TranslationMisses?
     private var baseState = CompositionState()
     private var entries: [Entry] = []
     private var highlight = Highlight.automatic
@@ -35,12 +54,18 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         base: ChineseInputEngine,
         lexicon: EnglishLexicon = .bundled,
         dictionary: ChineseEnglishDictionary = .bundled,
-        glossary: EnglishGlossary = .bundled
+        userTranslations: UserTranslations? = nil,
+        glossary: EnglishGlossary = .bundled,
+        history: CandidateHistory? = nil,
+        misses: TranslationMisses? = nil
     ) {
         self.base = base
         self.lexicon = lexicon
         self.dictionary = dictionary
+        self.userTranslations = userTranslations
         self.glossary = glossary
+        self.history = history
+        self.misses = misses
     }
 
     public func process(_ event: InputKeyEvent) -> InputSessionUpdate {
@@ -49,7 +74,12 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         }
 
         highlight = .automatic
-        return merge(base.process(event))
+        let update = base.process(event)
+        if event.keyCode == Self.spaceKeyCode, update.commitText != nil {
+            recordChinesePick()
+            recordMissingTranslation(update.commitText)
+        }
+        return merge(update)
     }
 
     public func selectCandidate(at index: Int) -> InputSessionUpdate {
@@ -58,7 +88,12 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
             return commit(candidate)
         case .chinese(let pageIndex):
             highlight = .automatic
-            return merge(base.selectCandidate(at: pageIndex))
+            let update = base.selectCandidate(at: pageIndex)
+            if update.commitText != nil {
+                recordChinesePick()
+                recordMissingTranslation(update.commitText)
+            }
+            return merge(update)
         case nil:
             return merge(base.selectCandidate(at: index))
         }
@@ -107,6 +142,8 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
 
     private func commit(_ candidate: Candidate) -> InputSessionUpdate {
         let mode = baseState.mode
+        history?.recordChoice(input: baseState.rawInput, english: candidate.text)
+        history?.recordWord(candidate.text, in: lexicon)
         reset()
         return InputSessionUpdate(
             handled: true,
@@ -171,37 +208,91 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
         let isUsable = { (word: String) in allowsRareWords || self.lexicon.isCommon(word) }
         let exactWord = lexicon.displayForm(of: input).flatMap { isUsable($0) ? $0 : nil }
         let completions = lexicon
-            .completions(forPrefix: input, limit: Self.maxWordCandidates + 1)
+            .completions(forPrefix: input, limit: Self.maxWordCandidates + 1, preferring: history)
             .filter { $0 != exactWord && isUsable($0) }
         let words = Array(((exactWord.map { [$0] } ?? []) + completions).prefix(Self.maxWordCandidates))
+        let translations = translationsOfFirstCandidate()
+        let choices = history?.choices(for: input) ?? .empty
 
-        // A finished common English word that is not pinyin goes first so Space commits it.
-        let leading = !isPinyin ? exactWord.flatMap { lexicon.isCommon($0) ? [$0] : nil } ?? [] : []
+        // English candidates the user picked for this input before and that still fit it, most picked first.
+        let picks = choices.english.compactMap { pick -> (pick: CandidateHistory.Pick, option: EnglishOption)? in
+            if translations.contains(pick.text) {
+                return (pick, (pick.text, .englishTranslation))
+            }
+            let completesInput = EnglishLexicon.key(for: pick.text).hasPrefix(input)
+            return completesInput && lexicon.displayForm(of: pick.text) == pick.text && isUsable(pick.text)
+                ? (pick, (pick.text, .englishCompletion))
+                : nil
+        }
+        // A pick leads once it beats Chinese for this input; pinyin input also needs repeated picks.
+        let leadingPick = picks.first.flatMap { top in
+            top.pick.score > choices.chinese && (!isPinyin || top.pick.count >= Self.minimumPicksToLeadPinyin)
+                ? top.option
+                : nil
+        }
+        // A finished common English word that is not pinyin goes first so Space commits it,
+        // unless the user picks Chinese for this input more often.
+        let leadingWord = !isPinyin ? exactWord.flatMap { lexicon.isCommon($0) ? $0 : nil } : nil
+        let wordLeads = leadingWord.map { choices.chinese <= choices.score(of: $0) } ?? false
+        let first = leadingPick ?? (wordLeads ? leadingWord.map { ($0, .englishCompletion) } : nil)
+
         // Longer non-pinyin input gets its best completion right after the first Chinese candidate,
         // reachable with number key 2 while Space still commits Chinese.
-        let promoted = leading.isEmpty && !isPinyin && input.count >= Self.minimumPromotionLength
-            ? Array(completions.filter(lexicon.isCommon).prefix(1))
-            : []
-        let translations = leading.isEmpty ? translationsOfFirstCandidate() : []
-        let trailing = translations.map { ($0, CandidateSource.englishTranslation) }
-            + words.filter { !leading.contains($0) && !promoted.contains($0) }.map { ($0, CandidateSource.englishCompletion) }
+        let promoted = !wordLeads && !isPinyin && input.count >= Self.minimumPromotionLength
+            ? completions.first(where: lexicon.isCommon)
+            : nil
+        let secondPlace: [EnglishOption] = picks.map(\.option)
+            + [leadingWord, promoted].compactMap { $0.map { ($0, .englishCompletion) } }
+        // Translations of a non-pinyin English word's Chinese candidates would be noise.
+        let trailing: [EnglishOption] = (wordLeads ? [] : translations.prefix(Self.maxTranslations))
+            .map { ($0, .englishTranslation) }
+            + words.map { ($0, .englishCompletion) }
 
         var seen = Set(baseState.candidates.map(\.text))
-        func english(_ text: String, _ source: CandidateSource) -> Entry? {
-            guard seen.insert(text).inserted else {
+        func english(_ option: EnglishOption) -> Entry? {
+            guard seen.insert(option.text).inserted else {
                 return nil
             }
             // Translations need no gloss: the user just typed the Chinese.
-            let annotation = source == .englishCompletion ? glossary.gloss(for: text) : nil
-            return .english(Candidate(text: text, source: source, annotation: annotation))
+            let annotation = option.source == .englishCompletion ? glossary.gloss(for: option.text) : nil
+            return .english(Candidate(text: option.text, source: option.source, annotation: annotation))
         }
 
-        let merged = leading.compactMap { english($0, .englishCompletion) }
+        let leading = [first].compactMap { $0.flatMap(english) }
+        // Stop at the limit so options left out here can still appear after the Chinese candidates.
+        var second: [Entry] = []
+        for option in secondPlace where second.count < Self.maxSecondPlace {
+            english(option).map { second.append($0) }
+        }
+        let merged = leading
             + chinese.prefix(1)
-            + promoted.compactMap { english($0, .englishCompletion) }
+            + second
             + chinese.dropFirst()
-            + trailing.compactMap { english($0.0, $0.1) }
+            + trailing.compactMap(english)
         return Array(merged.prefix(Self.maxCandidates))
+    }
+
+    /// Records a Space or number-key pick of Chinese, only for inputs where English came first or was picked
+    /// before, so English stops leading once the user prefers Chinese. Other Chinese typing is librime's to learn.
+    /// Call before `merge` replaces the state being picked from.
+    private func recordChinesePick() {
+        let input = baseState.rawInput
+        guard let history, isLearnable(input) else {
+            return
+        }
+        if entries.first?.isEnglish == true || !history.choices(for: input).english.isEmpty {
+            history.recordChoice(input: input, english: nil)
+        }
+    }
+
+    /// Counts a committed Chinese word that has no translation, so the host can learn one.
+    private func recordMissingTranslation(_ text: String?) {
+        guard let misses, let text, Self.missLengths.contains(text.unicodeScalars.count),
+              text.unicodeScalars.allSatisfy({ (0x4E00...0x9FFF).contains($0.value) }),
+              translations(of: text).isEmpty else {
+            return
+        }
+        misses.record(text)
     }
 
     /// librime shows non-pinyin input as syllable fragments ("good" -> "go o d"); show what was typed instead,
@@ -216,16 +307,22 @@ public final class EnglishAugmentedChineseEngine: ChineseInputEngine {
     }
 
     private func isEligible(_ input: String) -> Bool {
-        baseState.mode == .chinese
-            && baseState.candidatePageIndex == 0
-            && input.count >= Self.minimumInputLength
-            && input.allSatisfy { $0.isASCII && $0.isLowercase }
+        baseState.mode == .chinese && baseState.candidatePageIndex == 0 && isLearnable(input)
+    }
+
+    private func isLearnable(_ input: String) -> Bool {
+        input.count >= Self.minimumInputLength && input.allSatisfy { $0.isASCII && $0.isLowercase }
     }
 
     private func translationsOfFirstCandidate() -> [String] {
         guard let first = baseState.candidates.first?.text, first.count >= 2 else {
             return []
         }
-        return Array(dictionary.translations(for: first).prefix(Self.maxTranslations))
+        return translations(of: first)
+    }
+
+    /// The user's own translations replace the built-in ones.
+    private func translations(of word: String) -> [String] {
+        userTranslations?.translations(for: word) ?? dictionary.translations(for: word)
     }
 }

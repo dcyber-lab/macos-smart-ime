@@ -3,6 +3,7 @@ import AppKit
 import RimeBridge
 import EnglishEngine
 import SharedModels
+import UserData
 
 // Confined to the main thread: InputMethodKit creates and calls input controllers only there.
 public final class IMEInputController: IMKInputController, @unchecked Sendable {
@@ -20,6 +21,18 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         static let downArrow: UInt16 = 125
         static let upArrow: UInt16 = 126
     }
+
+    /// Shared by every input controller in the process so picks in one app count everywhere.
+    private static let candidateHistory = CandidateHistory(fileURL: IMEHostConfiguration.candidateHistoryURL())
+    private static let translationMisses = TranslationMisses(
+        fileURL: IMEHostConfiguration.translationMissesURL(),
+        isEnabled: { TranslationLearningSettings().isEnabled }
+    )
+    private static let userTranslations = UserTranslations(fileURL: IMEHostConfiguration.userTranslationsURL())
+    @MainActor private static let translationLearner = TranslationLearner(
+        misses: translationMisses,
+        userTranslations: userTranslations
+    )
 
     private let sessionStore = IMEHostSessionStore()
     private let chineseEngine: ChineseInputEngine?
@@ -48,12 +61,17 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                     defaultSchemaID: IMEHostConfiguration.defaultSchemaID
                 )
             )
-            chineseEngine = EnglishAugmentedChineseEngine(base: rimeEngine)
+            chineseEngine = EnglishAugmentedChineseEngine(
+                base: rimeEngine,
+                userTranslations: Self.userTranslations,
+                history: Self.candidateHistory,
+                misses: Self.translationMisses
+            )
         } catch {
             chineseEngine = nil
         }
 
-        englishEngine = BasicEnglishEngine()
+        englishEngine = BasicEnglishEngine(history: Self.candidateHistory)
 
         super.init(server: server, delegate: delegate, client: inputClient)
         NSLog("SmartIME: IMEInputController init – chineseEngine=%@, englishEngine=%@, bundle=%@",
@@ -95,7 +113,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
         // Selection by number keys or arrows
         if sessionStore.hasActiveComposition {
-            if let candidateIndex = candidateIndex(for: event.keyCode) {
+            if let candidateIndex = Self.candidateIndex(forKeyCode: event.keyCode, modifierFlags: event.modifierFlags) {
                 if sessionStore.state.mode == .chinese {
                     return apply(chineseEngine?.selectCandidate(at: candidateIndex), sender: sender)
                 } else if sessionStore.state.mode == .english {
@@ -166,6 +184,15 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         englishEngine?.reset()
         sessionStore.reset()
         withCandidatePanel { $0.hide() }
+    }
+
+    public override func activateServer(_ sender: Any!) {
+        super.activateServer(sender)
+        // Picks up hand edits of the user translation file, and learns missing translations once a day.
+        Self.userTranslations.reloadIfChanged()
+        MainActor.assumeIsolated {
+            Self.translationLearner.runIfDue()
+        }
     }
 
     public override func deactivateServer(_ sender: Any!) {
@@ -305,7 +332,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         apply(update, sender: client())
     }
 
-    private func candidateIndex(for keyCode: UInt16) -> Int? {
+    /// Number keys pick candidates only when pressed alone: Shift+1 is "！", which librime commits after the
+    /// first candidate.
+    static func candidateIndex(forKeyCode keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) -> Int? {
+        guard modifierFlags.intersection([.shift, .control, .option, .command]).isEmpty else {
+            return nil
+        }
         switch keyCode {
         case KeyCode.one:
             return 0

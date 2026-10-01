@@ -1,5 +1,68 @@
 # Implementation Log
 
+## 2026-10-01
+
+### Shift+letter types a capital in Chinese mode
+
+- Shift+h typed pinyin "h" instead of "H". InputMethodKit drops Shift from `charactersIgnoringModifiers` for letters, as it does for symbols, so librime got keysym `h`. `RimeKeyTranslator` now takes `characters` for any Shift combination without Control, Option, or Command, as Squirrel does. Unshifted letters still use `charactersIgnoringModifiers`, so Caps Lock keeps typing pinyin.
+- librime's `uppercase` recognizer then starts inline English. Checked through `EnglishAugmentedChineseEngine` with the bundled librime and IMK-shaped events:
+  - Shift+h shows `H` and Space commits `H`.
+  - Shift+h `ello` Space commits `Hello`; `GitHub` with Space commits `GitHub`.
+  - `nihao` and `shujuku` are unchanged.
+- `testShiftedLetterIsUppercase` used to feed "A" in `charactersIgnoringModifiers`, which hid the bug. It now uses the IMK-shaped "a". Control+Shift+p still binds as `p`.
+
+## 2026-09-30
+
+### Learning missing translations
+
+- Implemented OpenSpec change `learn-missing-translations`:
+  - `TranslationMisses` (`UserData`) counts committed 2–6 character Chinese words that have no translation.
+  - `UserTranslations` (`EnglishEngine`) is a user-editable `user-translations.tsv` looked up before the bundled table.
+  - `TranslationLearner` (`IMEHostCore`) runs at most once a day on activation, translates up to 50 words with 3+ commits on-device (zh-Hans → en and back), and keeps those whose round trip matches.
+- Changed from the earlier idea of reading librime's `userdb`: exporting it goes through the levers API, which opens the LevelDB the live sessions hold (librime closes all sessions before its own sync). Counting in the engine also records only words without a translation.
+- `Usage` moved out of `CandidateHistory.swift` so both stores share it; `CandidateHistory` is unchanged.
+- Verified end to end with real librime (scratch user directory) and a fake translator:
+  - Three `Space` commits of 灰度环境 are counted; 数据库 (translated) is not.
+  - A run keeps "Staging environment" as `staging environment`, and `huiduhuanjing` then offers it after the Chinese candidates.
+  - Neither `neihekongj` → `kernel space` nor `neihe` → `kernel`, `core` is changed by this change.
+- Tests: 101 `EnglishEngine`/`UserData` cases and 71 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in, now with async `setUp` support, so `SelectionTranslationControllerTests` ran locally for the first time.
+- Not verified: the real Translation framework path. This Mac has no translation languages installed (`LanguageAvailability` reports `supported`), so the acceptance rate of the round-trip check is unknown. Step 10 of the translation learning checklist records it.
+
+### Developer-term translations
+
+- Implemented OpenSpec change `add-tech-term-translations`. `neihekongj` → 内核空间 had no English candidate, because `zh-en.tsv` came only from CC-CEDICT's first two glosses. `build-translations.py` now builds three layers:
+  - the new hand-written `packages/english-engine/Data/zh-en-supplement.tsv` (974 developer terms)
+  - CC-CEDICT with its "(computing)" glosses first (内核 → kernel, core; 容器 → container)
+  - ECDICT `[计]` senses reversed, for headwords CC-CEDICT lacks (源文件 → source file)
+
+  The ECDICT loader moved to `scripts/english/ecdict_source.py`; `en-zh.tsv` regenerates byte-identical.
+- Rejected in the prototype:
+  - Reversing all ECDICT senses: 开心 → open core, 喜欢 → choose to.
+  - Promoting ECDICT `[计]` senses above CC-CEDICT: 问题 → sieve problem, 删除 → kill.
+  - Filtering ECDICT fills by the rime-ice vocabulary: that would have put GPL-derived selection into a committed file; without it the table is about 1.1 MB larger.
+- Table: 88,595 → 126,167 headwords (974 supplement, 88,143 CC-CEDICT 2026-09-30, 37,050 ECDICT), 2.2 → 3.3 MB.
+  - Parsing (`-O` build) takes a median 35.6 → 55.2 ms, once per process.
+  - Among the 3,000 most frequent rime-ice words, 123 changed, 110 of them through the supplement. The rest are CC-CEDICT reorders or release differences (必须 → must, have to). The bad ECDICT fills among them (执行时间 → executive time) were overridden in the supplement.
+- On a 138-term developer list written before the supplement, correct first translations rose from 73 to 137. The remaining miss is 栈, which is single-character and not translated. The supplement was filled in from this list's misses, so the gain overstates coverage of unseen terms.
+- Everyday senses stay second where a technical sense now leads (提交 → commit, submit; 协议 → protocol, agreement).
+- `testBundledTableContainsEverySupplementEntry` fails when the supplement is edited without regenerating `zh-en.tsv`.
+- Verification: the 82 `EnglishEngineTests` and `UserDataTests` cases and the 54 RimeBridge/IMEHostCore cases pass through `swiftc` with the local XCTest stand-in. The translation checks (steps 19–21 of the Chinese-mode checklist) still need a real client.
+
+### Shifted punctuation in Chinese mode
+
+- Shift+= typed "=" instead of "+" in Chinese mode. `RimeKeyTranslator` built the Rime key from `charactersIgnoringModifiers`, which InputMethodKit can fill with the unshifted key; librime commits "=" for keysym `=` even with the Shift mask (checked with the bundled librime). Symbols now come from `characters`, as in Squirrel; letters, and keys with Control, Option, or Command, still use `charactersIgnoringModifiers` so Caps Lock keeps typing pinyin and bindings such as Control+p still match.
+- While composing, Shift+1…9 was taken as a candidate number key, so `nihao` + Shift+1 committed 你好 and dropped the "！". Number keys now pick candidates only without Shift, Control, Option, or Command.
+- Verified with real librime through `RimeBridgeEngine` using InputMethodKit-shaped events: Shift+= → +, Shift+/ → ？, Shift+1 → ！, `nihao` + Shift+1 → 你好！. New `RimeBridgeTests` target (7 cases) and `CandidateKeyTests` (3); the RimeBridge and IMEHostCore suites (54 cases, minus the async selection-translation tests) pass through `swiftc` on this machine, which has no XCTest. Not yet checked by hand in a real client.
+- Known, not changed: in English mode a punctuation key after a word commits the word but the host consumes the key, so the punctuation itself is lost.
+
+### English candidates learn from the user's picks
+
+- Implemented OpenSpec change `learn-candidate-choices`. New `UserData` target (`packages/user-data`) with `CandidateHistory`; `EnglishAugmentedChineseEngine` and `BasicEnglishEngine` rank with it and record commits; the host shares one instance per process.
+- Chinese ranking was already learning: probing the bundled librime with a copy of the user's real `smartime_pinyin.userdb` moved `he` → 合, `shi` → 时, `gj` → 根据, `sj` → 数据 to first place versus an empty user directory. Left unchanged.
+- Verified against real librime and the bundled data (scratch user directory): `gith` → GitHub moves from 2 to 1 after one pick; `shujuku` → database moves from 6 to 2 after one pick and to 1 after two more; picking Chinese for `hello` puts Chinese first; English-mode `dep` → deployment moves from 4 to 2. The stored file holds no Chinese text.
+- Cost with 5,000 learned words all matching the typed prefix: mean keystroke 0.37 ms versus 0.23 ms without history (librime included; engines built unoptimized).
+- This machine has only the Command Line Tools (no XCTest, and SwiftPM fails to load), so the 81 `EnglishEngineTests` and `UserDataTests` cases ran through `swiftc` with a local XCTest stand-in, and `IMEHostCore` was compiled against the bundled librime. `swift test`, the app build, and the smoke test run in CI (`package.sh`); the learning checklist in `docs/ime-manual-validation.md` still needs a pass in a real client.
+
 ## 2026-09-28
 
 ### Cleanup before making the repository public

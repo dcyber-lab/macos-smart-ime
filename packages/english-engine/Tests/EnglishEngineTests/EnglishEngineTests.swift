@@ -1,6 +1,7 @@
 import XCTest
 @testable import EnglishEngine
 import SharedModels
+import UserData
 
 final class EnglishLexiconTests: XCTestCase {
     func testBundledLexiconIsLarge() {
@@ -125,6 +126,27 @@ final class BasicEnglishEngineTests: XCTestCase {
 
         XCTAssertEqual(candidates.first { $0.text == "category" }?.annotation, "类别")
         XCTAssertNil(candidates.first { $0.text == "catch" }?.annotation)
+    }
+
+    func testLearnedCompletionsComeAfterTypedText() {
+        let history = CandidateHistory()
+        history.recordWord("category")
+        let engine = BasicEnglishEngine(lexicon: lexicon, history: history)
+
+        XCTAssertEqual(type("cat", into: engine).state.candidates.map(\.text), ["cat", "category", "catch"])
+        XCTAssertEqual(engine.process(key(49, " ")).commitText, "cat ", "Space still commits the typed text")
+    }
+
+    func testCommitsRecordOnlyLexiconWords() {
+        let history = CandidateHistory()
+        let engine = BasicEnglishEngine(lexicon: lexicon, history: history)
+        type("hel", into: engine)
+        engine.selectCandidate(at: 2)
+        type("xyz", into: engine)
+        engine.process(key(49, " "))
+
+        XCTAssertEqual(history.words(withPrefix: "hel", limit: 9), ["hello"])
+        XCTAssertEqual(history.words(withPrefix: "xyz", limit: 9), [])
     }
 
     func testNoCandidatesWhenNothingCompletes() {
