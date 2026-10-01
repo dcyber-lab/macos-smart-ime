@@ -6,7 +6,7 @@ import SharedModels
 final class CandidatePanel {
     static let shared = CandidatePanel()
 
-    static let cornerRadius: CGFloat = 10
+    static let cornerRadius: CGFloat = 12
 
     private let window: NSPanel
     private let listView = CandidateListView()
@@ -89,25 +89,26 @@ final class CandidatePanel {
 /// Draws the optional preedit header and candidate rows top to bottom, and reports row clicks.
 final class CandidateListView: NSView {
     private enum Metrics {
-        static let outerPadding: CGFloat = 4
+        static let outerPadding: CGFloat = 6
         static let rowHorizontalPadding: CGFloat = 8
-        static let rowVerticalPadding: CGFloat = 3
-        static let columnGap: CGFloat = 7
+        static let rowVerticalPadding: CGFloat = 4
+        static let columnGap: CGFloat = 8
         static let tagGap: CGFloat = 12
         static let annotationGap: CGFloat = 6
         static let tagHorizontalPadding: CGFloat = 5
         static let tagVerticalPadding: CGFloat = 1
         static let separatorSpacing: CGFloat = 7
         static let highlightRadius: CGFloat = 6
-        static let headerVerticalPadding: CGFloat = 3
+        static let headerVerticalPadding: CGFloat = 4
+        static let headerSeparatorSpacing: CGFloat = 5
         static let chevronGap: CGFloat = 12
         static let chevronSpacing: CGFloat = 4
     }
 
     private let textFont = NSFont.systemFont(ofSize: 16)
-    private let labelFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+    private let labelFont = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
     private let tagFont = NSFont.systemFont(ofSize: 10, weight: .medium)
-    private let headerFont = NSFont.systemFont(ofSize: 12)
+    private let headerFont = NSFont.systemFont(ofSize: 13, weight: .medium)
     private let annotationFont = NSFont.systemFont(ofSize: 12)
     private let chevronConfiguration = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
 
@@ -132,6 +133,7 @@ final class CandidateListView: NSView {
             return 0
         }
         return ceil(headerFont.ascender - headerFont.descender + headerFont.leading) + Metrics.headerVerticalPadding * 2
+            + Metrics.headerSeparatorSpacing
     }
 
     private var labelColumnWidth: CGFloat {
@@ -192,7 +194,7 @@ final class CandidateListView: NSView {
             }
 
             let contentX = rect.minX + Metrics.rowHorizontalPadding
-            draw(row.label, font: labelFont, color: row.isHighlighted ? highlightText.withAlphaComponent(0.85) : .secondaryLabelColor,
+            draw(row.label, font: labelFont, color: row.isHighlighted ? highlightText.withAlphaComponent(0.85) : .tertiaryLabelColor,
                  at: contentX + labelWidth - row.label.size(withAttributes: [.font: labelFont]).width, in: rect)
             let textX = contentX + labelWidth + Metrics.columnGap
             draw(row.text, font: textFont, color: row.isHighlighted ? highlightText : .labelColor, at: textX, in: rect)
@@ -209,8 +211,8 @@ final class CandidateListView: NSView {
 
         NSColor.separatorColor.setStroke()
         let radius = CandidatePanel.cornerRadius
-        let border = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: radius, yRadius: radius)
-        border.lineWidth = 1
+        let border = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.25, dy: 0.25), xRadius: radius, yRadius: radius)
+        border.lineWidth = 0.5
         border.stroke()
     }
 
@@ -253,36 +255,33 @@ final class CandidateListView: NSView {
             x: Metrics.outerPadding,
             y: Metrics.outerPadding,
             width: bounds.width - Metrics.outerPadding * 2,
-            height: headerHeight
+            height: headerHeight - Metrics.headerSeparatorSpacing
         )
         draw(header.text, font: headerFont, color: .secondaryLabelColor, at: rect.minX + Metrics.rowHorizontalPadding, in: rect)
+        drawSeparator(atY: rect.maxY + Metrics.headerSeparatorSpacing / 2, from: rect.minX, to: rect.maxX)
 
         guard showsChevrons else {
             return
         }
-        // Fixed slots (up, then down) so the arrows do not shift while paging.
+        // Fixed slots (up, then down); the unavailable direction is dimmed so the pair reads as one control.
         let downX = rect.maxX - Metrics.rowHorizontalPadding - chevronSlotWidth
         let upX = downX - Metrics.chevronSpacing - chevronSlotWidth
-        if header.canPageUp {
-            drawChevron("chevron.up", atX: upX, in: rect)
-        }
-        if header.canPageDown {
-            drawChevron("chevron.down", atX: downX, in: rect)
-        }
+        drawChevron("chevron.up", atX: upX, in: rect, enabled: header.canPageUp)
+        drawChevron("chevron.down", atX: downX, in: rect, enabled: header.canPageDown)
     }
 
     private func chevron(_ name: String) -> NSImage? {
         NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(chevronConfiguration)
     }
 
-    private func drawChevron(_ name: String, atX x: CGFloat, in rect: CGRect) {
+    private func drawChevron(_ name: String, atX x: CGFloat, in rect: CGRect, enabled: Bool) {
         guard let symbol = chevron(name) else {
             return
         }
         let size = symbol.size
         let tinted = NSImage(size: size, flipped: false) { bounds in
             symbol.draw(in: bounds)
-            NSColor.secondaryLabelColor.set()
+            (enabled ? NSColor.secondaryLabelColor : NSColor.quaternaryLabelColor).set()
             bounds.fill(using: .sourceAtop)
             return true
         }
@@ -308,10 +307,14 @@ final class CandidateListView: NSView {
     }
 
     private func drawSeparator(above rect: CGRect) {
-        let y = rect.minY - Metrics.separatorSpacing / 2
+        drawSeparator(atY: rect.minY - Metrics.separatorSpacing / 2,
+                      from: rect.minX + Metrics.rowHorizontalPadding, to: rect.maxX - Metrics.rowHorizontalPadding)
+    }
+
+    private func drawSeparator(atY y: CGFloat, from minX: CGFloat, to maxX: CGFloat) {
         let line = NSBezierPath()
-        line.move(to: CGPoint(x: rect.minX + Metrics.rowHorizontalPadding, y: y))
-        line.line(to: CGPoint(x: rect.maxX - Metrics.rowHorizontalPadding, y: y))
+        line.move(to: CGPoint(x: minX, y: y))
+        line.line(to: CGPoint(x: maxX, y: y))
         line.lineWidth = 1
         NSColor.separatorColor.setStroke()
         line.stroke()

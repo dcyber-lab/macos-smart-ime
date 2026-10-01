@@ -2,6 +2,18 @@
 
 ## 2026-10-01
 
+### Candidate panel and translation popup polish
+
+- Implemented OpenSpec change `polish-candidate-panel` after the user asked for a nicer-looking UI:
+  - Candidate panel: 12 pt corners, 6 pt outer padding, 28 pt rows, 12 pt medium tertiary row numbers, 13 pt medium preedit header above a hairline, 0.5 pt border.
+  - Page chevrons: both are drawn on multi-page lists and the unavailable one is dimmed, so the control no longer changes shape while paging.
+  - Popup: capsule direction badge before the source text.
+- Fixed: the popup's source line ran to the right edge (`please review the plan before Friday` ended at 267 pt in a 265 pt popup). `NSStackView` dropped the trailing inset from its fitting width; explicit constraints replace it.
+- Sizes: a 9-row Chinese list grows from 107×268 to 111×298 pt, a 5-row English list from 192×133 to 196×147 pt.
+- Reviewed through offscreen before/after renders in light and dark, with the `.popover` material approximated by a flat fill.
+- Tests: new `TranslationPopupViewTests` fail on the old popup and pass on the new one. 75 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in.
+- Not verified yet: the live panel on screen (no screen-capture permission on the dev Mac).
+
 ### Shift+letter types a capital in Chinese mode
 
 - Shift+h typed pinyin "h" instead of "H". InputMethodKit drops Shift from `charactersIgnoringModifiers` for letters, as it does for symbols, so librime got keysym `h`. `RimeKeyTranslator` now takes `characters` for any Shift combination without Control, Option, or Command, as Squirrel does. Unshifted letters still use `charactersIgnoringModifiers`, so Caps Lock keeps typing pinyin.

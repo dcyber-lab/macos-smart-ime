@@ -79,14 +79,14 @@ Owns explicit and async workflows:
 ## Candidate Panel
 
 - `IMEHostCore` draws its own vertical candidate panel (`CandidatePanel`) instead of the fixed-height `IMKCandidates` panel. One borderless, non-activating `NSPanel` with an `NSVisualEffectView` background is shared by all input controllers in the process and sized to its rows on every update.
-- Visuals: soft accent-tint highlight (lightened text in dark mode), capsule 英/译 tags, and in Chinese mode a header with the Rime preedit plus up/down chevrons when more pages exist (`CompositionState.candidatePageIndex` / `isLastCandidatePage`).
+- Visuals: 12 pt corners with 6 pt padding (the highlight's 6 pt radius stays concentric), soft accent-tint highlight (lightened text in dark mode), tertiary row numbers, capsule 英/译 tags, and in Chinese mode a header with the Rime preedit above a hairline. On multi-page lists the header shows both page chevrons and dims the unavailable direction (`CompositionState.candidatePageIndex` / `isLastCandidatePage`).
 - `CandidatePanelModel` (header, rows, 英/译 tags, Chinese/English separators, highlight) and `CandidatePanelPlacement` (below caret, flip above, horizontal clamp, empty-caret fallback) are pure and covered by `IMEHostCoreTests`.
 - Keyboard handling stays in `IMEInputController.handle(_:client:)`; the panel only reports row clicks, which go through the same `selectCandidate(at:)` path as number keys.
 - Text reaches the client through `IMKTextInput.insertText`; `composedString` returns an empty string (never nil) so `updateComposition()` clears marked text on cancel.
 
 ## Selection Translation
 
-- While SmartIMEHost is active and nothing is being composed, the translation hotkey (default `⌃⌥T`) reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`) and translates it on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; weak-linked). `TranslationPopup` shows the result; `Return` replaces the captured range, `Escape` or any other key dismisses.
+- While SmartIMEHost is active and nothing is being composed, the translation hotkey (default `⌃⌥T`) reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`) and translates it on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; weak-linked). `TranslationPopup` shows the result under a capsule direction badge (英 → 中 / 中 → 英), laid out with explicit constraints so every edge keeps its inset; `Return` replaces the captured range, `Escape` or any other key dismisses.
 - Direction is detected from the text: Simplified Chinese → English when Han characters ≥ English words, otherwise English → Simplified Chinese (`TranslationDirection`).
 - Settings live in the input method's defaults domain and are read on every key: `SelectionTranslationEnabled` (default true) and `SelectionTranslationHotkey` (default `ctrl+option+t`; modifiers plus one letter, must include ctrl, option, or cmd).
 - IME rule: explicit, user-triggered, asynchronous, on-device actions such as this are allowed in the IME; AI, network calls, and long-running work stay out of the per-keystroke and composition path. The Companion app remains the planned home for features that must work in every app and with every input method.
