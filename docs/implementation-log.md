@@ -2,6 +2,21 @@
 
 ## 2026-10-01
 
+### Commit effects with switchable skins
+
+- Implemented OpenSpec change `add-commit-effects`. Committing a candidate breaks its row apart: 玻璃炸裂 (cracks, then a radial burst), 碎裂下坠 (left-to-right break and fall), or 粒子消散 (dust sweep). Palettes: 彩虹, 霓虹, 马卡龙, or 跟随强调色; both axes have 随机, and motion has 关闭. Defaults: 玻璃炸裂 with 彩虹. Chinese and English mode both play it.
+- The user chose this after live prototypes: four styles, then colored fragments, then all of them as skins.
+- Switching is in the input menu (two submenus); choosing plays a preview. The settings are `CommitEffect` / `CommitEffectPalette` in the defaults domain. Reduce Motion turns effects off.
+- The text is inserted first, and the effect runs in a pool of three click-through overlay windows. A generation counter keeps a stale fade from hiding a panel shown during it.
+- Checked with a scratch harness against the real `IMEHostCore` in a running app:
+  - A panel shown 30 ms after a commit ends visible at alpha 1.
+  - A plain commit fades and orders out with alpha restored.
+  - Unmatched commits play nothing, and five rapid commits use three overlays.
+  - Optimized cost per commit is 2.6–3.8 ms: snapshot about 1 ms, dust sampling about 1 ms, overlay about 0.15 ms.
+  - Frames drawn by the production view match the prototype.
+- Tests: 24 new cases (effect model, settings, committed row, row snapshots); 99 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in.
+- Not verified yet: whether the input menu's submenus deliver their actions (only checkable live), and the effects in real clients.
+
 ### Candidate panel and translation popup polish
 
 - Implemented OpenSpec change `polish-candidate-panel` after the user asked for a nicer-looking UI.

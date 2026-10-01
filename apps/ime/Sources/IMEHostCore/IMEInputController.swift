@@ -35,6 +35,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     )
 
     private let sessionStore = IMEHostSessionStore()
+    private let commitEffectSettings = CommitEffectSettings()
     private let chineseEngine: ChineseInputEngine?
     private let englishEngine: EnglishInputEngine?
     private var shiftToggle = ShiftToggleDetector()
@@ -283,10 +284,88 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         sessionStore.apply(update)
         if let committedText = update.commitText, !committedText.isEmpty {
             commit(committedText, using: sender)
+            playCommitEffect(for: committedText)
             sessionStore.reset(committedText: committedText)
         }
         syncPresentation()
         return update.handled || update.commitText != nil || sessionStore.hasActiveComposition
+    }
+
+    /// Runs after the text is inserted; the effect is visual only and never delays input.
+    private func playCommitEffect(for committedText: String) {
+        var generator = SystemRandomNumberGenerator()
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard let skin = commitEffectSettings.resolve(reduceMotion: reduceMotion, using: &generator) else {
+            return
+        }
+        withCandidatePanel { $0.playCommitEffect(for: committedText, style: skin.style, palette: skin.palette) }
+    }
+
+    // MARK: Input menu
+
+    public override func menu() -> NSMenu! {
+        let menu = NSMenu()
+        let motion = commitEffectSettings.motion
+        menu.addItem(Self.submenu(
+            "选词动效",
+            items: CommitEffectMotionChoice.allChoices.map { ($0.title, $0 == motion, $0 == .off) },
+            action: #selector(selectCommitEffectMotion(_:))
+        ))
+        let palette = commitEffectSettings.palette
+        menu.addItem(Self.submenu(
+            "碎片配色",
+            items: CommitEffectPaletteChoice.allChoices.map { ($0.title, $0 == palette, false) },
+            action: #selector(selectCommitEffectPalette(_:))
+        ))
+        return menu
+    }
+
+    /// Item tags index `allChoices`; `separatedBefore` puts a line above an item.
+    private static func submenu(_ title: String, items: [(title: String, isOn: Bool, separatedBefore: Bool)], action: Selector) -> NSMenuItem {
+        let submenu = NSMenu(title: title)
+        for (index, item) in items.enumerated() {
+            if item.separatedBefore {
+                submenu.addItem(.separator())
+            }
+            let menuItem = NSMenuItem(title: item.title, action: action, keyEquivalent: "")
+            menuItem.tag = index
+            menuItem.state = item.isOn ? .on : .off
+            submenu.addItem(menuItem)
+        }
+        let parent = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        parent.submenu = submenu
+        return parent
+    }
+
+    /// InputMethodKit passes a dictionary holding the chosen item under `kIMKCommandMenuItemName`.
+    private static func chosenTag(_ sender: Any?) -> Int? {
+        ((sender as? [String: Any])?[kIMKCommandMenuItemName] as? NSMenuItem)?.tag
+    }
+
+    @objc func selectCommitEffectMotion(_ sender: Any?) {
+        guard let tag = Self.chosenTag(sender), CommitEffectMotionChoice.allChoices.indices.contains(tag) else {
+            return
+        }
+        commitEffectSettings.motion = CommitEffectMotionChoice.allChoices[tag]
+        previewCommitEffect()
+    }
+
+    @objc func selectCommitEffectPalette(_ sender: Any?) {
+        guard let tag = Self.chosenTag(sender), CommitEffectPaletteChoice.allChoices.indices.contains(tag) else {
+            return
+        }
+        commitEffectSettings.palette = CommitEffectPaletteChoice.allChoices[tag]
+        previewCommitEffect()
+    }
+
+    /// Ignores Reduce Motion: the user just asked to see the effect.
+    private func previewCommitEffect() {
+        var generator = SystemRandomNumberGenerator()
+        guard let skin = commitEffectSettings.resolve(reduceMotion: false, using: &generator) else {
+            return
+        }
+        let pointer = NSEvent.mouseLocation
+        withCandidatePanel { $0.previewCommitEffect(style: skin.style, palette: skin.palette, below: pointer) }
     }
 
     private func syncPresentation() {

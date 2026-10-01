@@ -84,6 +84,14 @@ Owns explicit and async workflows:
 - Keyboard handling stays in `IMEInputController.handle(_:client:)`; the panel only reports row clicks, which go through the same `selectCandidate(at:)` path as number keys.
 - Text reaches the client through `IMKTextInput.insertText`; `composedString` returns an empty string (never nil) so `updateComposition()` clears marked text on cancel.
 
+## Commit Effects
+
+- When committed text matches a visible panel row, that row breaks apart after `insertText` and the rest of the panel fades in 100 ms. Matching rule (`CandidatePanelModel.committedRowIndex`): exact text first (highlighted row preferred), else the longest row the commit starts with ("deploy ", "你好，"); no match plays nothing (raw pinyin with `Return`).
+- `CommitEffect` is pure and seeded: fragments (triangles for 玻璃炸裂/碎裂下坠, 3 pt squares for 粒子消散) with velocity, spin, delay, and lifetime, and `pose(of:at:)` per frame. `CommitEffectView` draws poses from a display link over two row snapshots (as drawn, and text only via `CandidateListView.drawsHighlightFill`) in click-through overlay windows one level above the panel (`CommitEffectOverlay`, pool of three).
+- Palettes 彩虹/霓虹/马卡龙 recolor shards (random for glass, a left-to-right gradient otherwise) and keep text white; 跟随强调色 keeps the snapshot.
+- Settings in the defaults domain, read on every commit: `CommitEffect` (`shatter`, `crumble`, `dust`, `random`, `off`; default `shatter`) and `CommitEffectPalette` (`rainbow`, `neon`, `pastel`, `accent`, `random`; default `rainbow`). Reduce Motion turns effects off. The input menu (`IMEInputController.menu()`) has submenus 选词动效 and 碎片配色; choosing an item saves it and plays a preview below the pointer.
+- Cost on the main thread: about 3 ms once per commit (two snapshots about 1 ms, dust sampling about 1 ms, overlay setup), then one small redraw per frame for at most about 0.8 s.
+
 ## Selection Translation
 
 - While SmartIMEHost is active and nothing is being composed, the translation hotkey (default `⌃⌥T`) reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`) and translates it on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; weak-linked). `TranslationPopup` shows the result under a capsule direction badge (英 → 中 / 中 → 英), laid out with explicit constraints so every edge keeps its inset; `Return` replaces the captured range, `Escape` or any other key dismisses.
