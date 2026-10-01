@@ -63,6 +63,14 @@
 - Cost with 5,000 learned words all matching the typed prefix: mean keystroke 0.37 ms versus 0.23 ms without history (librime included; engines built unoptimized).
 - This machine has only the Command Line Tools (no XCTest, and SwiftPM fails to load), so the 81 `EnglishEngineTests` and `UserDataTests` cases ran through `swiftc` with a local XCTest stand-in, and `IMEHostCore` was compiled against the bundled librime. `swift test`, the app build, and the smoke test run in CI (`package.sh`); the learning checklist in `docs/ime-manual-validation.md` still needs a pass in a real client.
 
+## 2026-09-28
+
+### Cleanup before making the repository public
+
+- Removed the Notion page links from `README.md` and `AGENTS.md` and deleted `docs/notion-links.md`; they now live in the untracked `local/notion-links.md`, which `.gitignore` already covers. Replaced two absolute developer paths in `apps/ime/README.md` with relative links.
+- Added the MIT `LICENSE` for the project's own code, a License section in `README.md` that points at the data licenses, and a copy of the license in the release zip's `licenses/` directory.
+- Rewrote the git history with `git filter-repo`: the 2026-03-15 commits carried a work e-mail address, now the GitHub noreply address, and the Notion links and the absolute path were replaced in earlier revisions of the files. Every commit hash changed; `main` and `v0.1.0` were force-pushed, so existing clones must be reset to `origin/main`. GitHub keeps the old commits reachable through the merged pull requests until they are garbage-collected.
+
 ## 2026-09-27
 
 ### CI build

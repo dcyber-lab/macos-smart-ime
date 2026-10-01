@@ -11,12 +11,6 @@ Start with:
 - `docs/openspec-workflow.md`
 - `docs/implementation-log.md`
 
-The project is tracked in Notion:
-
-- Project page: `<removed>`
-- Design doc: `<removed>`
-- Task database: `<removed>`
-
 GitHub repository:
 
 - `https://github.com/dcyber-lab/macos-smart-ime`
@@ -42,3 +36,7 @@ scripts/release/package.sh --publish   # also upload it as GitHub release v<vers
 `package.sh` runs the unit tests first. CI (`.github/workflows/build.yml`, on `macos-26`) runs the same script: pull requests to `main` keep the zip as a build artifact for 7 days, and pushing a `v<version>` tag that matches `MARKETING_VERSION` in `project.yml` publishes the release. Documentation-only changes do not trigger a build, because macOS minutes count 10x against the free Actions quota.
 
 The zip holds a self-contained app (librime, its libraries, and the Chinese dictionary bundled) plus an installer that needs neither Xcode nor Homebrew: unzip, then run `zsh install.command`. It runs on Apple Silicon Macs with macOS 26 or later.
+
+## License
+
+The project's own code is released under the MIT License (see `LICENSE`). The bundled dictionaries keep their own licenses: the rime-ice Chinese tables are GPL-3.0 (`third_party/librime-data/smartime/NOTICE.md`), and the English word list, glosses, and translation table are CC-BY-SA 4.0 or MIT as described in `packages/english-engine/DATA_LICENSE.md`. The release zip ships all of them in `licenses/`.
