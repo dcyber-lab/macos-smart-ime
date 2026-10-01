@@ -234,6 +234,16 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 7. Turn off 保存输入原文, type a sentence, and confirm the journal does not gain it while the app's counts still grow
 8. Choose 清除学习记录…, confirm the alert, and check that `~/Library/Application Support/SmartIMEHost/` no longer has `input-memory.json`, `journal/`, `candidate-history.json`, or `translation-misses.json`
 
+## AI Assist Checklist (proof of concept)
+
+1. Open Notes (or TextEdit), open the input menu, and choose 在「Notes」中启用 AI 提示; the status line shows Codex and the model
+2. Type 这个功能下周上线，麻烦大家帮忙回归一下。: a chip "✨ 转成英文 · 生成中… ⇥" appears below the caret, then after about 7–9 s an English preview
+3. Press Tab: the sentence is replaced by the English text and the chip says 已替换
+4. Type another sentence and press Tab before the preview appears: it is replaced as soon as the result arrives
+5. Type another sentence and keep typing: the chip disappears and nothing is replaced
+6. In an app that was not enabled, type the same sentence: no chip appears
+7. In Chrome (a GitHub comment box) and SeaTalk, enable AI 提示 and repeat 2–3; note whether the text is replaced or copied (⌘V)
+
 ## Known Limits In This Milestone
 
 - This checklist validates both the Chinese `librime` path and the basic English completion path

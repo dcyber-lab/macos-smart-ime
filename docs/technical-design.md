@@ -126,6 +126,17 @@ Owns explicit and async workflows:
   - The page opens with 学到了什么 (`LearningInsights`), computed in the background with rules only: overview, each app's writing language, frequent words (`NLTokenizer`), possible new words (single characters that keep appearing together), repeated sentences, and sentences naming a time of day (`NSDataDetector` plus a "N点" rule). A month of typing takes at most 0.2 s.
   - 清除学习记录… confirms with an `NSAlert`, then clears `InputMemory`, `InputJournal`, `CandidateHistory`, and `TranslationMisses`.
 
+## AI Assist (proof of concept)
+
+- After a sentence ending in punctuation is read from the field, `IntelligenceRecorder.onFieldSentence` reports it with the cursor. In apps listed in `AIAssistChipApps`, `AIAssistChipController.qualifies` checks the sentence: 6+ characters, mostly Han characters against English words.
+- For a qualifying sentence the controller shows the ✨ chip (`SuggestionChip`) and starts `CodexRewriter` at once (prefetch).
+  - `Tab` replaces `[cursor − length, cursor)` via `insertText(_:replacementRange:)` and reads it back; if the app did not take it, the text goes to the clipboard.
+  - `Tab` before the result arrives replaces it on arrival. `Esc` or any other key dismisses the chip and cancels the request.
+  - There is at most one offer per app per minute.
+- `CodexRewriter` runs `codex exec --skip-git-repo-check --ephemeral -s read-only -C <empty temp dir> -m gpt-6-luna -c model_reasoning_effort="low" -o <file> -` with the prompt on stdin and a 30 s timeout.
+  - The binary comes from `AICodexPath`, else `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, or `~/.local/bin/codex`.
+  - The model and effort come from `AICodexModel` and `AICodexReasoningEffort`.
+
 ## Selection Translation
 
 - While SmartIMEHost is active and nothing is being composed, the translation hotkey (default `⌃⌥T`) reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`) and translates it on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; weak-linked). `TranslationPopup` shows the result under a capsule direction badge (英 → 中 / 中 → 英), laid out with explicit constraints so every edge keeps its inset; `Return` replaces the captured range, `Escape` or any other key dismisses.

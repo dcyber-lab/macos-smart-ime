@@ -79,6 +79,12 @@ The same rewrite prompt ("这个功能下周上线，麻烦大家帮忙回归一
 - A cloud provider sends the current sentence or selection off the Mac. That needs the user to amend the local-only decision for confirmed actions only; learned memory and the journal never leave.
 - Launch the CLI by absolute path (the input method has no login-shell `PATH`), pass the text as an argument array, use a timeout, and cancel on dismiss.
 
+## AI assist proof of concept (2026-10-01)
+
+- **Provider**: Codex, through the user's subscription (`codex exec`, `gpt-6-luna`, low effort), 7–9 s per rewrite through the input method's code path.
+- **Exception to "local only"**, chosen by the user: in apps where the user turned on AI 提示, a finished, mostly Chinese sentence is sent to Codex as soon as the ✨ chip shows (prefetch), before the user confirms. Nothing is sent from other apps. Learned memory, the journal, context, and titles are never sent.
+- With a local model (Apple Intelligence), prefetch would cost neither privacy nor quota; it is the preferred provider once enabled.
+
 ## Open risks
 
 - The journal is a plain file during the trial. Encrypting it with a Keychain key is deferred: with ad-hoc signing every update changes the code signature and would prompt for Keychain access mid-typing. Revisit with Developer ID signing or if the journal is kept.

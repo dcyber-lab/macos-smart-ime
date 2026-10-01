@@ -105,7 +105,7 @@ public final class InputMemory: @unchecked Sendable {
     }
 
     /// Han characters, and runs of Latin letters as English words.
-    static func languageCounts(_ text: String) -> (han: Int, english: Int) {
+    public static func languageCounts(_ text: String) -> (han: Int, english: Int) {
         var han = 0, english = 0, inWord = false
         for scalar in text.unicodeScalars {
             let isLatin = scalar.isASCII && CharacterSet.letters.contains(scalar)

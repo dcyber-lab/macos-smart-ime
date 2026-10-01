@@ -41,6 +41,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         journal: InputJournal(directoryURL: IMEHostConfiguration.inputJournalDirectoryURL())
     )
     @MainActor private static var lastJournalPrune = Date.distantPast
+    /// AI assist (proof of concept): a ✨ rewrite offered after sentences in apps the user enabled.
+    @MainActor private static let aiChip = AIAssistChipController(
+        rewriter: { AIAssistSettings().rewriter() },
+        present: { display, caret in SuggestionChip.shared.show(display, caret: caret) }
+    )
     private static let returnKeys: Set<UInt16> = [36, 76]
 
     private let sessionStore = IMEHostSessionStore()
@@ -113,6 +118,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             return false
         }
         shiftToggle.keyDown()
+
+        // While a ✨ chip shows: Tab accepts, Esc dismisses, any other key dismisses and is typed.
+        let keyCode = event.keyCode
+        if MainActor.assumeIsolated({ Self.aiChip.handleKey(keyCode) }) == .consumed {
+            return true
+        }
 
         if Self.returnKeys.contains(event.keyCode), !sessionStore.hasActiveComposition {
             // Reads the field before the app gets the key: a chat app sends and clears it on Return.
@@ -213,6 +224,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         Self.userTranslations.reloadIfChanged()
         clientBundleIdentifier = ((sender as? IMKTextInput) ?? client())?.bundleIdentifier()
         MainActor.assumeIsolated {
+            Self.intelligence.onFieldSentence = { [weak self] end in self?.offerAIRewrite(end) }
             Self.translationLearner.runIfDue()
             if Date().timeIntervalSince(Self.lastJournalPrune) > 24 * 60 * 60 {
                 Self.lastJournalPrune = Date()
@@ -223,6 +235,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
     public override func deactivateServer(_ sender: Any!) {
         // An unfinished sentence stays open: leaving to copy a link and coming back continues it.
+        MainActor.assumeIsolated { Self.aiChip.dismiss() }
         tearDownSession()
         super.deactivateServer(sender)
     }
@@ -349,7 +362,55 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         IntelligenceMenu.items(settings: IntelligenceSettings(), currentApp: currentApp, isAccessibilityTrusted: WindowTitleReader.isTrusted,
                                action: #selector(intelligenceMenuCommand(_:)))
             .forEach(menu.addItem)
+        menu.addItem(.separator())
+        let ai = AIAssistSettings()
+        AIAssistMenu.items(settings: ai, currentApp: currentApp, codexFound: ai.rewriter() != nil, action: #selector(aiMenuCommand(_:)))
+            .forEach(menu.addItem)
         return menu
+    }
+
+    @objc func aiMenuCommand(_ sender: Any?) {
+        guard AIAssistMenu.isToggle(sender), let app = clientBundleIdentifier else {
+            return
+        }
+        let settings = AIAssistSettings()
+        settings.toggleChips(in: app)
+        NSLog("SmartIME: AI chips %@ for %@", settings.chipApps.contains(app) ? "on" : "off", app)
+    }
+
+    // MARK: AI assist
+
+    /// Offers ✨ 转成英文 for a sentence that just ended, if this app has AI hints on and it qualifies.
+    private func offerAIRewrite(_ end: FieldSentenceEnd) {
+        guard AIAssistSettings().chipApps.contains(end.app), AIAssistChipController.qualifies(end.text),
+              !sessionStore.hasActiveComposition, end.app == clientBundleIdentifier else {
+            return
+        }
+        let length = (end.text as NSString).length
+        guard end.cursor >= length else {
+            return
+        }
+        let offer = AIAssistChipController.Offer(
+            app: end.app, sentence: end.text, range: NSRange(location: end.cursor - length, length: length), caret: caretRect(),
+            apply: { [weak self] text, range in self?.replaceText(in: range, with: text) ?? false }
+        )
+        MainActor.assumeIsolated { Self.aiChip.offer(offer) }
+    }
+
+    /// Replaces the range in the client and checks that it took; otherwise copies the text so the user
+    /// can paste it.
+    private func replaceText(in range: NSRange, with text: String) -> Bool {
+        guard let client = client() else {
+            return false
+        }
+        client.insertText(text, replacementRange: range)
+        let written = client.attributedSubstring(from: NSRange(location: range.location, length: (text as NSString).length))?.string
+        if written == text {
+            return true
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        return false
     }
 
     @objc func intelligenceMenuCommand(_ sender: Any?) {
@@ -419,7 +480,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             let range = NSRange(location: start, length: cursor.location - start)
             if let text = client.attributedSubstring(from: range)?.string, !text.isEmpty {
                 MainActor.assumeIsolated { Self.fieldReadLimits[app] = size }
-                return FieldText(text, startsMidway: start > 0)
+                return FieldText(text, startsMidway: start > 0, cursor: cursor.location)
             }
         }
         // Nothing at any size (a terminal, say): try only the small read from now on.

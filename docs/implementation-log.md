@@ -2,6 +2,14 @@
 
 ## 2026-10-01
 
+### AI assist proof of concept (Codex)
+
+- The user chose their Codex subscription as the AI provider (Apple Intelligence is off on this Mac). They asked to see the ✨ suggestion with prefetch before the full change (OpenSpec `add-ai-assist`, POC section).
+- In apps enabled from the menu, a finished, mostly Chinese sentence read from the field gets a chip below the caret. Codex starts at once; `Tab` replaces the sentence, with a read-back and a clipboard fallback.
+- Codex measured 6–12 s across models in the terminal; `gpt-6-luna` at low effort took 6.6–7 s. Through the input method's code path it took 7.4–8.8 s for two sentences, with good results.
+- Tests: 12 new cases (chip flow with a fake provider, `codex` stand-in script for arguments, stdin, errors, timeout, empty output). 160 host and 120 data tests pass locally.
+- Pending: live check (AI Assist checklist), especially whether Chromium apps honor `replacementRange`.
+
 ### Input memory (intelligence hub, step 1)
 
 - Implemented OpenSpec change `add-input-memory`:

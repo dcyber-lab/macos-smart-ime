@@ -1,3 +1,11 @@
+## 0. Proof of Concept
+
+- [x] 0.1 `CodexRewriter` (lookup, ephemeral read-only `codex exec`, stdin prompt, `-o`, 30 s timeout, cancel) with stub-binary tests; checked against the real codex: 7–9 s
+- [x] 0.2 `AIAssistChipController` (offer, prefetch, Tab before or after the result, dismiss and cancel, one offer per app per minute) with fake-provider tests
+- [x] 0.3 `SuggestionChip` panel; offers from `IntelligenceRecorder.onFieldSentence`; replacement with read-back and clipboard fallback
+- [x] 0.4 Menu: 在「App」中启用 AI 提示 (per app, off by default), Codex status
+- [ ] 0.5 Live: Notes or TextEdit, Chrome (GitHub), SeaTalk
+
 ## 1. Provider
 
 - [ ] 1.1 `AIProvider` protocol and `CodexProvider` (binary lookup, arguments, stdin, `-o`, timeout, cancel, errors), tested with a stub binary script
