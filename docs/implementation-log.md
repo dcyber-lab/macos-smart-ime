@@ -16,7 +16,7 @@
 - Fixed: the popup's source line ran to the right edge (`please review the plan before Friday` ended at 267 pt in a 265 pt popup). `NSStackView` dropped the trailing inset from its fitting width; explicit constraints replace it.
 - Sizes: a 9-row Chinese list grows from 107×268 to 113×334 pt, and a 5-row English list from 192×133 to 202×167 pt.
 - Tests: the new `TranslationPopupViewTests` fail on the old popup and pass on the new one. 75 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in.
-- Not verified yet: the installed panel in a real client.
+- CI passed on PR #12 (176 tests). The user installed the CI build and confirmed the live panel looks better.
 
 ### Shift+letter types a capital in Chinese mode
 

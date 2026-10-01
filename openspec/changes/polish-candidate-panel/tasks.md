@@ -14,6 +14,6 @@
 ## 3. Review and Docs
 
 - [x] 3.1 Show style variants live on screen; the user picked vertical with a solid highlight (2026-10-01); check the implementation in light and dark renders
-- [ ] 3.2 Run `IMEHostCoreTests` locally through `swiftc` (done: 75 pass) and in CI
+- [x] 3.2 Run `IMEHostCoreTests` locally through `swiftc` (75 pass) and in CI (176 pass)
 - [x] 3.3 Update `docs/technical-design.md`, `docs/ime-manual-validation.md`, `docs/implementation-log.md`
-- [ ] 3.4 Check the live panel and popup after installing the CI build
+- [x] 3.4 Check the live panel and popup after installing the CI build
