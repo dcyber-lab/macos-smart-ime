@@ -33,7 +33,7 @@ fi
 mkdir -p "$REPO_ROOT/build/ime-host"
 echo "Running unit tests..."
 swift test --package-path "$REPO_ROOT" > "$REPO_ROOT/build/unit-tests.log" 2>&1 \
-  || { tail -n 40 "$REPO_ROOT/build/unit-tests.log" >&2; fail "unit tests failed; see build/unit-tests.log"; }
+  || { grep -E "error: |failed \(" "$REPO_ROOT/build/unit-tests.log" >&2; tail -n 20 "$REPO_ROOT/build/unit-tests.log" >&2; fail "unit tests failed; see build/unit-tests.log"; }
 grep -E 'Executed [0-9]+ tests' "$REPO_ROOT/build/unit-tests.log" | tail -n 1
 
 echo "Building..."

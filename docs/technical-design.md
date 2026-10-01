@@ -95,6 +95,31 @@ Owns explicit and async workflows:
   - Next run-loop turn: building fragments and pre-rendering each shard into a small bitmap, up to 5 ms for a long row.
   - Each frame then only draws those bitmaps (dust fills rectangles). Measured optimized: about 0.1–0.4 ms per frame for a short Chinese row and about 0.5–1.1 ms (p99 under 3 ms) for a 190 pt English row; a whole effect costs 13–90 ms of main-thread time spread over 0.6–0.8 s.
 
+## Intelligence Hub: Input Memory
+
+- `IMEInputController` reads the client's bundle ID once per activation (`IMKTextInput.bundleIdentifier()`), so commits never wait on a round trip to the client.
+- On every commit it hands the text to `IntelligenceRecorder` (`IMEHostCore`). Nothing is recorded:
+  - while 智能学习 is off;
+  - under secure input (`IsSecureEventInputEnabled`);
+  - in excluded apps: `PrivacyFilter.defaultExcludedApps` (password managers, terminals, launchers) unless listed in `IntelligenceAllowedApps`, plus `IntelligenceExcludedApps`.
+- `SentenceAssembler` joins commits into sentences. A sentence ends at 。！？；!?;. or a newline, after 10 s, on `Return` without a composition, on an app switch, or when the input method is deactivated. It keeps the last 5 sentences per app in memory.
+- When a sentence ends on punctuation or `Return`, the recorder reads up to 400 characters before the cursor (`selectedRange`, `attributedSubstring(from:)`) on the next main-actor turn. It keeps the last 300 before the sentence as the journal entry's `context`. Reads are timed per app and stop for an app after one over 100 ms.
+- With 读取窗口标题 on (`IntelligenceWindowTitlesEnabled`, Accessibility granted), the same deferred step reads the focused window's title through `WindowTitleReader` (frontmost pid, `kAXFocusedWindowAttribute` → `kAXTitleAttribute`, 0.25 s messaging timeout).
+  - The title is stored as the journal entry's `window`: 120 characters at most, dropped if it looks sensitive.
+  - Title reads are timed in `windowStats` and stop for an app after one over 100 ms.
+- `PrivacyFilter.allowsSentence` drops a whole sentence that contains 6+ digits, an email, a URL, or a token-like string.
+- An allowed sentence goes to two stores in `UserData`:
+  - `InputMemory` (`input-memory.json`): per-app decayed Han/English counts and salted HMAC-SHA256 sentence fingerprints with counts; no text.
+  - `InputJournal` (`journal/YYYY-MM-DD.jsonl`), when 保存输入原文 is on: one JSON line per sentence with app and time, appended on a utility queue; pruned to `IntelligenceJournalRetentionDays` (default 30) once a day.
+  - Both use `PrivateFiles`: 0700 directory, 0600 files, excluded from backups.
+- Cost measured in an optimized build: 0.4 µs per commit with learning off, 3.9 µs with learning and the journal on.
+- The input menu's 智能中心 section (`IntelligenceMenu`) has these items:
+  - 智能学习 and 保存输入原文 toggle the settings.
+  - 不在「App」中学习 toggles the current app's exclusion; for a default exclusion it toggles an override.
+  - 查看学习记录… writes `learning-summary.html` (`LearningPage`, 0600, self-contained, HTML-escaped, with a journal search box) and opens it.
+  - The page opens with 学到了什么 (`LearningInsights`), computed in the background with rules only: overview, each app's writing language, frequent words (`NLTokenizer`), possible new words (single characters that keep appearing together), repeated sentences, and sentences naming a time of day (`NSDataDetector` plus a "N点" rule). A month of typing takes at most 0.2 s.
+  - 清除学习记录… confirms with an `NSAlert`, then clears `InputMemory`, `InputJournal`, `CandidateHistory`, and `TranslationMisses`.
+
 ## Selection Translation
 
 - While SmartIMEHost is active and nothing is being composed, the translation hotkey (default `⌃⌥T`) reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`) and translates it on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; weak-linked). `TranslationPopup` shows the result under a capsule direction badge (英 → 中 / 中 → 英), laid out with explicit constraints so every edge keeps its inset; `Return` replaces the captured range, `Escape` or any other key dismisses.
@@ -132,6 +157,13 @@ Owns explicit and async workflows:
 - Default processing is local.
 - Chinese text is stored only by librime's user dictionary and by translation learning (committed 2–6 character words that have no translation, local and bounded; `TranslationLearningEnabled` turns it off).
 - Any future AI processing must be explicit and must stay outside the IME real-time path.
+- Intelligence hub (`docs/intelligence-hub.md`):
+  - Learning is off until enabled and stays on the Mac.
+  - Derived data is always stored: per-app language counts and salted sentence fingerprints.
+  - The input journal (保存输入原文) also keeps sentences: on by default while learning is on, 30-day retention, files 0600 and excluded from backups. It is not encrypted during the trial.
+  - Sentences with digit runs, emails, URLs, or tokens are dropped whole.
+  - Password managers, terminals, and user-excluded apps record nothing.
+  - Suggestions wait for a key press.
 
 ## Context Strategy
 

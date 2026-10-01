@@ -2,6 +2,53 @@
 
 ## 2026-10-01
 
+### Input memory (intelligence hub, step 1)
+
+- Implemented OpenSpec change `add-input-memory`:
+  - `UserData`: `PrivacyFilter`, `SentenceFingerprint`, `InputMemory`, `InputJournal`, `PrivateFiles`, and `clear()` on `CandidateHistory` and `TranslationMisses`.
+  - `IMEHostCore`: `SentenceAssembler`, `IntelligenceSettings`, `IntelligenceRecorder`, `IntelligenceMenu`, `LearningPage`, and the controller wiring (bundle ID cached per activation, `Return`/deactivation end sentences, daily journal pruning).
+- Learning is off by default; with it on, the journal is on by default (the user's choice), 30 days, plain 0600 files excluded from backups.
+- Cost per commit in an optimized build: 0.4 µs with learning off, 3.5 µs on, 3.9 µs with the journal; worst single commit 0.54 ms.
+- Tests: 38 new cases. Locally 123 `RimeBridge`/`IMEHostCore` and 119 `EnglishEngine`/`UserData` cases pass through `swiftc` with the XCTest stand-in.
+- Also measured AI providers for the rewrite step: `claude -p` (Haiku, subscription) took 4–6 s without user settings and 8.6 s with them; `codex exec` took 11 s; Apple Foundation Models needs Apple Intelligence. Recorded in `docs/intelligence-hub.md`.
+- Live feedback: in Ghostty the per-app item was checked and disabled, because default exclusions were locked. The user types to AI tools in the terminal, so default exclusions can now be lifted (`IntelligenceAllowedApps`); the sentence rules still apply.
+- The user asked what learning has learned. The learning page now opens with 学到了什么 (`LearningInsights`), computed in the background from the journal and memory. Each section names the step that will act on it:
+  - overview and each app's writing language;
+  - frequent words (`NLTokenizer`) and possible new words;
+  - repeated sentences;
+  - sentences naming a time (time-of-day rule, then `NSDataDetector` or "N点").
+  A month (3,000 sentences) takes 0.05–0.2 s in an optimized build. Prefiltering on a time of day took a sparse month from 0.6 s to 0.2 s; a colon or am/pm only counts next to digits.
+- CI failed one assertion: `NSDataDetector` parses Chinese dates only when Chinese is a preferred language. This Mac lists zh-Hans-SG; the CI runner and `-AppleLanguages '(en)'` do not, and nothing is found. The test now checks the parsed date only for the English sentence, and reminders (step 2) need their own Chinese time parser.
+- The user's journal was never read into the development session; insights were checked with synthetic sentences (7 new tests, 131 host tests pass locally).
+- The user found the journal lacking context (lines like 合了 or Alfred's lo with only an app and a time). Three changes need no new permission:
+  - The text before the cursor: up to 300 characters, read once a sentence ends on punctuation or Return, after the key. It is timed per app and stops for apps slower than 100 ms. The page shows reads, hits, and timings.
+  - Sessions on the page.
+  - Launchers excluded by default.
+  The text before the cursor was planned for the rewrite step; the user asked for it now. `IntelligenceRecorder` became `@MainActor` with an injectable `later` scheduler. 7 new tests; 138 host and 120 data tests pass locally.
+- Window titles (Accessibility) are deferred to their own change. The answer to the user's cost question is recorded in `docs/intelligence-hub.md`: the permission is free, while reads are round trips, so they stay off the key path with a timeout, and web content is not read so Chromium does not switch on full accessibility.
+- Implemented OpenSpec change `add-window-context` at the user's request, accepting Accessibility access:
+  - 读取窗口标题 (off by default) reads the focused window's title after a sentence ends.
+  - The read uses one generic Accessibility call, title only, with a 0.25 s timeout, timed per app, and stops after a read over 100 ms.
+  - Titles are protected like sentences and stored with journal entries.
+  - The page splits sessions by window and lists sample titles and timings per app.
+  - 8 new tests; 143 host and 120 data tests pass locally.
+  - Ad-hoc signing means the grant may need renewing after updates.
+- Pending: live check (Intelligence Hub checklist).
+
+### Intelligence hub direction (design only)
+
+- The user wants the input method to be an AI entry point that learns from typing and helps proactively. Decisions:
+  - Learned data stays on the Mac.
+  - All four kinds of help: better candidates, Chinese-English rewriting, calendar reminders, quick phrases.
+  - Help is suggested and confirmed with a key, never automatic.
+- Added `docs/intelligence-hub.md` (principles, architecture, a roadmap of five OpenSpec changes) and the first change, `add-input-memory` (privacy shell, sentence assembly, per-app language profiles, sentence fingerprints, menu controls). The project brief and technical design gained the new goal and boundaries.
+- After weighing raw-text storage, the user chose an optional input journal: on by default while learning is on, 30 days, plain 0600 files excluded from backups, as a trial to switch off if it does not pay off. 查看学习记录 becomes a local page with a searchable journal.
+- Probes on the dev Mac:
+  - `NSDataDetector` finds 明天下午三点, 下周一上午, 10月8号晚上7点, and 后天 14:30, but not 3点开会, and it also reports bare dates (今天).
+  - `IMKTextInput.bundleIdentifier()` is available for per-app rules.
+  - Apple Foundation Models supports Chinese but reports `appleIntelligenceNotEnabled`.
+- No code yet; implementation waits for the user's review of the proposal.
+
 ### Commit effects with switchable skins
 
 - Implemented OpenSpec change `add-commit-effects`. Committing a candidate breaks its row apart: 玻璃炸裂 (cracks, then a radial burst), 碎裂下坠 (left-to-right break and fall), or 粒子消散 (dust sweep). Palettes: 彩虹, 霓虹, 马卡龙, or 跟随强调色; both axes have 随机, and motion has 关闭. Defaults: 玻璃炸裂 with 彩虹. Chinese and English mode both play it.

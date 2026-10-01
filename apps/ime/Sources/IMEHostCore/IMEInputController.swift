@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 @preconcurrency import InputMethodKit
 import RimeBridge
 import EnglishEngine
@@ -33,9 +34,19 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         misses: translationMisses,
         userTranslations: userTranslations
     )
+    /// Intelligence hub: what is learned from committed text (see `docs/intelligence-hub.md`).
+    @MainActor private static let intelligence = IntelligenceRecorder(
+        settings: IntelligenceSettings(),
+        memory: InputMemory(fileURL: IMEHostConfiguration.inputMemoryURL()),
+        journal: InputJournal(directoryURL: IMEHostConfiguration.inputJournalDirectoryURL())
+    )
+    @MainActor private static var lastJournalPrune = Date.distantPast
+    private static let returnKeys: Set<UInt16> = [36, 76]
 
     private let sessionStore = IMEHostSessionStore()
     private let commitEffectSettings = CommitEffectSettings()
+    /// The client app, read once per activation so commits never wait on a round trip to it.
+    private var clientBundleIdentifier: String?
     private let chineseEngine: ChineseInputEngine?
     private let englishEngine: EnglishInputEngine?
     private var shiftToggle = ShiftToggleDetector()
@@ -102,6 +113,13 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             return false
         }
         shiftToggle.keyDown()
+
+        if Self.returnKeys.contains(event.keyCode), !sessionStore.hasActiveComposition {
+            let readTitle = windowTitleReader()
+            MainActor.assumeIsolated {
+                Self.intelligence.endSentence(readContext: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
+            }
+        }
 
         if let handled = handleSelectionTranslationKey(event) {
             return handled
@@ -191,12 +209,18 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         super.activateServer(sender)
         // Picks up hand edits of the user translation file, and learns missing translations once a day.
         Self.userTranslations.reloadIfChanged()
+        clientBundleIdentifier = ((sender as? IMKTextInput) ?? client())?.bundleIdentifier()
         MainActor.assumeIsolated {
             Self.translationLearner.runIfDue()
+            if Date().timeIntervalSince(Self.lastJournalPrune) > 24 * 60 * 60 {
+                Self.lastJournalPrune = Date()
+                Self.intelligence.journal.prune(keepingDays: Self.intelligence.settings.retentionDays)
+            }
         }
     }
 
     public override func deactivateServer(_ sender: Any!) {
+        MainActor.assumeIsolated { Self.intelligence.endSentence() }
         tearDownSession()
         super.deactivateServer(sender)
     }
@@ -285,6 +309,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         if let committedText = update.commitText, !committedText.isEmpty {
             commit(committedText, using: sender)
             playCommitEffect(for: committedText)
+            let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled(), readTitle = windowTitleReader()
+            MainActor.assumeIsolated {
+                Self.intelligence.commit(committedText, app: app, secureInput: secureInput,
+                                         readContext: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
+            }
             sessionStore.reset(committedText: committedText)
         }
         syncPresentation()
@@ -312,7 +341,122 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             motionAction: #selector(selectCommitEffectMotion(_:)),
             paletteAction: #selector(selectCommitEffectPalette(_:))
         ).forEach(menu.addItem)
+        menu.addItem(.separator())
+        let currentApp = clientBundleIdentifier.map { (id: $0, name: AppNames.displayName(for: $0)) }
+        IntelligenceMenu.items(settings: IntelligenceSettings(), currentApp: currentApp, isAccessibilityTrusted: WindowTitleReader.isTrusted,
+                               action: #selector(intelligenceMenuCommand(_:)))
+            .forEach(menu.addItem)
         return menu
+    }
+
+    @objc func intelligenceMenuCommand(_ sender: Any?) {
+        guard let command = IntelligenceMenu.command(from: sender) else {
+            NSLog("SmartIME: unrecognized intelligence menu item: %@", String(describing: sender))
+            return
+        }
+        let app = clientBundleIdentifier
+        MainActor.assumeIsolated {
+            let settings = Self.intelligence.settings
+            switch command {
+            case .learning:
+                settings.isLearningEnabled.toggle()
+                if !settings.isLearningEnabled {
+                    Self.intelligence.endSentence()
+                }
+            case .journal:
+                settings.isJournalEnabled.toggle()
+            case .windowTitles:
+                settings.isWindowTitlesEnabled.toggle()
+                if settings.isWindowTitlesEnabled, !WindowTitleReader.isTrusted {
+                    WindowTitleReader.requestTrust()
+                }
+            case .excludeApp:
+                if let app {
+                    Self.intelligence.endSentence()
+                    settings.toggleExcluded(app)
+                }
+            case .view:
+                Self.openLearningPage()
+            case .clear:
+                Self.confirmAndClearLearning()
+            }
+            NSLog("SmartIME: intelligence menu %@ (learning %@, journal %@)", String(describing: command),
+                  settings.isLearningEnabled ? "on" : "off", settings.isJournalEnabled ? "on" : "off")
+        }
+    }
+
+    /// Reads the client app's focused window title when that setting is on; nil otherwise.
+    private func windowTitleReader() -> (() -> String?)? {
+        guard let app = clientBundleIdentifier, IntelligenceSettings().isWindowTitlesEnabled else {
+            return nil
+        }
+        return { WindowTitleReader.focusedWindowTitle(bundleIdentifier: app) }
+    }
+
+    /// Up to 400 characters before the cursor in the client's field, through the same IMK text
+    /// input calls selection translation uses. A round trip to the client app: only called after a
+    /// sentence ends, once the key has been handled.
+    private func textBeforeCursor() -> String? {
+        guard let client = client() else {
+            return nil
+        }
+        let cursor = client.selectedRange()
+        guard cursor.location != NSNotFound, cursor.location > 0 else {
+            return nil
+        }
+        let start = max(0, cursor.location - 400)
+        return client.attributedSubstring(from: NSRange(location: start, length: cursor.location - start))?.string
+    }
+
+    /// App names are looked up here; tokenizing, date detection, and writing run in the background.
+    @MainActor private static func openLearningPage() {
+        let settings = intelligence.settings
+        let summary = intelligence.memory.summary()
+        let entries = intelligence.journal.entries(days: settings.retentionDays)
+        let apps = Set(summary.apps.map(\.bundleIdentifier) + entries.map(\.app) + intelligence.contextStats.keys + intelligence.windowStats.keys)
+        let names = Dictionary(uniqueKeysWithValues: apps.map { ($0, AppNames.displayName(for: $0)) })
+        let input = LearningPage.Input(
+            isLearningEnabled: settings.isLearningEnabled,
+            isJournalEnabled: settings.isJournalEnabled,
+            retentionDays: settings.retentionDays,
+            excludedApps: settings.effectiveExcludedApps.map(AppNames.displayName(for:)).sorted(),
+            summary: summary,
+            entries: entries,
+            insights: LearningInsights(),
+            contextStats: intelligence.contextStats,
+            windowStats: intelligence.windowStats,
+            isWindowTitlesEnabled: settings.isWindowTitlesEnabled,
+            isAccessibilityTrusted: WindowTitleReader.isTrusted,
+            appName: { names[$0] ?? $0 },
+            generatedAt: Date()
+        )
+        let url = IMEHostConfiguration.learningPageURL()
+        DispatchQueue.global(qos: .userInitiated).async {
+            var page = input
+            page.insights = LearningInsights.compute(entries: entries, summary: summary)
+            PrivateFiles.write(Data(LearningPage.html(page).utf8), to: url)
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+
+    @MainActor private static func confirmAndClearLearning() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "清除学习记录？"
+        alert.informativeText = "将删除智能中心的统计和输入原文、候选习惯、翻译学习记录，无法恢复。拼音的用户词库不受影响。"
+        alert.addButton(withTitle: "清除")
+        alert.addButton(withTitle: "取消")
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+        intelligence.clear()
+        candidateHistory.clear()
+        translationMisses.clear()
+        try? FileManager.default.removeItem(at: IMEHostConfiguration.learningPageURL())
+        NSLog("SmartIME: learning records cleared")
     }
 
     /// Input menu choices arrive here first; the log shows whether the system delivered them.
