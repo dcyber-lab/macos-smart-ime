@@ -305,56 +305,39 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
     public override func menu() -> NSMenu! {
         let menu = NSMenu()
-        let motion = commitEffectSettings.motion
-        menu.addItem(Self.submenu(
-            "选词动效",
-            items: CommitEffectMotionChoice.allChoices.map { ($0.title, $0 == motion, $0 == .off) },
-            action: #selector(selectCommitEffectMotion(_:))
-        ))
-        let palette = commitEffectSettings.palette
-        menu.addItem(Self.submenu(
-            "碎片配色",
-            items: CommitEffectPaletteChoice.allChoices.map { ($0.title, $0 == palette, false) },
-            action: #selector(selectCommitEffectPalette(_:))
-        ))
+        menu.autoenablesItems = false
+        CommitEffectMenu.items(
+            motion: commitEffectSettings.motion,
+            palette: commitEffectSettings.palette,
+            motionAction: #selector(selectCommitEffectMotion(_:)),
+            paletteAction: #selector(selectCommitEffectPalette(_:))
+        ).forEach(menu.addItem)
         return menu
     }
 
-    /// Item tags index `allChoices`; `separatedBefore` puts a line above an item.
-    private static func submenu(_ title: String, items: [(title: String, isOn: Bool, separatedBefore: Bool)], action: Selector) -> NSMenuItem {
-        let submenu = NSMenu(title: title)
-        for (index, item) in items.enumerated() {
-            if item.separatedBefore {
-                submenu.addItem(.separator())
-            }
-            let menuItem = NSMenuItem(title: item.title, action: action, keyEquivalent: "")
-            menuItem.tag = index
-            menuItem.state = item.isOn ? .on : .off
-            submenu.addItem(menuItem)
-        }
-        let parent = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        parent.submenu = submenu
-        return parent
-    }
-
-    /// InputMethodKit passes a dictionary holding the chosen item under `kIMKCommandMenuItemName`.
-    private static func chosenTag(_ sender: Any?) -> Int? {
-        ((sender as? [String: Any])?[kIMKCommandMenuItemName] as? NSMenuItem)?.tag
+    /// Input menu choices arrive here first; the log shows whether the system delivered them.
+    public override func doCommand(by aSelector: Selector!, command infoDictionary: [AnyHashable: Any]!) {
+        NSLog("SmartIME: menu command %@", aSelector.map(NSStringFromSelector) ?? "nil")
+        super.doCommand(by: aSelector, command: infoDictionary)
     }
 
     @objc func selectCommitEffectMotion(_ sender: Any?) {
-        guard let tag = Self.chosenTag(sender), CommitEffectMotionChoice.allChoices.indices.contains(tag) else {
+        guard let choice = CommitEffectMenu.motionChoice(from: sender) else {
+            NSLog("SmartIME: unrecognized commit effect menu item: %@", String(describing: sender))
             return
         }
-        commitEffectSettings.motion = CommitEffectMotionChoice.allChoices[tag]
+        commitEffectSettings.motion = choice
+        NSLog("SmartIME: commit effect motion set to %@", choice.rawValue)
         previewCommitEffect()
     }
 
     @objc func selectCommitEffectPalette(_ sender: Any?) {
-        guard let tag = Self.chosenTag(sender), CommitEffectPaletteChoice.allChoices.indices.contains(tag) else {
+        guard let choice = CommitEffectMenu.paletteChoice(from: sender) else {
+            NSLog("SmartIME: unrecognized commit effect menu item: %@", String(describing: sender))
             return
         }
-        commitEffectSettings.palette = CommitEffectPaletteChoice.allChoices[tag]
+        commitEffectSettings.palette = choice
+        NSLog("SmartIME: commit effect palette set to %@", choice.rawValue)
         previewCommitEffect()
     }
 

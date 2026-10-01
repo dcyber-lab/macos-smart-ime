@@ -13,10 +13,10 @@
 
 - [x] 3.1 `CommitEffectSettings` with tests (defaults, unknown values, random, Reduce Motion)
 - [x] 3.2 Play the effect from `IMEInputController.apply` after inserting the text
-- [x] 3.3 Input menu with two submenus, check marks, and a preview on selection (design 6)
+- [x] 3.3 Input menu with check marks and a preview on selection (design 6); flat sections after submenu actions did not arrive
 
 ## 4. Verification and Docs
 
-- [ ] 4.1 Run `IMEHostCoreTests` locally through `swiftc` (99 pass) and in CI
+- [ ] 4.1 Run `IMEHostCoreTests` locally through `swiftc` (103 pass) and in CI
 - [x] 4.2 Update `docs/technical-design.md`, `docs/ime-manual-validation.md`, `docs/implementation-log.md`
 - [ ] 4.3 Install the CI build; the user checks every skin, the menu, fast typing, and Reduce Motion

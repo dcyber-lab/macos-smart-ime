@@ -45,10 +45,10 @@ The longest-prefix rule keeps 你 from matching a commit of 你好. The panel re
 
 `CommitEffectSettings` reads `CommitEffect` (`shatter`, `crumble`, `dust`, `random`, `off`) and `CommitEffectPalette` (`rainbow`, `neon`, `pastel`, `accent`, `random`) on every commit, like the other settings. Unknown values fall back to the defaults. `random` resolves per commit. `NSWorkspace.accessibilityDisplayShouldReduceMotion` turns effects off.
 
-`IMEInputController.menu()` builds two submenus. Each item carries its raw value in `representedObject`. IMK sends the action with an info dictionary whose `kIMKCommandMenuItemName` entry is the chosen `NSMenuItem`. The action writes the setting and plays a preview on a sample row ("灵译输入法") below the pointer.
+`IMEInputController.menu()` lists both settings flat (`CommitEffectMenu`): a disabled section title, then the choices, indented, with the current one checked. The first build used submenus. The system displayed them, but choosing an item never reached the controller (nothing was saved), so the menu is flat, as in Squirrel and McBopomofo. Each item's tag identifies its choice, with the title as a fallback. IMK delivers the choice through `doCommand(by:command:)`, which logs the selector, with an info dictionary whose `kIMKCommandMenuItemName` entry is the chosen `NSMenuItem`. The action writes the setting and plays a preview on a sample row ("灵译输入法") below the pointer.
 
 ## Risks
 
 - Main-thread cost: one snapshot pair (about 1 ms) per commit, and per frame up to about 40 clipped image draws or about 400 small fills. This is measured in tests with an upper bound and checked live.
-- Submenus in the input menu are routed through the system's text input menu. If their actions do not reach the controller, the fallback is a flat menu with section headers. This can only be verified live.
+- Input menu actions can only be verified live; submenu actions did not arrive, which is why the menu is flat.
 - Fragments over a new panel are briefly visible while typing fast; they fade within about 0.6 s.

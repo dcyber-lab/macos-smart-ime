@@ -39,8 +39,8 @@ The effect SHALL combine a motion (玻璃炸裂, 碎裂下坠, 粒子消散, 随
 - **THEN** no effect SHALL play, whatever the setting
 
 ### Requirement: Switching Skins
-While the input method is active, its input menu SHALL offer submenus 选词动效 and 碎片配色 with a check mark on the current choice. Choosing an item SHALL save it, apply it to the next commit, and play a preview near the pointer. The same settings SHALL be writable with `defaults write lab.dcyber.inputmethod.smartime CommitEffect …` and `CommitEffectPalette …`.
+While the input method is active, its input menu SHALL list the choices under the section titles 选词动效 and 碎片配色, without submenus, with a check mark on the current choice. Choosing an item SHALL save it, apply it to the next commit, and play a preview near the pointer. The same settings SHALL be writable with `defaults write lab.dcyber.inputmethod.smartime CommitEffect …` and `CommitEffectPalette …`.
 
 #### Scenario: Pick a palette from the menu
-- **WHEN** the user chooses 碎片配色 › 霓虹
+- **WHEN** the user chooses 霓虹 under 碎片配色
 - **THEN** a neon preview SHALL play near the pointer, and the next commit SHALL use neon colors

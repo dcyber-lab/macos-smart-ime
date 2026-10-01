@@ -13,7 +13,7 @@ The user wants committing a candidate to feel lively: the selected row should sh
   - 彩虹, 霓虹, 马卡龙: shards take random colors (glass) or a left-to-right gradient (crumble, dust); text fragments stay white.
   - 跟随强调色: shards keep the row's own accent color.
 - A 随机 option for each axis picks a new motion or palette on every commit.
-- Switching: two submenus in the input menu (menu bar), 选词动效 and 碎片配色, with a check mark on the current choice. Choosing an item plays a preview next to the pointer. The settings are stored in the input method's defaults (`CommitEffect`, `CommitEffectPalette`), so `defaults write` works too.
+- Switching: two sections in the input menu (menu bar), titled 选词动效 and 碎片配色, with a check mark on the current choice. The menu is flat because the system did not deliver actions from submenu items. Choosing an item plays a preview next to the pointer. The settings are stored in the input method's defaults (`CommitEffect`, `CommitEffectPalette`), so `defaults write` works too.
 - Defaults: 玻璃炸裂 with 彩虹. With Reduce Motion on, no effect plays.
 - Triggers: any commit whose text matches a panel row — `Space`, number keys, clicks, punctuation that commits the first candidate, and in English mode also `Return` (the typed text is row 1). `Escape` and raw-pinyin commits play nothing.
 

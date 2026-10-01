@@ -213,7 +213,7 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 4. Type `nihao` and press `Return` with raw pinyin, and press `Escape` on another composition: nothing breaks apart
 5. Switch to English mode, type `deplo`, press `Down` and `Space`: the deploy row breaks apart
 6. Type quickly (`wo` `Space` `men` `Space` …): every new panel appears at once and fully visible; fragments fly over it and fade
-7. Click the input menu in the menu bar: 选词动效 and 碎片配色 list the choices with a check mark on the current one; choosing an item plays a preview below the pointer and the next commit uses it. Try every motion and palette, 随机 (changes per commit), and 关闭 (no effect)
+7. Click the input menu in the menu bar: the choices are listed under the gray titles 选词动效 and 碎片配色 (no submenus), with a check mark on the current one; choosing an item plays a preview below the pointer and the next commit uses it. Try every motion and palette, 随机 (changes per commit), and 关闭 (no effect)
 8. Turn on System Settings › Accessibility › Display › Reduce motion: commits play no effect; turn it off again
 9. Repeat step 1 in dark appearance
 
