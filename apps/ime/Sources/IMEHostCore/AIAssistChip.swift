@@ -44,6 +44,9 @@ final class AIAssistChipController {
     private var lastOffer: [String: Date] = [:]
     private let rewriter: () -> AIRewriter?
     private let present: (Display?, CGRect) -> Void
+    /// Records what happened (event, app), never text, so a failed try can be explained.
+    private let log: (String, String) -> Void
+    private var offeredAt = Date.distantPast
     private let now: () -> Date
     private let hideAfter: (TimeInterval, @escaping @MainActor () -> Void) -> Void
 
@@ -52,6 +55,7 @@ final class AIAssistChipController {
     init(
         rewriter: @escaping () -> AIRewriter?,
         present: @escaping (Display?, CGRect) -> Void,
+        log: @escaping (String, String) -> Void = { _, _ in },
         now: @escaping () -> Date = { Date() },
         hideAfter: @escaping (TimeInterval, @escaping @MainActor () -> Void) -> Void = { delay, work in
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { MainActor.assumeIsolated(work) }
@@ -59,6 +63,7 @@ final class AIAssistChipController {
     ) {
         self.rewriter = rewriter
         self.present = present
+        self.log = log
         self.now = now
         self.hideAfter = hideAfter
     }
@@ -83,8 +88,10 @@ final class AIAssistChipController {
         guard let rewriter = rewriter() else {
             return
         }
-        dismiss()
+        dismiss(reason: nil)
         lastOffer[offer.app] = time
+        offeredAt = time
+        log("offered", offer.app)
         self.offer = offer
         generation += 1
         let current = generation
@@ -112,22 +119,26 @@ final class AIAssistChipController {
                 applyResult()
             case .generating:
                 accepted = true
+                log("accepted early", offer?.app ?? "")
                 show(.generating(accepted: true))
             case .done, .failed:
-                dismiss()
+                dismiss(reason: nil)
             }
             return .consumed
         case Self.escapeKey:
-            dismiss()
+            dismiss(reason: "dismissed by Esc")
             return .consumed
         default:
-            dismiss()
+            dismiss(reason: "dismissed by key \(keyCode)")
             return .passThrough
         }
     }
 
     /// Hides the chip and stops the request if it is still running.
-    func dismiss() {
+    func dismiss(reason: String? = "dismissed") {
+        if let reason, let app = offer?.app {
+            log(reason, app)
+        }
         task?.cancel()
         task = nil
         offer = nil
@@ -143,8 +154,11 @@ final class AIAssistChipController {
             return
         }
         task = nil
+        let app = offer?.app ?? ""
+        let seconds = String(format: "%.1fs", now().timeIntervalSince(offeredAt))
         switch outcome {
         case .success(let text):
+            log("ready after \(seconds)", app)
             result = text
             if accepted {
                 applyResult()
@@ -153,6 +167,7 @@ final class AIAssistChipController {
                 hideLater()
             }
         case .failure(let error):
+            log("failed after \(seconds): \(error)", app)
             show(.failed(error.message))
             hideLater()
         }
@@ -163,6 +178,7 @@ final class AIAssistChipController {
             return
         }
         let replaced = offer.apply(result, offer.range)
+        log(replaced ? "replaced" : "replacement refused, copied", offer.app)
         show(.done(replaced ? "已替换" : "这个应用不支持替换，已复制，⌘V 粘贴"))
         self.result = nil
         self.offer = nil
@@ -178,7 +194,7 @@ final class AIAssistChipController {
         let current = generation
         hideAfter(delay) { [weak self] in
             guard let self, self.generation == current, self.display != nil else { return }
-            self.dismiss()
+            self.dismiss(reason: "timed out")
         }
     }
 }
@@ -221,8 +237,8 @@ final class SuggestionChip {
         }
         let text: String
         switch display {
-        case .generating(let accepted): text = accepted ? "✨ 转成英文 · 生成中，好了自动替换…" : "✨ 转成英文 · 生成中…   ⇥"
-        case .ready(let preview): text = "✨ \(preview)   ⇥ 替换"
+        case .generating(let accepted): text = accepted ? "✨ 转成英文 · 生成中，好了自动替换…" : "✨ 转成英文 · 生成中…   Tab 好了就替换"
+        case .ready(let preview): text = "✨ \(preview)   Tab 替换 · Esc 关闭"
         case .done(let message): text = "✨ \(message)"
         case .failed(let message): text = "✨ \(message)"
         }

@@ -133,6 +133,7 @@ Owns explicit and async workflows:
   - `Tab` replaces `[cursor − length, cursor)` via `insertText(_:replacementRange:)` and reads it back; if the app did not take it, the text goes to the clipboard.
   - `Tab` before the result arrives replaces it on arrival. `Esc` or any other key dismisses the chip and cancels the request.
   - There is at most one offer per app every 5 seconds.
+  - Events (never text) are appended to `ai-assist-events.log` for diagnosis.
 - `CodexRewriter` runs `codex exec --skip-git-repo-check --ephemeral -s read-only -C <empty temp dir> -m gpt-6-luna -c model_reasoning_effort="low" -o <file> -` with the prompt on stdin and a 30 s timeout.
   - The binary comes from `AICodexPath`, else `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, or `~/.local/bin/codex`.
   - The model and effort come from `AICodexModel` and `AICodexReasoningEffort`.

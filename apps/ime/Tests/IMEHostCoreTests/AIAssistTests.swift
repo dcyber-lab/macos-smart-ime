@@ -110,6 +110,25 @@ final class AIAssistChipTests: XCTestCase {
         XCTAssertEqual(chip.display, .done("这个应用不支持替换，已复制，⌘V 粘贴"))
     }
 
+    func testEventsAreLoggedWithoutText() async {
+        var events: [String] = []
+        let chip = AIAssistChipController(
+            rewriter: { [unowned self] in rewriter }, present: { _, _ in },
+            log: { event, app in events.append("\(app): \(event)") }, now: { [unowned self] in clock }, hideAfter: { _, _ in }
+        )
+        chip.offer(offer())
+        await waitUntil { events.count >= 2 }
+        _ = chip.handleKey(124) // right arrow
+        XCTAssertEqual(events.first, "notes: offered")
+        XCTAssertTrue(events[1].hasPrefix("notes: ready after"))
+        XCTAssertEqual(events.last, "notes: dismissed by key 124")
+        XCTAssertFalse(events.joined().contains("这个功能"))
+
+        let log = AIAssistEventLog(url: FileManager.default.temporaryDirectory.appendingPathComponent("ai-log-\(UUID().uuidString).log"))
+        log.append("offered", app: "notes")
+        log.flush()
+    }
+
     func testNoCodexMeansNoChip() {
         let chip = AIAssistChipController(rewriter: { nil }, present: { [unowned self] display, _ in shown.append(display) })
         chip.offer(offer())

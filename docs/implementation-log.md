@@ -9,6 +9,7 @@
 - Codex measured 6–12 s across models in the terminal; `gpt-6-luna` at low effort took 6.6–7 s. Through the input method's code path it took 7.4–8.8 s for two sentences, with good results.
 - Tests: 12 new cases (chip flow with a fake provider, `codex` stand-in script for arguments, stdin, errors, timeout, empty output). 160 host and 120 data tests pass locally.
 - First live try in Sublime Text: a chip appeared once and was dismissed; seven more sentences within 50 s got none because of the one-per-minute limit. The limit is now 5 s per app, so a dismissed chip does not block the next sentence. (Repeated journal lines were the same test sentence retyped: identical text and context hashes.)
+- Second try: the result appeared but was not applied. The chip's "⇥" reads as an arrow; Right Arrow (like any key other than Tab) dismisses the chip. The chip now says "Tab 替换 · Esc 关闭". SmartIMEHost's NSLog lines do not reach `log show`, so chip events (offered, ready after N s, key that dismissed it, replaced or copied, failures; never text) go to `ai-assist-events.log` (0600, last 500 lines).
 - Pending: live check (AI Assist checklist), especially whether Chromium apps honor `replacementRange`.
 
 ### Input memory (intelligence hub, step 1)

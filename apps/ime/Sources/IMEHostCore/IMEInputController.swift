@@ -44,7 +44,8 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     /// AI assist (proof of concept): a ✨ rewrite offered after sentences in apps the user enabled.
     @MainActor private static let aiChip = AIAssistChipController(
         rewriter: { AIAssistSettings().rewriter() },
-        present: { display, caret in SuggestionChip.shared.show(display, caret: caret) }
+        present: { display, caret in SuggestionChip.shared.show(display, caret: caret) },
+        log: { event, app in AIAssistEventLog.shared.append(event, app: app) }
     )
     private static let returnKeys: Set<UInt16> = [36, 76]
 
@@ -235,7 +236,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
     public override func deactivateServer(_ sender: Any!) {
         // An unfinished sentence stays open: leaving to copy a link and coming back continues it.
-        MainActor.assumeIsolated { Self.aiChip.dismiss() }
+        MainActor.assumeIsolated { Self.aiChip.dismiss(reason: "dismissed on deactivation") }
         tearDownSession()
         super.deactivateServer(sender)
     }
