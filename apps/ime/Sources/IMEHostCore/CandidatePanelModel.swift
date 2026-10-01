@@ -50,6 +50,39 @@ enum CandidatePanelModel {
         }
     }
 
+    /// The row whose candidate was committed: an exact match (the highlighted row first), else the
+    /// longest row text the commit starts with, which covers a trailing space ("deploy ") or
+    /// punctuation ("你好，"). Nil when no row matches, e.g. raw pinyin committed with Return.
+    static func committedRowIndex(in rows: [CandidatePanelRow], committedText: String) -> Int? {
+        func best(_ indices: [Int]) -> Int? {
+            indices.first { rows[$0].isHighlighted } ?? indices.first
+        }
+        let exact = rows.indices.filter { rows[$0].text == committedText }
+        if let index = best(exact) {
+            return index
+        }
+        let prefixes = rows.indices.filter { !rows[$0].text.isEmpty && committedText.hasPrefix(rows[$0].text) }
+        let longest = prefixes.map { rows[$0].text.count }.max()
+        return best(prefixes.filter { rows[$0].text.count == longest })
+    }
+
+    /// The same rows with only `index` highlighted.
+    static func highlighting(_ rows: [CandidatePanelRow], at index: Int) -> [CandidatePanelRow] {
+        rows.enumerated().map { i, row in
+            CandidatePanelRow(label: row.label, text: row.text, tag: row.tag, isHighlighted: i == index,
+                              hasSeparatorBefore: row.hasSeparatorBefore, annotation: row.annotation)
+        }
+    }
+
+    /// The same rows with `index` left blank, for the panel's fade after that row broke away.
+    static func vacating(_ rows: [CandidatePanelRow], at index: Int) -> [CandidatePanelRow] {
+        rows.enumerated().map { i, row in
+            i == index
+                ? CandidatePanelRow(label: "", text: "", tag: nil, isHighlighted: false, hasSeparatorBefore: row.hasSeparatorBefore, annotation: nil)
+                : row
+        }
+    }
+
     private static func truncated(_ annotation: String) -> String {
         annotation.count > maxAnnotationLength ? annotation.prefix(maxAnnotationLength) + "…" : annotation
     }

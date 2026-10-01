@@ -8,9 +8,16 @@ final class CandidatePanel {
 
     static let cornerRadius: CGFloat = 14
 
+    /// The fade after a commit effect starts.
+    static let commitFadeDuration: TimeInterval = 0.1
+
     private let window: NSPanel
     private let listView = CandidateListView()
     private var lastCaretRect: CGRect?
+    /// Set by `playCommitEffect`; the next `hide()` fades instead of disappearing.
+    private var fadesOnHide = false
+    /// Bumped by every show and fade, so a stale fade never hides a newer panel.
+    private var generation = 0
 
     private init() {
         window = NSPanel(
@@ -43,6 +50,16 @@ final class CandidatePanel {
             return
         }
 
+        fadesOnHide = false
+        generation += 1
+        if window.alphaValue < 1 {
+            // A zero-length animation replaces a running fade.
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0
+                window.animator().alphaValue = 1
+            }
+        }
+
         listView.onSelect = onSelect
         listView.header = CandidatePanelModel.header(for: state)
         listView.rows = rows
@@ -70,7 +87,75 @@ final class CandidatePanel {
 
     func hide() {
         listView.onSelect = nil
-        window.orderOut(nil)
+        guard fadesOnHide, window.isVisible else {
+            window.orderOut(nil)
+            return
+        }
+        fadesOnHide = false
+        generation += 1
+        let fade = generation
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Self.commitFadeDuration
+            window.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.generation == fade else {
+                    return
+                }
+                self.window.orderOut(nil)
+                self.window.alphaValue = 1
+            }
+        }
+    }
+
+    /// Breaks the row showing `committedText` apart in the effect overlay and blanks it here, so the
+    /// following `hide()` fades the rest of the panel. Does nothing when no visible row matches.
+    func playCommitEffect(for committedText: String, style: CommitEffectStyle, palette: CommitEffectPalette) {
+        guard window.isVisible,
+              let index = CandidatePanelModel.committedRowIndex(in: listView.rows, committedText: committedText)
+        else {
+            return
+        }
+        // A number key or click may pick a row that is not highlighted; draw it highlighted for the snapshot.
+        listView.rows = CandidatePanelModel.highlighting(listView.rows, at: index)
+        let rowRects = listView.rowRects()
+        guard rowRects.indices.contains(index), let snapshot = listView.snapshotRow(at: index) else {
+            return
+        }
+        let screenRect = window.convertToScreen(listView.convert(rowRects[index], to: nil))
+        Self.playEffect(style: style, palette: palette, snapshot: snapshot, at: screenRect)
+
+        listView.rows = CandidatePanelModel.vacating(listView.rows, at: index)
+        fadesOnHide = true
+    }
+
+    /// Plays an effect on a sample row below `point` (screen coordinates), for the input menu.
+    func previewCommitEffect(style: CommitEffectStyle, palette: CommitEffectPalette, below point: CGPoint) {
+        let sample = CandidateListView()
+        sample.appearance = NSApp.effectiveAppearance
+        sample.rows = CandidatePanelModel.rows(for: CompositionState(
+            mode: .english, compositionText: "preview",
+            candidates: [Candidate(text: "灵译输入法", source: .rime)], selectedCandidateIndex: 0
+        ))
+        sample.frame = CGRect(origin: .zero, size: sample.fittingSize)
+        guard let snapshot = sample.snapshotRow(at: 0) else {
+            return
+        }
+        let rowRect = CGRect(x: point.x - snapshot.size.width / 2, y: point.y - 40 - snapshot.size.height,
+                             width: snapshot.size.width, height: snapshot.size.height)
+        Self.playEffect(style: style, palette: palette, snapshot: snapshot, at: rowRect)
+    }
+
+    /// Only the snapshot is taken while the key is being handled; building the fragments and their
+    /// bitmaps (up to about 5 ms for a long row) waits until the input method has answered the key.
+    private static func playEffect(style: CommitEffectStyle, palette: CommitEffectPalette, snapshot: RowSnapshot, at screenRect: CGRect) {
+        Task { @MainActor in
+            let effect = CommitEffect(
+                style: style, palette: palette, rowSize: snapshot.size,
+                pixelColor: snapshot.color(at:), isText: snapshot.isText(at:), seed: UInt64.random(in: 1...UInt64.max)
+            )
+            CommitEffectOverlay.shared.play(effect, snapshot: snapshot, rowRect: screenRect)
+        }
     }
 
     static func roundedMask(radius: CGFloat) -> NSImage {
@@ -119,6 +204,8 @@ final class CandidateListView: NSView {
         didSet { needsDisplay = true }
     }
     var onSelect: ((Int) -> Void)?
+    /// Off while snapshotting a row's text alone for colored commit-effect fragments.
+    private var drawsHighlightFill = true
 
     override var isFlipped: Bool { true }
 
@@ -185,7 +272,7 @@ final class CandidateListView: NSView {
             if row.hasSeparatorBefore {
                 drawSeparator(above: rect)
             }
-            if row.isHighlighted {
+            if row.isHighlighted, drawsHighlightFill {
                 NSColor.controlAccentColor.setFill()
                 NSBezierPath(roundedRect: rect, xRadius: Metrics.highlightRadius, yRadius: Metrics.highlightRadius).fill()
             }
@@ -229,7 +316,34 @@ final class CandidateListView: NSView {
         return text + Metrics.annotationGap + annotation.size(withAttributes: [.font: annotationFont]).width
     }
 
-    private func rowRects() -> [CGRect] {
+    /// The row as drawn and its text alone, for the commit effect.
+    func snapshotRow(at index: Int) -> RowSnapshot? {
+        let rects = rowRects()
+        guard rects.indices.contains(index) else {
+            return nil
+        }
+        let rect = rects[index]
+        func capture() -> NSBitmapImageRep? {
+            guard let rep = bitmapImageRepForCachingDisplay(in: rect) else {
+                return nil
+            }
+            effectiveAppearance.performAsCurrentDrawingAppearance {
+                cacheDisplay(in: rect, to: rep)
+            }
+            return rep
+        }
+        guard let full = capture() else {
+            return nil
+        }
+        drawsHighlightFill = false
+        defer { drawsHighlightFill = true }
+        guard let textOnly = capture() else {
+            return nil
+        }
+        return RowSnapshot(full: full, textOnly: textOnly, size: rect.size)
+    }
+
+    func rowRects() -> [CGRect] {
         var y = Metrics.outerPadding + headerHeight
         return rows.map { row in
             if row.hasSeparatorBefore {

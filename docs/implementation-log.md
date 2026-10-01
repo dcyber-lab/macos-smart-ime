@@ -2,6 +2,26 @@
 
 ## 2026-10-01
 
+### Commit effects with switchable skins
+
+- Implemented OpenSpec change `add-commit-effects`. Committing a candidate breaks its row apart: 玻璃炸裂 (cracks, then a radial burst), 碎裂下坠 (left-to-right break and fall), or 粒子消散 (dust sweep). Palettes: 彩虹, 霓虹, 马卡龙, or 跟随强调色; both axes have 随机, and motion has 关闭. Defaults: 玻璃炸裂 with 彩虹. Chinese and English mode both play it.
+- The user chose this after live prototypes: four styles, then colored fragments, then all of them as skins.
+- Switching is in the input menu; choosing plays a preview. The first build used submenus: the system showed them, but choosing 关闭 changed nothing and the defaults domain stayed empty, so submenu actions never reached the controller. The menu is now flat (`CommitEffectMenu`: gray section titles, indented choices), and `doCommand(by:command:)` logs every menu command. The settings are `CommitEffect` / `CommitEffectPalette` in the defaults domain. Reduce Motion turns effects off.
+- The text is inserted first, and the effect runs in a pool of three click-through overlay windows. A generation counter keeps a stale fade from hiding a panel shown during it.
+- Checked with a scratch harness against the real `IMEHostCore` in a running app:
+  - A panel shown 30 ms after a commit ends visible at alpha 1.
+  - A plain commit fades and orders out with alpha restored.
+  - Unmatched commits play nothing, and five rapid commits use three overlays.
+  - Optimized cost per commit is 2.6–3.8 ms: snapshot about 1 ms, dust sampling about 1 ms, overlay about 0.15 ms.
+  - Frames drawn by the production view match the prototype.
+- Tests: 28 new cases (effect model, settings, committed row, row snapshots, menu); 103 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in.
+- The user confirmed the effects and the flat menu live: choosing 随机 and 跟随强调色 wrote `CommitEffect = random` and `CommitEffectPalette = accent`.
+- Performance, measured at the user's request with the real `IMEHostCore` in an optimized build (120 Hz frames into a Retina-sized bitmap):
+  - The first version clipped and redrew the whole row image for each shard on every frame. On a 190 pt English row (72 shards, rainbow glass) that cost 5.0 ms per frame on average, 19 ms at p99, 33 ms at worst, and 371 ms of main-thread time per effect.
+  - Shards are now pre-rendered once into small bitmaps, and dust fills rectangles directly: 1.1 ms on average, 2.8 ms at p99, 2.9 ms at worst, and 81 ms per effect. A short Chinese row takes 0.13–0.37 ms per frame.
+  - Building the effect (up to 5 ms for a long row) runs on the next main-actor turn, so key handling pays about 2 ms per commit.
+  - The input method used 71 MB RSS after live use; each overlay's backing store is about 4 MB while an effect plays (three at most).
+
 ### Candidate panel and translation popup polish
 
 - Implemented OpenSpec change `polish-candidate-panel` after the user asked for a nicer-looking UI.

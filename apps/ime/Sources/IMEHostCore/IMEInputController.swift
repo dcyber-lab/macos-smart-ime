@@ -35,6 +35,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     )
 
     private let sessionStore = IMEHostSessionStore()
+    private let commitEffectSettings = CommitEffectSettings()
     private let chineseEngine: ChineseInputEngine?
     private let englishEngine: EnglishInputEngine?
     private var shiftToggle = ShiftToggleDetector()
@@ -283,10 +284,71 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         sessionStore.apply(update)
         if let committedText = update.commitText, !committedText.isEmpty {
             commit(committedText, using: sender)
+            playCommitEffect(for: committedText)
             sessionStore.reset(committedText: committedText)
         }
         syncPresentation()
         return update.handled || update.commitText != nil || sessionStore.hasActiveComposition
+    }
+
+    /// Runs after the text is inserted; the effect is visual only and never delays input.
+    private func playCommitEffect(for committedText: String) {
+        var generator = SystemRandomNumberGenerator()
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard let skin = commitEffectSettings.resolve(reduceMotion: reduceMotion, using: &generator) else {
+            return
+        }
+        withCandidatePanel { $0.playCommitEffect(for: committedText, style: skin.style, palette: skin.palette) }
+    }
+
+    // MARK: Input menu
+
+    public override func menu() -> NSMenu! {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        CommitEffectMenu.items(
+            motion: commitEffectSettings.motion,
+            palette: commitEffectSettings.palette,
+            motionAction: #selector(selectCommitEffectMotion(_:)),
+            paletteAction: #selector(selectCommitEffectPalette(_:))
+        ).forEach(menu.addItem)
+        return menu
+    }
+
+    /// Input menu choices arrive here first; the log shows whether the system delivered them.
+    public override func doCommand(by aSelector: Selector!, command infoDictionary: [AnyHashable: Any]!) {
+        NSLog("SmartIME: menu command %@", aSelector.map(NSStringFromSelector) ?? "nil")
+        super.doCommand(by: aSelector, command: infoDictionary)
+    }
+
+    @objc func selectCommitEffectMotion(_ sender: Any?) {
+        guard let choice = CommitEffectMenu.motionChoice(from: sender) else {
+            NSLog("SmartIME: unrecognized commit effect menu item: %@", String(describing: sender))
+            return
+        }
+        commitEffectSettings.motion = choice
+        NSLog("SmartIME: commit effect motion set to %@", choice.rawValue)
+        previewCommitEffect()
+    }
+
+    @objc func selectCommitEffectPalette(_ sender: Any?) {
+        guard let choice = CommitEffectMenu.paletteChoice(from: sender) else {
+            NSLog("SmartIME: unrecognized commit effect menu item: %@", String(describing: sender))
+            return
+        }
+        commitEffectSettings.palette = choice
+        NSLog("SmartIME: commit effect palette set to %@", choice.rawValue)
+        previewCommitEffect()
+    }
+
+    /// Ignores Reduce Motion: the user just asked to see the effect.
+    private func previewCommitEffect() {
+        var generator = SystemRandomNumberGenerator()
+        guard let skin = commitEffectSettings.resolve(reduceMotion: false, using: &generator) else {
+            return
+        }
+        let pointer = NSEvent.mouseLocation
+        withCandidatePanel { $0.previewCommitEffect(style: skin.style, palette: skin.palette, below: pointer) }
     }
 
     private func syncPresentation() {
