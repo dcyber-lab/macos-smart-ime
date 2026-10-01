@@ -80,9 +80,10 @@ Use a normal editable text field such as TextEdit.
 12. Confirm Chinese text is inserted only for the committed cases
 13. With nothing composed, press Shift+`=` and confirm `+` is inserted (not `=`); press Shift+`/` and confirm `？`
 14. Type `nihao` and press Shift+`1`, and confirm `你好！` is inserted
-13. Type `yunyuansheng`, `neijuan`, and `fupan` and confirm 云原生, 内卷, and 复盘 are the first candidates (rime-ice vocabulary)
+15. With nothing composed, type Shift+`h` then `ello` and confirm the composition shows `Hello` with no candidates; press `Space` and confirm `Hello` is inserted
+16. Type `yunyuansheng`, `neijuan`, and `fupan` and confirm 云原生, 内卷, and 复盘 are the first candidates (rime-ice vocabulary)
 
-This milestone is not considered complete until steps 5 through 13 are verified in a real macOS text client with the visible candidate panel.
+This milestone is not considered complete until steps 5 through 16 are verified in a real macOS text client with the visible candidate panel.
 
 ## Basic English Mode Checklist
 
