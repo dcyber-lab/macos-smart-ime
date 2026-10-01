@@ -134,7 +134,8 @@ Owns explicit and async workflows:
 - Any future AI processing must be explicit and must stay outside the IME real-time path.
 - Intelligence hub (`docs/intelligence-hub.md`):
   - Learning is off until enabled and stays on the Mac.
-  - Only derived data is stored: per-app language counts and salted sentence fingerprints, never sentence text.
+  - Derived data is always stored: per-app language counts and salted sentence fingerprints.
+  - The input journal (保存输入原文) also keeps sentences: on by default while learning is on, 30-day retention, files 0600 and excluded from backups. It is not encrypted during the trial.
   - Sentences with digit runs, emails, URLs, or tokens are dropped whole.
   - Password managers, terminals, and user-excluded apps record nothing.
   - Suggestions wait for a key press.

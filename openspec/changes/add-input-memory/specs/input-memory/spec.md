@@ -7,12 +7,27 @@ Learning SHALL be off until the user turns on 智能学习 in the input menu. Wh
 - **WHEN** the user types normally without enabling 智能学习
 - **THEN** `input-memory.json` SHALL NOT exist
 
-### Requirement: Only Derived Data on Disk
-The memory SHALL persist only per-app language counts and salted sentence fingerprints with counts. Committed text SHALL NOT be written to disk, and the input method SHALL NOT send it over the network.
+### Requirement: Derived Memory
+While learning is on, the memory SHALL persist per-app language counts and salted sentence fingerprints with counts, and no sentence text. The input method SHALL NOT send committed text or learned data over the network.
 
 #### Scenario: Learned sentence
 - **WHEN** learning is on and the user commits "这个功能下周上线。" in Slack
-- **THEN** the file SHALL contain Slack's updated Chinese count and one fingerprint, and SHALL NOT contain the sentence text
+- **THEN** `input-memory.json` SHALL contain Slack's updated Chinese count and one fingerprint, and SHALL NOT contain the sentence text
+
+### Requirement: Input Journal
+While learning is on and 保存输入原文 is on (the default), each allowed sentence SHALL be appended with its app and time to that day's journal file. Journal files SHALL be readable only by the user, excluded from backups, and deleted after the retention period (default 30 days).
+
+#### Scenario: Journal entry
+- **WHEN** learning and the journal are on and the user commits "这个功能下周上线。" in Slack
+- **THEN** today's journal file SHALL contain that sentence with Slack's bundle identifier and the time
+
+#### Scenario: Journal off
+- **WHEN** the user turns 保存输入原文 off
+- **THEN** no further sentences SHALL be appended, while the derived memory keeps learning
+
+#### Scenario: Retention
+- **WHEN** a journal day file is older than the retention period
+- **THEN** it SHALL be deleted at the next launch or daily check
 
 ### Requirement: Sensitive Content Is Not Learned
 A sentence containing six or more consecutive digits, an email address, a URL, or a token-like string SHALL be dropped whole. Nothing SHALL be recorded in excluded apps, in apps without a bundle identifier, or while secure input is on.
@@ -26,7 +41,7 @@ A sentence containing six or more consecutive digits, an email address, a URL, o
 - **THEN** nothing SHALL be recorded
 
 ### Requirement: User Controls
-The input menu SHALL offer 智能学习 (on/off), 不在「<current app>」中学习, 查看学习记录…, and 清除学习记录… under the section title 智能中心.
+The input menu SHALL offer 智能学习 (on/off), 保存输入原文 (on/off), 不在「<current app>」中学习, 查看学习记录…, and 清除学习记录… under the section title 智能中心.
 
 #### Scenario: Exclude the current app
 - **WHEN** the user chooses 不在「微信」中学习 while typing in WeChat
@@ -34,11 +49,11 @@ The input menu SHALL offer 智能学习 (on/off), 不在「<current app>」中�
 
 #### Scenario: Clear
 - **WHEN** the user chooses 清除学习记录… and confirms
-- **THEN** the input memory, candidate history, and translation-learning records SHALL be deleted from disk and memory
+- **THEN** the input memory, the journal, candidate history, and translation-learning records SHALL be deleted from disk and memory
 
 #### Scenario: View
 - **WHEN** the user chooses 查看学习记录…
-- **THEN** a summary of settings, excluded apps, per-app language mix, and fingerprint counts SHALL open, and it SHALL contain no sentence text
+- **THEN** a local page SHALL open with settings, excluded apps, per-app language mix, fingerprint counts, and, when the journal is on, the recent sentences with a search box
 
 ### Requirement: No Cost While Typing
 Recording SHALL happen only when text is committed. The work SHALL be limited to appending to the sentence buffer and, at a sentence end, one fingerprint. Files SHALL be written off the main thread.

@@ -1,6 +1,6 @@
 # Intelligence Hub
 
-TL;DR: The input method turns what the user commits into a small local memory and offers help at the right moment: better candidates, Chinese-English rewriting, calendar reminders, and quick phrases. Every suggestion waits for a key press. Nothing leaves the Mac, learning is off until the user turns it on, and it can be inspected and wiped. It ships as five OpenSpec changes, foundation first.
+TL;DR: The input method turns what the user commits into a local memory and offers help at the right moment: better candidates, Chinese-English rewriting, calendar reminders, and quick phrases. Every suggestion waits for a key press. Nothing leaves the Mac, learning is off until the user turns it on, and it can be inspected and wiped. While learning is on, committed sentences are also kept as a 30-day input journal by default, as a trial the user can switch off. It ships as five OpenSpec changes, foundation first.
 
 ## Decisions (user, 2026-10-01)
 
@@ -9,12 +9,13 @@ TL;DR: The input method turns what the user commits into a small local memory an
 | Where learned data lives | Only on this Mac; no cloud, no network |
 | Which help | All four: better candidates, Chinese-English rewriting, calendar reminders, quick phrases |
 | How proactive | Suggest only; the user confirms with a key; never act automatically |
+| Raw text | Kept as an optional input journal, on by default while learning is on, 30 days, plain local file; a trial to judge usefulness, switched off if it does not pay off |
 
 ## Principles: privacy first, typing never slower
 
 - **Local only**: no network code in the learning or suggestion path. Models are on-device (Apple Translation, Apple Foundation Models).
 - **Off by default**: learning starts only after the user enables 智能学习 in the input menu.
-- **Store conclusions, not text**: memory keeps counts and fingerprints. Raw sentences stay in memory for the current suggestion only.
+- **Conclusions always, text optionally**: memory keeps counts and fingerprints. The input journal (保存输入原文) adds the sentences themselves: on by default, 30-day retention, one file per day, mode 0600, excluded from Time Machine. It is not encrypted during the trial: any process running as the user can read it.
 - **Drop sensitive sentences whole**: six or more digits in a row, email addresses, URLs, or token-like strings mean the sentence is not learned.
 - **Excluded apps**: password managers and terminals by default, plus any app the user excludes from the menu. Secure text fields are already closed to input methods.
 - **Visible and erasable**: the menu shows what was learned and clears it.
@@ -32,7 +33,7 @@ TL;DR: The input method turns what the user commits into a small local memory an
 ## Architecture: capture → memory → understanding → suggestion → action
 
 1. **Capture (IME)**: committed text, client app (`IMKTextInput.bundleIdentifier()`), time. A sentence assembler joins commits until punctuation, Return, a pause, or a focus change.
-2. **Memory (`packages/user-data`)**: bounded, decaying JSON stores like `CandidateHistory`; shared so a future Companion app can show it.
+2. **Memory (`packages/user-data`)**: bounded, decaying JSON stores like `CandidateHistory`, plus the optional journal (`journal/YYYY-MM-DD.jsonl`); shared so a future Companion app can show it.
 3. **Understanding (async)**: rules first (dates, repetition, app language); Foundation Models only where rules are not enough.
 4. **Suggestion (IME UI)**: one chip next to the caret. `Tab` accepts, any other key dismisses. Rate-limited, and each dismissal makes that kind rarer in that app.
 5. **Action**: replace the sentence, create an event or reminder, save a phrase, or update candidates. Each is reversible or confirmable.
@@ -41,13 +42,15 @@ TL;DR: The input method turns what the user commits into a small local memory an
 
 | # | Change | Delivers | Depends on |
 |---|---|---|---|
-| 1 | `add-input-memory` | Privacy shell, sentence assembly, app language profiles, sentence fingerprints, menu controls (智能学习, per-app exclusion, view, clear) | — |
+| 1 | `add-input-memory` | Privacy shell, sentence assembly, app language profiles, sentence fingerprints, the input journal, menu controls (智能学习, 保存输入原文, per-app exclusion, view and search, clear) | — |
 | 2 | `add-suggestion-chip` | Chip UI, `Tab` to accept, rate limits, feedback; first provider: calendar reminders (EventKit) | 1 |
 | 3 | `add-quick-phrases` | "存成短语" on the third repetition; phrases come back as candidates by pinyin initials | 1, 2 |
 | 4 | `add-rewrite-suggestions` | "转成英文" in English-dominant apps; polish actions for selected text with Foundation Models | 1, 2 |
 | 5 | `add-personal-terms` | Terms typed in pieces become words; per-app candidate order (English first in code editors) | 1 |
 
 ## Open risks
+
+- The journal is a plain file during the trial. Encrypting it with a Keychain key is deferred: with ad-hoc signing every update changes the code signature and would prompt for Keychain access mid-typing. Revisit with Developer ID signing or if the journal is kept.
 
 - Apple Intelligence is off on the dev Mac (`appleIntelligenceNotEnabled`); polish actions need it. "转成英文" falls back to Apple Translation.
 - `NSDataDetector` misses "3点开会" and reports bare dates ("今天天气不错"). Reminders require a time of day; a small rule covers "N点".
