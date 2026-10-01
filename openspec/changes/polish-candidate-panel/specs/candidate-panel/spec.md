@@ -1,5 +1,16 @@
 ## MODIFIED Requirements
 
+### Requirement: Highlighted Row
+The row matching the composition's selected candidate index SHALL be drawn with a solid fill in the system accent color. The candidate text SHALL be white. The row number, gloss, and tag SHALL be white or translucent white.
+
+#### Scenario: Arrow key moves the highlight
+- **WHEN** the first row is highlighted and the user presses `Down`
+- **THEN** the second row SHALL be drawn with the accent fill and white text, and the first row SHALL be drawn normally
+
+#### Scenario: Highlighted translation row
+- **WHEN** the highlighted row is a translation with the tag 译
+- **THEN** the tag SHALL be drawn in white on a translucent white capsule
+
 ### Requirement: Preedit Header
 In Chinese mode, the panel SHALL show the text being composed (the Rime preedit) in secondary text above the candidate rows, separated from the rows by a hairline. In English mode, the panel SHALL NOT show the header.
 

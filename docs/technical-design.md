@@ -79,7 +79,7 @@ Owns explicit and async workflows:
 ## Candidate Panel
 
 - `IMEHostCore` draws its own vertical candidate panel (`CandidatePanel`) instead of the fixed-height `IMKCandidates` panel. One borderless, non-activating `NSPanel` with an `NSVisualEffectView` background is shared by all input controllers in the process and sized to its rows on every update.
-- Visuals: 12 pt corners with 6 pt padding (the highlight's 6 pt radius stays concentric), soft accent-tint highlight (lightened text in dark mode), tertiary row numbers, capsule 英/译 tags, and in Chinese mode a header with the Rime preedit above a hairline. On multi-page lists the header shows both page chevrons and dims the unavailable direction (`CompositionState.candidatePageIndex` / `isLastCandidatePage`).
+- Visuals: 14 pt corners with 6 pt padding (the highlight's 8 pt radius stays concentric), 17 pt candidates in 31 pt rows, a solid accent-color highlight with white text, tertiary row numbers, capsule 英/译 tags, and in Chinese mode a header with the Rime preedit above a hairline. On multi-page lists the header shows both page chevrons and dims the unavailable direction (`CompositionState.candidatePageIndex` / `isLastCandidatePage`).
 - `CandidatePanelModel` (header, rows, 英/译 tags, Chinese/English separators, highlight) and `CandidatePanelPlacement` (below caret, flip above, horizontal clamp, empty-caret fallback) are pure and covered by `IMEHostCoreTests`.
 - Keyboard handling stays in `IMEInputController.handle(_:client:)`; the panel only reports row clicks, which go through the same `selectCandidate(at:)` path as number keys.
 - Text reaches the client through `IMKTextInput.insertText`; `composedString` returns an empty string (never nil) so `updateComposition()` clears marked text on cancel.

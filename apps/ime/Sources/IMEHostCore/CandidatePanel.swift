@@ -6,7 +6,7 @@ import SharedModels
 final class CandidatePanel {
     static let shared = CandidatePanel()
 
-    static let cornerRadius: CGFloat = 12
+    static let cornerRadius: CGFloat = 14
 
     private let window: NSPanel
     private let listView = CandidateListView()
@@ -90,22 +90,22 @@ final class CandidatePanel {
 final class CandidateListView: NSView {
     private enum Metrics {
         static let outerPadding: CGFloat = 6
-        static let rowHorizontalPadding: CGFloat = 8
-        static let rowVerticalPadding: CGFloat = 4
+        static let rowHorizontalPadding: CGFloat = 9
+        static let rowVerticalPadding: CGFloat = 5
         static let columnGap: CGFloat = 8
-        static let tagGap: CGFloat = 12
+        static let tagGap: CGFloat = 10
         static let annotationGap: CGFloat = 6
         static let tagHorizontalPadding: CGFloat = 5
         static let tagVerticalPadding: CGFloat = 1
         static let separatorSpacing: CGFloat = 7
-        static let highlightRadius: CGFloat = 6
+        static let highlightRadius: CGFloat = 8
         static let headerVerticalPadding: CGFloat = 4
         static let headerSeparatorSpacing: CGFloat = 5
         static let chevronGap: CGFloat = 12
         static let chevronSpacing: CGFloat = 4
     }
 
-    private let textFont = NSFont.systemFont(ofSize: 16)
+    private let textFont = NSFont.systemFont(ofSize: 17)
     private let labelFont = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
     private let tagFont = NSFont.systemFont(ofSize: 10, weight: .medium)
     private let headerFont = NSFont.systemFont(ofSize: 13, weight: .medium)
@@ -179,33 +179,29 @@ final class CandidateListView: NSView {
             drawHeader(header)
         }
 
-        let accent = NSColor.controlAccentColor
-        let isDark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        // Plain accent text is too dark on the dark-mode tint; lighten it there.
-        let highlightText = isDark ? (accent.blended(withFraction: 0.5, of: .white) ?? .labelColor) : accent
+        let onHighlight = NSColor.white.withAlphaComponent(0.8)
         let labelWidth = labelColumnWidth
         for (row, rect) in zip(rows, rowRects()) {
             if row.hasSeparatorBefore {
                 drawSeparator(above: rect)
             }
             if row.isHighlighted {
-                accent.withAlphaComponent(isDark ? 0.32 : 0.16).setFill()
+                NSColor.controlAccentColor.setFill()
                 NSBezierPath(roundedRect: rect, xRadius: Metrics.highlightRadius, yRadius: Metrics.highlightRadius).fill()
             }
 
             let contentX = rect.minX + Metrics.rowHorizontalPadding
-            draw(row.label, font: labelFont, color: row.isHighlighted ? highlightText.withAlphaComponent(0.85) : .tertiaryLabelColor,
+            draw(row.label, font: labelFont, color: row.isHighlighted ? onHighlight : .tertiaryLabelColor,
                  at: contentX + labelWidth - row.label.size(withAttributes: [.font: labelFont]).width, in: rect)
             let textX = contentX + labelWidth + Metrics.columnGap
-            draw(row.text, font: textFont, color: row.isHighlighted ? highlightText : .labelColor, at: textX, in: rect)
+            draw(row.text, font: textFont, color: row.isHighlighted ? .white : .labelColor, at: textX, in: rect)
             if let annotation = row.annotation {
                 let annotationX = textX + row.text.size(withAttributes: [.font: textFont]).width + Metrics.annotationGap
-                draw(annotation, font: annotationFont,
-                     color: row.isHighlighted ? highlightText.withAlphaComponent(0.75) : .secondaryLabelColor,
+                draw(annotation, font: annotationFont, color: row.isHighlighted ? onHighlight : .secondaryLabelColor,
                      at: annotationX, in: rect)
             }
             if let tag = row.tag {
-                drawTag(tag, highlightText: row.isHighlighted ? highlightText : nil, rightEdge: rect.maxX - Metrics.rowHorizontalPadding, in: rect)
+                drawTag(tag, onHighlight: row.isHighlighted, rightEdge: rect.maxX - Metrics.rowHorizontalPadding, in: rect)
             }
         }
 
@@ -258,7 +254,8 @@ final class CandidateListView: NSView {
             height: headerHeight - Metrics.headerSeparatorSpacing
         )
         draw(header.text, font: headerFont, color: .secondaryLabelColor, at: rect.minX + Metrics.rowHorizontalPadding, in: rect)
-        drawSeparator(atY: rect.maxY + Metrics.headerSeparatorSpacing / 2, from: rect.minX, to: rect.maxX)
+        drawSeparator(atY: rect.maxY + Metrics.headerSeparatorSpacing / 2,
+                      from: rect.minX + Metrics.rowHorizontalPadding, to: rect.maxX - Metrics.rowHorizontalPadding)
 
         guard showsChevrons else {
             return
@@ -296,13 +293,13 @@ final class CandidateListView: NSView {
         )
     }
 
-    /// `highlightText` is set when the tag sits on the highlighted row.
-    private func drawTag(_ tag: String, highlightText: NSColor?, rightEdge: CGFloat, in rect: CGRect) {
+    /// `onHighlight` is true when the tag sits on the accent-filled highlighted row.
+    private func drawTag(_ tag: String, onHighlight: Bool, rightEdge: CGFloat, in rect: CGRect) {
         let size = tagSize(for: tag)
         let capsule = CGRect(x: rightEdge - size.width, y: rect.midY - size.height / 2, width: size.width, height: size.height)
-        (highlightText.map { $0.withAlphaComponent(0.2) } ?? NSColor.quaternaryLabelColor).setFill()
+        (onHighlight ? NSColor.white.withAlphaComponent(0.25) : NSColor.quaternaryLabelColor).setFill()
         NSBezierPath(roundedRect: capsule, xRadius: size.height / 2, yRadius: size.height / 2).fill()
-        draw(tag, font: tagFont, color: highlightText ?? .secondaryLabelColor,
+        draw(tag, font: tagFont, color: onHighlight ? .white : .secondaryLabelColor,
              at: capsule.minX + Metrics.tagHorizontalPadding, in: capsule)
     }
 

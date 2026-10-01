@@ -4,15 +4,19 @@
 
 ### Candidate panel and translation popup polish
 
-- Implemented OpenSpec change `polish-candidate-panel` after the user asked for a nicer-looking UI:
-  - Candidate panel: 12 pt corners, 6 pt outer padding, 28 pt rows, 12 pt medium tertiary row numbers, 13 pt medium preedit header above a hairline, 0.5 pt border.
-  - Page chevrons: both are drawn on multi-page lists and the unavailable one is dimmed, so the control no longer changes shape while paging.
-  - Popup: capsule direction badge before the source text.
+- Implemented OpenSpec change `polish-candidate-panel` after the user asked for a nicer-looking UI.
+  - A first pass changed only spacing and looked unchanged to the user.
+  - A scratch preview app then showed four styles as real panels on screen: current, solid highlight, solid highlight on Liquid Glass, and horizontal on glass. Offscreen renders cannot show blur or glass, and this Mac cannot take screenshots. The user picked the vertical solid highlight on the existing `.popover` material.
+- Candidate panel:
+  - Solid `controlAccentColor` highlight with white text; this replaces the soft tint.
+  - 17 pt candidates in 31 pt rows, 14 pt corners, 6 pt padding, 12 pt medium tertiary row numbers, 0.5 pt border.
+  - 13 pt medium preedit header above a hairline.
+  - On multi-page lists both chevrons are drawn, and the unavailable one is dimmed.
+- Popup: capsule direction badge before the source text, sharing the panel's corner radius.
 - Fixed: the popup's source line ran to the right edge (`please review the plan before Friday` ended at 267 pt in a 265 pt popup). `NSStackView` dropped the trailing inset from its fitting width; explicit constraints replace it.
-- Sizes: a 9-row Chinese list grows from 107×268 to 111×298 pt, a 5-row English list from 192×133 to 196×147 pt.
-- Reviewed through offscreen before/after renders in light and dark, with the `.popover` material approximated by a flat fill.
-- Tests: new `TranslationPopupViewTests` fail on the old popup and pass on the new one. 75 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in.
-- Not verified yet: the live panel on screen (no screen-capture permission on the dev Mac).
+- Sizes: a 9-row Chinese list grows from 107×268 to 113×334 pt, and a 5-row English list from 192×133 to 202×167 pt.
+- Tests: the new `TranslationPopupViewTests` fail on the old popup and pass on the new one. 75 `RimeBridge`/`IMEHostCore` cases pass through `swiftc` with the local XCTest stand-in.
+- Not verified yet: the installed panel in a real client.
 
 ### Shift+letter types a capital in Chinese mode
 
