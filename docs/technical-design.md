@@ -132,6 +132,12 @@ Owns explicit and async workflows:
 - Default processing is local.
 - Chinese text is stored only by librime's user dictionary and by translation learning (committed 2–6 character words that have no translation, local and bounded; `TranslationLearningEnabled` turns it off).
 - Any future AI processing must be explicit and must stay outside the IME real-time path.
+- Intelligence hub (`docs/intelligence-hub.md`):
+  - Learning is off until enabled and stays on the Mac.
+  - Only derived data is stored: per-app language counts and salted sentence fingerprints, never sentence text.
+  - Sentences with digit runs, emails, URLs, or tokens are dropped whole.
+  - Password managers, terminals, and user-excluded apps record nothing.
+  - Suggestions wait for a key press.
 
 ## Context Strategy
 

@@ -2,6 +2,19 @@
 
 ## 2026-10-01
 
+### Intelligence hub direction (design only)
+
+- The user wants the input method to be an AI entry point that learns from typing and helps proactively. Decisions:
+  - Learned data stays on the Mac.
+  - All four kinds of help: better candidates, Chinese-English rewriting, calendar reminders, quick phrases.
+  - Help is suggested and confirmed with a key, never automatic.
+- Added `docs/intelligence-hub.md` (principles, architecture, a roadmap of five OpenSpec changes) and the first change, `add-input-memory` (privacy shell, sentence assembly, per-app language profiles, sentence fingerprints, menu controls). The project brief and technical design gained the new goal and boundaries.
+- Probes on the dev Mac:
+  - `NSDataDetector` finds 明天下午三点, 下周一上午, 10月8号晚上7点, and 后天 14:30, but not 3点开会, and it also reports bare dates (今天).
+  - `IMKTextInput.bundleIdentifier()` is available for per-app rules.
+  - Apple Foundation Models supports Chinese but reports `appleIntelligenceNotEnabled`.
+- No code yet; implementation waits for the user's review of the proposal.
+
 ### Commit effects with switchable skins
 
 - Implemented OpenSpec change `add-commit-effects`. Committing a candidate breaks its row apart: 玻璃炸裂 (cracks, then a radial burst), 碎裂下坠 (left-to-right break and fall), or 粒子消散 (dust sweep). Palettes: 彩虹, 霓虹, 马卡龙, or 跟随强调色; both axes have 随机, and motion has 关闭. Defaults: 玻璃炸裂 with 彩虹. Chinese and English mode both play it.
