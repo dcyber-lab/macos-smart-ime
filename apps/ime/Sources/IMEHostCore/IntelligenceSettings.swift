@@ -8,6 +8,7 @@ struct IntelligenceSettings {
     static let journalKey = "IntelligenceJournalEnabled"
     static let retentionKey = "IntelligenceJournalRetentionDays"
     static let excludedAppsKey = "IntelligenceExcludedApps"
+    static let allowedAppsKey = "IntelligenceAllowedApps"
     static let defaultRetentionDays = 30
 
     let defaults: UserDefaults
@@ -39,15 +40,31 @@ struct IntelligenceSettings {
         nonmutating set { defaults.set(newValue.sorted(), forKey: Self.excludedAppsKey) }
     }
 
-    func allows(app: String?) -> Bool {
-        PrivacyFilter.allowsApp(app, userExcluded: excludedApps)
+    /// Default exclusions (`PrivacyFilter.defaultExcludedApps`) the user chose to learn in anyway.
+    var allowedApps: Set<String> {
+        get { Set(defaults.stringArray(forKey: Self.allowedAppsKey) ?? []) }
+        nonmutating set { defaults.set(newValue.sorted(), forKey: Self.allowedAppsKey) }
     }
 
+    func allows(app: String?) -> Bool {
+        PrivacyFilter.allowsApp(app, userExcluded: excludedApps, userAllowed: allowedApps)
+    }
+
+    func isExcluded(_ app: String) -> Bool {
+        !allows(app: app)
+    }
+
+    /// Every app currently not learned: defaults the user did not allow, plus the user's own.
+    var effectiveExcludedApps: Set<String> {
+        PrivacyFilter.defaultExcludedApps.subtracting(allowedApps).union(excludedApps)
+    }
+
+    /// Default exclusions flip in `allowedApps`; other apps flip in `excludedApps`.
     func toggleExcluded(_ app: String) {
-        var apps = excludedApps
-        if apps.remove(app) == nil {
-            apps.insert(app)
+        if PrivacyFilter.defaultExcludedApps.contains(app) {
+            allowedApps = allowedApps.symmetricDifference([app])
+        } else {
+            excludedApps = excludedApps.symmetricDifference([app])
         }
-        excludedApps = apps
     }
 }

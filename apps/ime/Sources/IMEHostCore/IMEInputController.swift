@@ -379,7 +379,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             isLearningEnabled: settings.isLearningEnabled,
             isJournalEnabled: settings.isJournalEnabled,
             retentionDays: settings.retentionDays,
-            excludedApps: (PrivacyFilter.defaultExcludedApps.union(settings.excludedApps)).map(AppNames.displayName(for:)).sorted(),
+            excludedApps: settings.effectiveExcludedApps.map(AppNames.displayName(for:)).sorted(),
             summary: intelligence.memory.summary(),
             entries: intelligence.journal.entries(days: settings.retentionDays),
             appName: AppNames.displayName(for:),

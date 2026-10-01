@@ -33,9 +33,7 @@ enum IntelligenceMenu {
         items.append(item(learningTitle, .learning, action, isOn: learning))
         items.append(item(journalTitle, .journal, action, isOn: settings.isJournalEnabled, isEnabled: learning))
         if let currentApp {
-            let isDefault = PrivacyFilter.defaultExcludedApps.contains(currentApp.id)
-            items.append(item(excludeTitle(currentApp.name), .excludeApp, action,
-                              isOn: isDefault || settings.excludedApps.contains(currentApp.id), isEnabled: !isDefault))
+            items.append(item(excludeTitle(currentApp.name), .excludeApp, action, isOn: settings.isExcluded(currentApp.id)))
         }
         items.append(item(viewTitle, .view, action))
         items.append(item(clearTitle, .clear, action))

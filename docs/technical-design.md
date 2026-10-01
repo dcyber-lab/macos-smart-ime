@@ -101,7 +101,7 @@ Owns explicit and async workflows:
 - On every commit it hands the text to `IntelligenceRecorder` (`IMEHostCore`). Nothing is recorded:
   - while 智能学习 is off;
   - under secure input (`IsSecureEventInputEnabled`);
-  - in excluded apps: `PrivacyFilter.defaultExcludedApps` (password managers and terminals) plus `IntelligenceExcludedApps`.
+  - in excluded apps: `PrivacyFilter.defaultExcludedApps` (password managers and terminals) unless listed in `IntelligenceAllowedApps`, plus `IntelligenceExcludedApps`.
 - `SentenceAssembler` joins commits into sentences. A sentence ends at 。！？；!?;. or a newline, after 10 s, on `Return` without a composition, on an app switch, or when the input method is deactivated. It keeps the last 5 sentences per app in memory.
 - `PrivacyFilter.allowsSentence` drops a whole sentence that contains 6+ digits, an email, a URL, or a token-like string.
 - An allowed sentence goes to two stores in `UserData`:
@@ -111,7 +111,7 @@ Owns explicit and async workflows:
 - Cost measured in an optimized build: 0.4 µs per commit with learning off, 3.9 µs with learning and the journal on.
 - The input menu's 智能中心 section (`IntelligenceMenu`) has these items:
   - 智能学习 and 保存输入原文 toggle the settings.
-  - 不在「App」中学习 toggles the current app's exclusion; it is checked and locked for default exclusions.
+  - 不在「App」中学习 toggles the current app's exclusion; for a default exclusion it toggles an override.
   - 查看学习记录… writes `learning-summary.html` (`LearningPage`, 0600, self-contained, HTML-escaped, with a journal search box) and opens it.
   - 清除学习记录… confirms with an `NSAlert`, then clears `InputMemory`, `InputJournal`, `CandidateHistory`, and `TranslationMisses`.
 

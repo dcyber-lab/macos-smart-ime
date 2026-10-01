@@ -68,6 +68,19 @@ final class IntelligenceRecorderTests: XCTestCase {
         XCTAssertNil(recorder.memory.profile(for: "slack"))
     }
 
+    func testAllowingADefaultExcludedAppRecordsThere() {
+        recorder.settings.isLearningEnabled = true
+        recorder.settings.toggleExcluded("com.mitchellh.ghostty")
+        type("帮我看下这个报错。", in: "com.mitchellh.ghostty")
+
+        XCTAssertEqual(journalTexts(), ["帮我看下这个报错。"])
+        XCTAssertEqual(recorder.settings.allowedApps, ["com.mitchellh.ghostty"])
+        XCTAssertFalse(recorder.settings.effectiveExcludedApps.contains("com.mitchellh.ghostty"))
+
+        recorder.settings.toggleExcluded("com.mitchellh.ghostty")
+        XCTAssertTrue(recorder.settings.isExcluded("com.mitchellh.ghostty"))
+    }
+
     func testLeavingForAnExcludedAppClosesTheSentence() {
         recorder.settings.isLearningEnabled = true
         recorder.commit("写到一半", app: "slack", secureInput: false)

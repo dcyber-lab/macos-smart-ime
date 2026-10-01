@@ -29,11 +29,15 @@ public enum PrivacyFilter {
         !sensitivePatterns.contains { sentence.range(of: $0, options: .regularExpression) != nil }
     }
 
-    /// Apps without a bundle identifier are not learned.
-    public static func allowsApp(_ bundleIdentifier: String?, userExcluded: Set<String>) -> Bool {
+    /// Apps without a bundle identifier are not learned. `userAllowed` lifts default exclusions the
+    /// user chose to learn in anyway (e.g. a terminal used for chatting with an AI).
+    public static func allowsApp(_ bundleIdentifier: String?, userExcluded: Set<String>, userAllowed: Set<String> = []) -> Bool {
         guard let bundleIdentifier, !bundleIdentifier.isEmpty else {
             return false
         }
-        return !defaultExcludedApps.contains(bundleIdentifier) && !userExcluded.contains(bundleIdentifier)
+        if userExcluded.contains(bundleIdentifier) {
+            return false
+        }
+        return !defaultExcludedApps.contains(bundleIdentifier) || userAllowed.contains(bundleIdentifier)
     }
 }

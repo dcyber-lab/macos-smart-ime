@@ -46,6 +46,8 @@ It is false for the whole sentence; the sentence is not partially masked. `allow
 
 `IsSecureEventInputEnabled()` also blocks recording.
 
+Default exclusions are a starting point, not a lock. The user tried the first build in Ghostty, where they type to AI tools, and found the menu item checked and disabled. A default-excluded app can now be allowed: it moves into `IntelligenceAllowedApps`, and the sentence rules still apply there.
+
 ### 4. Controls in the input menu
 
 The input menu is flat (submenu actions are not delivered; see `add-commit-effects`). It gets a third section after the effect settings:
@@ -61,7 +63,7 @@ The input menu is flat (submenu actions are not delivered; see `add-commit-effec
 
 - **保存输入原文**: toggles the journal; disabled (grayed) while 智能学习 is off. Turning it off stops appending and keeps existing days until they age out or are cleared.
 
-- **Per-app item**: names the current client app (`NSWorkspace` display name) and toggles it in `IntelligenceExcludedApps`.
+- **Per-app item**: names the current client app (`NSWorkspace` display name) and is checked when the app is not learned. Choosing it toggles a default exclusion in `IntelligenceAllowedApps` and any other app in `IntelligenceExcludedApps`.
 - **查看学习记录…**: writes `learning-summary.html` (0600) to the support directory and opens it. It contains:
   - the settings;
   - excluded apps;

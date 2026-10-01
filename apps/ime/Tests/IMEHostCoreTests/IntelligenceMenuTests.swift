@@ -41,11 +41,13 @@ final class IntelligenceMenuTests: XCTestCase {
         XCTAssertEqual(items[3].state, .on)
     }
 
-    func testDefaultExcludedAppIsCheckedAndLocked() {
-        let item = menu(app: (id: "com.apple.Terminal", name: "终端"))[3]
+    func testDefaultExcludedAppIsCheckedButCanBeAllowed() {
+        XCTAssertEqual(menu(app: (id: "com.mitchellh.ghostty", name: "Ghostty"))[3].state, .on)
+        XCTAssertTrue(menu(app: (id: "com.mitchellh.ghostty", name: "Ghostty"))[3].isEnabled)
 
-        XCTAssertEqual(item.state, .on)
-        XCTAssertFalse(item.isEnabled)
+        IntelligenceSettings(defaults: defaults).toggleExcluded("com.mitchellh.ghostty")
+
+        XCTAssertEqual(menu(app: (id: "com.mitchellh.ghostty", name: "Ghostty"))[3].state, .off)
     }
 
     func testNoAppItemWithoutAClient() {

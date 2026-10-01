@@ -11,6 +11,7 @@
 - Cost per commit in an optimized build: 0.4 µs with learning off, 3.5 µs on, 3.9 µs with the journal; worst single commit 0.54 ms.
 - Tests: 38 new cases. Locally 123 `RimeBridge`/`IMEHostCore` and 119 `EnglishEngine`/`UserData` cases pass through `swiftc` with the XCTest stand-in.
 - Also measured AI providers for the rewrite step: `claude -p` (Haiku, subscription) took 4–6 s without user settings and 8.6 s with them; `codex exec` took 11 s; Apple Foundation Models needs Apple Intelligence. Recorded in `docs/intelligence-hub.md`.
+- Live feedback: in Ghostty the per-app item was checked and disabled, because default exclusions were locked. The user types to AI tools in the terminal, so default exclusions can now be lifted (`IntelligenceAllowedApps`); the sentence rules still apply.
 - Pending: live check (Intelligence Hub checklist).
 
 ### Intelligence hub direction (design only)

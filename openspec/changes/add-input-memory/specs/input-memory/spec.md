@@ -37,8 +37,12 @@ A sentence containing six or more consecutive digits, an email address, a URL, o
 - **THEN** nothing from that sentence SHALL be recorded
 
 #### Scenario: Terminal
-- **WHEN** the user types in Terminal
+- **WHEN** the user types in Terminal without having allowed it
 - **THEN** nothing SHALL be recorded
+
+#### Scenario: Allowing a default exclusion
+- **WHEN** the user unchecks 不在「Ghostty」中学习
+- **THEN** sentences typed in Ghostty SHALL be recorded, still subject to the sentence rules
 
 ### Requirement: User Controls
 The input menu SHALL offer 智能学习 (on/off), 保存输入原文 (on/off), 不在「<current app>」中学习, 查看学习记录…, and 清除学习记录… under the section title 智能中心.
