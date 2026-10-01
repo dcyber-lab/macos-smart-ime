@@ -86,8 +86,10 @@ final class LearningInsightsTests: XCTestCase {
         ]), summary: InputMemory().summary(), calendar: calendar)
 
         XCTAssertEqual(insights.schedules.map(\.text), ["明天下午三点和 Alex 过方案", "3点开会", "Let's sync tomorrow at 3pm"])
-        XCTAssertNotNil(insights.schedules[0].when)
         XCTAssertEqual(insights.schedules[1].mention, "3点")
+        // NSDataDetector parses Chinese dates only when Chinese is among the preferred languages (not on
+        // CI); English dates parse everywhere.
+        XCTAssertNotNil(insights.schedules[2].when)
     }
 
     func testOverviewAndAppLanguages() {

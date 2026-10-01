@@ -74,5 +74,6 @@ The same rewrite prompt ("这个功能下周上线，麻烦大家帮忙回归一
 
 - Apple Intelligence is off on the dev Mac (`appleIntelligenceNotEnabled`); polish actions need it. "转成英文" falls back to Apple Translation.
 - `NSDataDetector` misses "3点开会" and reports bare dates ("今天天气不错"). Reminders require a time of day; a small rule covers "N点".
+- `NSDataDetector` parses Chinese dates only when Chinese is among the user's preferred languages (`AppleLanguages`). With an English-only list, "明天下午三点" finds nothing. Reminders need a project-owned parser for common Chinese expressions (今天/明天/后天/下周X, 上午/下午/晚上, N点[半]).
 - Replacing an already committed sentence needs the client to honor `replacementRange`; where it does not, the suggestion copies the result instead.
 - `Tab` is meaningful in many apps; it is captured only while a chip is visible.

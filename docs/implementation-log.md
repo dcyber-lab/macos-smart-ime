@@ -18,6 +18,7 @@
   - repeated sentences;
   - sentences naming a time (time-of-day rule, then `NSDataDetector` or "N点").
   A month (3,000 sentences) takes 0.05–0.2 s in an optimized build. Prefiltering on a time of day took a sparse month from 0.6 s to 0.2 s; a colon or am/pm only counts next to digits.
+- CI failed one assertion: `NSDataDetector` parses Chinese dates only when Chinese is a preferred language. This Mac lists zh-Hans-SG; the CI runner and `-AppleLanguages '(en)'` do not, and nothing is found. The test now checks the parsed date only for the English sentence, and reminders (step 2) need their own Chinese time parser.
 - The user's journal was never read into the development session; insights were checked with synthetic sentences (7 new tests, 131 host tests pass locally).
 - Pending: live check (Intelligence Hub checklist).
 
