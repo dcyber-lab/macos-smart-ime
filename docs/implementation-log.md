@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-10-01
+
+### Shift+letter types a capital in Chinese mode
+
+- Shift+h typed pinyin "h" instead of "H". InputMethodKit drops Shift from `charactersIgnoringModifiers` for letters, as it does for symbols, so librime got keysym `h`. `RimeKeyTranslator` now takes `characters` for any Shift combination without Control, Option, or Command, as Squirrel does. Unshifted letters still use `charactersIgnoringModifiers`, so Caps Lock keeps typing pinyin.
+- librime's `uppercase` recognizer then starts inline English. Checked through `EnglishAugmentedChineseEngine` with the bundled librime and IMK-shaped events:
+  - Shift+h shows `H` and Space commits `H`.
+  - Shift+h `ello` Space commits `Hello`; `GitHub` with Space commits `GitHub`.
+  - `nihao` and `shujuku` are unchanged.
+- `testShiftedLetterIsUppercase` used to feed "A" in `charactersIgnoringModifiers`, which hid the bug. It now uses the IMK-shaped "a". Control+Shift+p still binds as `p`.
+
 ## 2026-09-30
 
 ### Learning missing translations

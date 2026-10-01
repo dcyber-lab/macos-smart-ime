@@ -100,8 +100,9 @@ enum RimeKeyTranslator {
         return TranslatedKey(keycode: Int32(scalar.value), mask: mask)
     }
 
-    /// InputMethodKit can report Shift+= as "=" in `charactersIgnoringModifiers`, and librime then types "=",
-    /// so symbols come from `characters` ("+"), as in Squirrel. Letters keep `charactersIgnoringModifiers` so
+    /// InputMethodKit drops Shift from `charactersIgnoringModifiers` (Shift+= arrives as "=", Shift+h as "h"), so
+    /// shifted keys and symbols come from `characters` ("+", "H"), as in Squirrel; librime then types the symbol or
+    /// starts its uppercase (inline English) segment. Unshifted letters keep `charactersIgnoringModifiers` so
     /// Caps Lock does not turn pinyin into capitals, and Control, Option, and Command combinations keep it so
     /// bindings such as Control+p still match.
     private static func keySymbol(of event: InputKeyEvent, mask: Int32) -> Unicode.Scalar? {
@@ -113,7 +114,9 @@ enum RimeKeyTranslator {
         }
 
         let hasCommandModifier = mask & (controlMask | altMask | superMask) != 0
-        if !hasCommandModifier, !scalar.properties.isAlphabetic, let typed = event.characters.unicodeScalars.first {
+        let isShifted = mask & shiftMask != 0
+        if !hasCommandModifier, isShifted || !scalar.properties.isAlphabetic,
+           let typed = event.characters.unicodeScalars.first {
             return typed
         }
         return scalar

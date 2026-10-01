@@ -20,7 +20,13 @@ final class RimeKeyTranslatorTests: XCTestCase {
     }
 
     func testShiftedLetterIsUppercase() {
+        // As InputMethodKit delivers Shift+a: the lowercase key in charactersIgnoringModifiers.
+        assertKey(keyCode: 0, characters: "A", ignoringModifiers: "a", flags: .shift, is: "A", mask: shift)
         assertKey(keyCode: 0, characters: "A", ignoringModifiers: "A", flags: .shift, is: "A", mask: shift)
+    }
+
+    func testControlShiftBindingUsesKeyLetter() {
+        assertKey(keyCode: 35, characters: "\u{10}", ignoringModifiers: "p", flags: [.control, .shift], is: "p", mask: shift | control)
     }
 
     func testCapsLockKeepsPinyinLowercase() {
