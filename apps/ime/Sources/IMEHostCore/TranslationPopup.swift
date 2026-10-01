@@ -62,19 +62,20 @@ final class TranslationPopup {
     }
 }
 
-/// Source line, wrapping translation (or message), and key hint.
+/// Direction badge and source line, wrapping translation (or message), and key hint.
 final class TranslationPopupView: NSView {
     private static let maxTextWidth: CGFloat = 400
     private static let minimumWidth: CGFloat = 180
-    private static let insets = NSEdgeInsets(top: 10, left: 12, bottom: 10, right: 12)
+    private static let insets = NSEdgeInsets(top: 11, left: 14, bottom: 11, right: 14)
+    private static let badgeGap: CGFloat = 6
+    private static let lineSpacing: CGFloat = 7
 
+    private let badge = CapsuleBadgeView()
     private let sourceLabel = NSTextField(labelWithString: "")
     private let bodyLabel = NSTextField(wrappingLabelWithString: "")
     private let hintLabel = NSTextField(labelWithString: "")
-    private let stack: NSStackView
 
     override init(frame frameRect: NSRect) {
-        stack = NSStackView(views: [sourceLabel, bodyLabel, hintLabel])
         super.init(frame: frameRect)
 
         sourceLabel.font = .systemFont(ofSize: 12)
@@ -87,18 +88,27 @@ final class TranslationPopupView: NSView {
         hintLabel.font = .systemFont(ofSize: 11)
         hintLabel.textColor = .tertiaryLabelColor
 
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 6
-        stack.edgeInsets = Self.insets
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
+        let insets = Self.insets
+        for view in [badge, sourceLabel, bodyLabel, hintLabel] as [NSView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(view)
+        }
+        // Each line is pinned on the left and only bounds the width on the right, so the
+        // fitting width is the widest line plus both insets.
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            badge.leadingAnchor.constraint(equalTo: leadingAnchor, constant: insets.left),
+            badge.topAnchor.constraint(equalTo: topAnchor, constant: insets.top),
+            sourceLabel.leadingAnchor.constraint(equalTo: badge.trailingAnchor, constant: Self.badgeGap),
+            sourceLabel.centerYAnchor.constraint(equalTo: badge.centerYAnchor),
             sourceLabel.widthAnchor.constraint(lessThanOrEqualToConstant: Self.maxTextWidth),
+            bodyLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: insets.left),
+            bodyLabel.topAnchor.constraint(equalTo: badge.bottomAnchor, constant: Self.lineSpacing),
+            hintLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: insets.left),
+            hintLabel.topAnchor.constraint(equalTo: bodyLabel.bottomAnchor, constant: Self.lineSpacing),
+            hintLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -insets.bottom),
+            trailingAnchor.constraint(greaterThanOrEqualTo: sourceLabel.trailingAnchor, constant: insets.right),
+            trailingAnchor.constraint(greaterThanOrEqualTo: bodyLabel.trailingAnchor, constant: insets.right),
+            trailingAnchor.constraint(greaterThanOrEqualTo: hintLabel.trailingAnchor, constant: insets.right),
             widthAnchor.constraint(greaterThanOrEqualToConstant: Self.minimumWidth),
         ])
     }
@@ -114,19 +124,46 @@ final class TranslationPopupView: NSView {
         case .idle:
             return false
         case .translating(let source, let direction):
-            fill(title: "\(direction.label)  \(source)", body: "翻译中…", hint: "Esc 取消")
+            fill(badge: direction.label, source: source, body: "翻译中…", hint: "Esc 取消")
         case .result(let source, let translation, let direction):
-            fill(title: "\(direction.label)  \(source)", body: translation, hint: "⏎ 替换 · Esc 取消")
+            fill(badge: direction.label, source: source, body: translation, hint: "⏎ 替换 · Esc 取消")
         case .message(let text):
-            fill(title: "翻译", body: text, hint: "Esc 关闭")
+            fill(badge: "翻译", source: "", body: text, hint: "Esc 关闭")
         }
         layoutSubtreeIfNeeded()
         return true
     }
 
-    private func fill(title: String, body: String, hint: String) {
-        sourceLabel.stringValue = title
+    private func fill(badge text: String, source: String, body: String, hint: String) {
+        badge.text = text
+        sourceLabel.stringValue = source
         bodyLabel.stringValue = body
         hintLabel.stringValue = hint
+    }
+}
+
+/// Small capsule label, drawn like the candidate panel's 英/译 tags.
+final class CapsuleBadgeView: NSView {
+    private static let font = NSFont.systemFont(ofSize: 11, weight: .medium)
+    private static let padding = NSSize(width: 7, height: 2)
+
+    var text = "" {
+        didSet {
+            invalidateIntrinsicContentSize()
+            needsDisplay = true
+        }
+    }
+
+    override var intrinsicContentSize: NSSize {
+        let size = text.size(withAttributes: [.font: Self.font])
+        return NSSize(width: ceil(size.width) + Self.padding.width * 2, height: ceil(size.height) + Self.padding.height * 2)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.quaternaryLabelColor.setFill()
+        NSBezierPath(roundedRect: bounds, xRadius: bounds.height / 2, yRadius: bounds.height / 2).fill()
+        let attributes: [NSAttributedString.Key: Any] = [.font: Self.font, .foregroundColor: NSColor.secondaryLabelColor]
+        let size = text.size(withAttributes: attributes)
+        text.draw(at: CGPoint(x: Self.padding.width, y: bounds.midY - size.height / 2), withAttributes: attributes)
     }
 }

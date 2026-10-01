@@ -168,7 +168,7 @@ Requires macOS 26 and the English and Simplified Chinese translation languages (
 Requires macOS 26 and the English and Simplified Chinese translation languages (System Settings › General › Language & Region › Translation Languages). Use TextEdit or Notes with SmartIMEHost active.
 
 1. Type or paste an English sentence and select it
-2. Press `⌃⌥T` and confirm a popup below the selection shows "英 → 中", then the Chinese translation with "⏎ 替换 · Esc 取消"
+2. Press `⌃⌥T` and confirm a popup below the selection shows an "英 → 中" badge before the selected text, then the Chinese translation with "⏎ 替换 · Esc 取消", and that the selected text does not touch the popup's right edge
 3. Press `Return` and confirm the selection is replaced by the translation
 4. Select a Chinese sentence (for example 请在周五前审阅部署计划), press `⌃⌥T`, and confirm the popup shows "中 → 英" and an English translation
 5. Select English again, press `⌃⌥T`, then `Escape`, and confirm the text is unchanged
@@ -192,10 +192,10 @@ Run it after every change to the IME host before hand-off.
 Use a normal editable text field such as TextEdit.
 
 1. In light appearance, type `shujuku` in Chinese mode
-2. Confirm a rounded vertical panel appears just below the caret with the pinyin (`shu ju ku`) in small gray text at the top, numbered rows, 数据库 highlighted with a soft accent tint, a separator line above `database`, and a capsule 译 tag on `database`
-3. Confirm a down chevron appears next to the pinyin; press `=` and confirm both up and down chevrons appear on page 2
+2. Confirm a rounded vertical panel appears just below the caret with the pinyin (`shu ju ku`) in gray text at the top above a hairline, numbered rows, 数据库 highlighted with a solid accent-color fill and white text, a separator line above `database`, and a capsule 译 tag on `database`
+3. Confirm a dimmed up chevron and a normal down chevron appear next to the pinyin; press `=` and confirm both chevrons are normal on page 2, and that they do not move while paging
 4. Confirm the panel is exactly as tall as its rows, with no empty space below; type `huiyi` and confirm the panel resizes
-5. Press `Down` twice and confirm the highlight moves to the third row
+5. Press `Down` twice and confirm the highlight moves to the third row; with `database` highlighted, confirm its 译 tag stays readable (white on the accent fill)
 6. Click the `database` row and confirm `database` is committed and the panel disappears
 7. Type `hello` and confirm `hello` is first with an 英 tag and a separator below it
 8. Press `Shift` to switch to English mode, type `he`, and confirm the rows have no tags or separators
