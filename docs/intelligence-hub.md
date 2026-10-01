@@ -16,7 +16,7 @@ TL;DR: The input method turns what the user commits into a local memory and offe
 - **Local only**: no network code in the learning or suggestion path. Models are on-device (Apple Translation, Apple Foundation Models).
 - **Off by default**: learning starts only after the user enables 智能学习 in the input menu.
 - **Conclusions always, text optionally**: memory keeps counts and fingerprints. The input journal (保存输入原文) adds the sentences themselves: on by default, 30-day retention, one file per day, mode 0600, excluded from Time Machine. It is not encrypted during the trial: any process running as the user can read it.
-- **Drop sensitive sentences whole**: six or more digits in a row, email addresses, URLs, or token-like strings mean the sentence is not learned.
+- **Mask sensitive spans**: URLs, email addresses, token-like strings, and six or more digits in a row become 〔链接〕〔邮箱〕〔密钥〕〔数字〕 before anything is learned; the rest of the sentence is kept. Dropping whole sentences was the first design; it lost every work message that contained a link.
 - **Excluded apps**: password managers and terminals by default, plus any app the user excludes from the menu. A default can be lifted from the menu, for example for a terminal used to talk to AI tools. Secure text fields are already closed to input methods.
 - **Visible and erasable**: the menu shows what was learned and clears it.
 - **Off the key path**: recording happens on commit and costs microseconds; analysis and models run asynchronously after the key is handled.

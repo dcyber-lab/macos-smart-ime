@@ -40,6 +40,13 @@ final class SentenceAssemblerTests: XCTestCase {
         XCTAssertEqual(sentences.map(\.app), ["slack", "slack", "mail"])
     }
 
+    func testAnotherSessionStartsANewSentence() {
+        assembler.commit("第一个框", app: "notes", session: 1, at: start)
+        assembler.commit("第二个框", app: "notes", session: 2, at: start + 1)
+        assembler.endSentence()
+        XCTAssertEqual(sentences.map(\.text), ["第一个框", "第二个框"])
+    }
+
     func testNewlineSplitsACommit() {
         assembler.commit("上一句\n下一句", app: "notes", at: start)
         assembler.endSentence()

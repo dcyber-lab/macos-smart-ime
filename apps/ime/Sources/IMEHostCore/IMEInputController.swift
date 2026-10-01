@@ -115,9 +115,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         shiftToggle.keyDown()
 
         if Self.returnKeys.contains(event.keyCode), !sessionStore.hasActiveComposition {
-            let readTitle = windowTitleReader()
+            // Reads the field before the app gets the key: a chat app sends and clears it on Return.
+            let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled(), readTitle = windowTitleReader()
             MainActor.assumeIsolated {
-                Self.intelligence.endSentence(readContext: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
+                Self.intelligence.endLine(app: app, secureInput: secureInput,
+                                          readField: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
         }
 
@@ -220,7 +222,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     }
 
     public override func deactivateServer(_ sender: Any!) {
-        MainActor.assumeIsolated { Self.intelligence.endSentence() }
+        // An unfinished sentence stays open: leaving to copy a link and coming back continues it.
         tearDownSession()
         super.deactivateServer(sender)
     }
@@ -310,9 +312,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             commit(committedText, using: sender)
             playCommitEffect(for: committedText)
             let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled(), readTitle = windowTitleReader()
+            let session = ObjectIdentifier(self).hashValue
             MainActor.assumeIsolated {
-                Self.intelligence.commit(committedText, app: app, secureInput: secureInput,
-                                         readContext: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
+                Self.intelligence.commit(committedText, app: app, session: session, secureInput: secureInput,
+                                         readField: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
             sessionStore.reset(committedText: committedText)
         }
@@ -361,7 +364,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             case .learning:
                 settings.isLearningEnabled.toggle()
                 if !settings.isLearningEnabled {
-                    Self.intelligence.endSentence()
+                    Self.intelligence.closeQuietly()
                 }
             case .journal:
                 settings.isJournalEnabled.toggle()
@@ -372,7 +375,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                 }
             case .excludeApp:
                 if let app {
-                    Self.intelligence.endSentence()
+                    Self.intelligence.closeQuietly()
                     settings.toggleExcluded(app)
                 }
             case .view:
@@ -393,9 +396,9 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         return { WindowTitleReader.focusedWindowTitle(bundleIdentifier: app) }
     }
 
-    /// Up to 400 characters before the cursor in the client's field, through the same IMK text
-    /// input calls selection translation uses. A round trip to the client app: only called after a
-    /// sentence ends, once the key has been handled.
+    /// Up to 1,300 characters before the cursor in the client's field (a long sentence plus its
+    /// context), through the IMK text input calls selection translation uses. A round trip to the
+    /// client app: only called when a sentence ends.
     private func textBeforeCursor() -> String? {
         guard let client = client() else {
             return nil
@@ -404,7 +407,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         guard cursor.location != NSNotFound, cursor.location > 0 else {
             return nil
         }
-        let start = max(0, cursor.location - 400)
+        let start = max(0, cursor.location - 1_300)
         return client.attributedSubstring(from: NSRange(location: start, length: cursor.location - start))?.string
     }
 

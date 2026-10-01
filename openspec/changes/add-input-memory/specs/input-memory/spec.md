@@ -30,11 +30,11 @@ While learning is on and 保存输入原文 is on (the default), each allowed se
 - **THEN** it SHALL be deleted at the next launch or daily check
 
 ### Requirement: Sensitive Content Is Not Learned
-A sentence containing six or more consecutive digits, an email address, a URL, or a token-like string SHALL be dropped whole. Nothing SHALL be recorded in excluded apps, in apps without a bundle identifier, or while secure input is on.
+URLs, email addresses, token-like strings, and runs of six or more digits SHALL be replaced by 〔链接〕, 〔邮箱〕, 〔密钥〕, and 〔数字〕 before anything is recorded; the rest of the sentence SHALL be kept. Nothing SHALL be recorded in excluded apps, in apps without a bundle identifier, or while secure input is on.
 
 #### Scenario: Verification code
 - **WHEN** the user commits "验证码是 482913。"
-- **THEN** nothing from that sentence SHALL be recorded
+- **THEN** the journal SHALL contain "验证码是 〔数字〕。" and never the digits
 
 #### Scenario: Terminal
 - **WHEN** the user types in Terminal without having allowed it
@@ -77,6 +77,13 @@ Each part SHALL say which later feature will use it. The computation SHALL NOT r
 #### Scenario: Time without a date word
 - **WHEN** the journal contains 3点开会 and 今天天气不错
 - **THEN** 3点开会 SHALL be listed under 提到时间的句子 and 今天天气不错 SHALL NOT
+
+### Requirement: Whole Messages
+When the user presses `Return` without a composition, the input method SHALL read the field before the app handles the key and journal the line the cursor ends as the app has it, including pasted text, picked mentions, and digits inserted directly, with sensitive spans masked. A sentence ended by punctuation SHALL be taken from the field the same way after the key. The field's text SHALL be used only when the characters the input method committed appear in it in order. Leaving the field and returning SHALL NOT end the sentence.
+
+#### Scenario: Chat message with a pasted link
+- **WHEN** the user types a message in SeaTalk, pastes a link into it, types 10mins 内完成, and presses `Return`
+- **THEN** the journal SHALL contain the whole message with the link as 〔链接〕 and 10mins kept
 
 ### Requirement: Context and Sessions
 When a sentence ends with punctuation or `Return` while its app is focused, and the journal is on, the journal entry SHALL include up to 300 characters before it in the same field, when the app reports them. The read SHALL happen after the key has been handled. Reads SHALL stop for an app after one takes longer than 100 ms. Context that looks sensitive SHALL be dropped. The learning page SHALL group journal entries into sessions and show each entry's context and the per-app read cost.

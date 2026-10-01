@@ -228,7 +228,8 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 4c. Type lo in Alfred or Raycast; it is not recorded
 4d. Choose 读取窗口标题: the system asks for Accessibility access and the Privacy & Security pane opens; switch on LinguaType (after an update, switch it off and on). The menu item drops 需授权辅助功能
 4e. Type a sentence in Chrome on two different tabs and in an editor; the page shows separate sessions with the window titles, and the 窗口标题 table shows sample titles and timings per app
-5. Type 验证码是 482913。 and a sentence in Terminal; neither appears after refreshing via 查看学习记录…
+5. Type 验证码是 482913。 and a sentence in Terminal; the first appears as 验证码是 〔数字〕。 and the Terminal one not at all
+5a. In a chat app, type part of a message, switch away to copy a link, paste it, type 10mins 内完成, and press Return; the page shows the whole message with 〔链接〕 and 10mins
 6. Choose 不在「<app>」中学习 for the first app, type another sentence there, and confirm it is not recorded
 7. Turn off 保存输入原文, type a sentence, and confirm the journal does not gain it while the app's counts still grow
 8. Choose 清除学习记录…, confirm the alert, and check that `~/Library/Application Support/SmartIMEHost/` no longer has `input-memory.json`, `journal/`, `candidate-history.json`, or `translation-misses.json`
