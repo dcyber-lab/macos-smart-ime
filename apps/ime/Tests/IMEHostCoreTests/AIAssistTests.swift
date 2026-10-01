@@ -83,13 +83,13 @@ final class AIAssistChipTests: XCTestCase {
         XCTAssertNil(chip.handleKey(AIAssistChipController.tabKey), "no chip: Tab is the app's again")
     }
 
-    func testOneOfferPerAppPerMinute() {
+    func testOffersAreAtLeastFiveSecondsApartPerApp() {
         chip.offer(offer())
         chip.dismiss()
-        clock += 30
+        clock += 3
         chip.offer(offer())
         XCTAssertNil(chip.display)
-        clock += 31
+        clock += 3
         chip.offer(offer())
         XCTAssertNotNil(chip.display)
         chip.offer(offer(app: "other"))

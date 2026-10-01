@@ -29,7 +29,8 @@ final class AIAssistChipController {
         case passThrough
     }
 
-    static let minimumInterval: TimeInterval = 60
+    /// Keeps chips from flickering over consecutive sentences; a dismissed chip does not block the next one.
+    static let minimumInterval: TimeInterval = 5
     static let lifetime: TimeInterval = 8
     static let tabKey: UInt16 = 48
     static let escapeKey: UInt16 = 53
@@ -73,7 +74,7 @@ final class AIAssistChipController {
         return han > 0 && Double(han) / Double(han + english) >= 0.7
     }
 
-    /// Starts the rewrite and shows the chip, unless this app had an offer within the last minute.
+    /// Starts the rewrite and shows the chip, unless this app had an offer within `minimumInterval`.
     func offer(_ offer: Offer) {
         let time = now()
         if let last = lastOffer[offer.app], time.timeIntervalSince(last) < Self.minimumInterval {

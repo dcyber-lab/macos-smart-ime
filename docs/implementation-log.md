@@ -8,6 +8,7 @@
 - In apps enabled from the menu, a finished, mostly Chinese sentence read from the field gets a chip below the caret. Codex starts at once; `Tab` replaces the sentence, with a read-back and a clipboard fallback.
 - Codex measured 6–12 s across models in the terminal; `gpt-6-luna` at low effort took 6.6–7 s. Through the input method's code path it took 7.4–8.8 s for two sentences, with good results.
 - Tests: 12 new cases (chip flow with a fake provider, `codex` stand-in script for arguments, stdin, errors, timeout, empty output). 160 host and 120 data tests pass locally.
+- First live try in Sublime Text: a chip appeared once and was dismissed; seven more sentences within 50 s got none because of the one-per-minute limit. The limit is now 5 s per app, so a dismissed chip does not block the next sentence. (Repeated journal lines were the same test sentence retyped: identical text and context hashes.)
 - Pending: live check (AI Assist checklist), especially whether Chromium apps honor `replacementRange`.
 
 ### Input memory (intelligence hub, step 1)

@@ -9,6 +9,8 @@ The user asked to try the chip before the full change. The POC implements:
 - **Prefetch.** The sentence is sent to Codex as soon as the chip shows, so the result is usually ready when the user reacts. In enabled apps, qualifying sentences therefore leave the Mac before confirmation. The user accepted that for the POC by asking to see the effect; it is why chips are opt-in per app and not driven by the learned English profile.
 - **Applying the result.** `Tab` replaces the sentence through `insertText(_:replacementRange:)` and checks the result; if the app did not take it, the text is copied to the clipboard. `Tab` before the result arrives replaces it on arrival. `Esc` or any other key dismisses the chip and stops the request.
 
+- **Pacing.** At most one chip per app every 5 seconds. The first build used one per minute, and a dismissed chip then blocked a minute of test sentences.
+
 ⌃⌥R, the other actions, the English-profile rule, and dismissal back-off follow after the POC.
 
 ## What Changes
