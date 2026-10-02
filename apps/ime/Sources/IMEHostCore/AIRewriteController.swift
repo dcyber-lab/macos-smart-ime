@@ -30,18 +30,25 @@ final class AIRewriteController {
     private static let escapeKey: UInt16 = 53
 
     private(set) var state = State.idle {
-        didSet { present(state) }
+        didSet {
+            present(state)
+            if case .message = state {
+                dismissMessageLater()
+            }
+        }
     }
     private let rewriter: () -> AIRewriter?
     private let present: @MainActor (State) -> Void
+    private let messageLifetime: Duration
     private var range = NSRange(location: NSNotFound, length: 0)
     private var task: Task<Void, Never>?
     private var requestID = 0
     /// True when the text is not in a text field (a web page): results are copied, never replaced.
     private(set) var readOnly = false
 
-    init(rewriter: @escaping () -> AIRewriter?, present: @escaping @MainActor (State) -> Void) {
+    init(rewriter: @escaping () -> AIRewriter?, messageLifetime: Duration = .seconds(6), present: @escaping @MainActor (State) -> Void) {
         self.rewriter = rewriter
+        self.messageLifetime = messageLifetime
         self.present = present
     }
 
@@ -150,6 +157,18 @@ final class AIRewriteController {
                 return
             }
             self.state = next
+        }
+    }
+
+    /// A message needs no key to go away: the popup may be over an app that sends no keys to the input method.
+    private func dismissMessageLater() {
+        let shown = state
+        let lifetime = messageLifetime
+        Task { [weak self] in
+            try? await Task.sleep(for: lifetime)
+            if let self, self.state == shown {
+                self.state = .idle
+            }
         }
     }
 

@@ -446,7 +446,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
         let start = (text: text, range: range, truncated: truncated)
         MainActor.assumeIsolated {
-            if blocked {
+            if !blocked && start.text == nil {
+                // A page without a text field reports nothing; copy the selection instead.
+                GlobalSelectionAssist.shared.startReadOnly()
+            } else if blocked {
                 aiRewrite.start(text: nil, range: range)
             } else {
                 aiRewrite.start(text: start.text, range: start.range, truncated: start.truncated)

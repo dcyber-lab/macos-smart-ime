@@ -343,6 +343,15 @@ final class AIOrganizeTests: XCTestCase {
         XCTAssertEqual(TranslationPopup.content(for: .result(action: .toChinese, original: sentence, rewritten: "译文"), readOnly: true)?.hint, "⏎ 复制 · Esc 关闭")
     }
 
+    func testAMessageGoesAwayByItself() async throws {
+        var last = AIRewriteController.State.idle
+        let controller = AIRewriteController(rewriter: { nil }, messageLifetime: .milliseconds(50)) { last = $0 }
+        controller.start(text: "你好", range: NSRange(location: 0, length: 2))
+        XCTAssertEqual(last, .message("没有可用的模型：打开 Apple Intelligence 或安装 Codex"))
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(last, .idle)
+    }
+
     func testAColonLineIsContentWhenOrganizing() {
         let output = "有两个问题：\n1. 慢\n2. 贵"
         XCTAssertEqual(AIPrompt.cleanFreeText(output, source: "有两个问题 慢 贵", longForm: true), output)

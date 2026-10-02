@@ -59,6 +59,13 @@ public final class GlobalSelectionAssist {
         }
     }
 
+    /// Also used by the input method when the focused page reports no text of its own.
+    func startReadOnly() {
+        Task { @MainActor in
+            await self.start()
+        }
+    }
+
     private func start() async {
         let mouse = NSEvent.mouseLocation
         anchor = CGRect(x: mouse.x, y: mouse.y - 6, width: 1, height: 6)
