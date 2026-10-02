@@ -8,6 +8,7 @@ enum AIAction: String, CaseIterable, Sendable {
     case concise
     case toChinese
     case organize
+    case explain
 
     var title: String {
         switch self {
@@ -17,6 +18,7 @@ enum AIAction: String, CaseIterable, Sendable {
         case .concise: "更简洁"
         case .toChinese: "转成中文"
         case .organize: "整理"
+        case .explain: "解释"
         }
     }
 
@@ -28,6 +30,7 @@ enum AIAction: String, CaseIterable, Sendable {
         case .concise: "用原来的语言把文本改得更简洁"
         case .toChinese: "把文本改写成自然的简体中文"
         case .organize: "用原来的语言整理文本：补全标点，合理分段，并列的内容用编号或项目符号列出，按背景、问题、请求的逻辑排序。不增加、不删除任何信息，保留所有术语、名字和数字"
+        case .explain: "用简体中文解释这段英文：单词或短语给词性、中文释义（有软件工程含义时先给它）和一个英文例句（附中文翻译）；整句给中文意思，并简短说明习语、语气或难词"
         }
     }
 }

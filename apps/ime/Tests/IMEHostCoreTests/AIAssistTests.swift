@@ -299,7 +299,7 @@ final class AIAssistSettingsTests: XCTestCase {
 @MainActor
 final class AIOrganizeTests: XCTestCase {
     func testOrganizeIsTheSixthActionOnKey6() {
-        XCTAssertEqual(AIAction.allCases.last, .organize)
+        XCTAssertEqual(AIAction.allCases[5], .organize)
         XCTAssertEqual(AIRewriteController.actionKeys[22], .organize)
         XCTAssertEqual(AIAction.organize.title, "整理")
     }
@@ -312,10 +312,20 @@ final class AIOrganizeTests: XCTestCase {
         XCTAssertEqual(AIPrompt.localField(for: .organize).name, "organized")
     }
 
+    func testExplainIsKey7AndNeverReplacesTheSelection() {
+        XCTAssertEqual(AIRewriteController.actionKeys[26], .explain)
+        XCTAssertEqual(AIRewriteController.defaultAction(for: "idempotent"), .explain)
+        XCTAssertEqual(AIRewriteController.defaultAction(for: "We should circle back after the dust settles."), .polish)
+        let controller = AIRewriteController(rewriter: { nil }, present: { _ in })
+        XCTAssertEqual(controller.state, .idle)
+        XCTAssertEqual(TranslationPopup.content(for: .result(action: .explain, original: "idempotent", rewritten: "形容词：幂等的"))?.hint, "Esc 关闭")
+        XCTAssertTrue(AIPrompt.localInstructions(for: .explain, answerLabel: "Result").contains("例句："))
+    }
+
     func testAColonLineIsContentWhenOrganizing() {
         let output = "有两个问题：\n1. 慢\n2. 贵"
-        XCTAssertEqual(AIPrompt.cleanFreeText(output, source: "有两个问题 慢 贵", colonIsContent: true), output)
-        XCTAssertEqual(AIPrompt.cleanFreeText("Here is the result:\n慢", source: "慢", colonIsContent: true), "慢")
+        XCTAssertEqual(AIPrompt.cleanFreeText(output, source: "有两个问题 慢 贵", longForm: true), output)
+        XCTAssertEqual(AIPrompt.cleanFreeText("Here is the result:\n慢", source: "慢", longForm: true), "慢")
     }
 }
 
@@ -397,7 +407,7 @@ final class AIRewriteControllerTests: XCTestCase {
 
     func testPopupContent() {
         let choosing = TranslationPopup.content(for: .choosing(text: "你好", defaultAction: .toEnglish, truncated: true))
-        XCTAssertEqual(choosing?.body, "1 转成英文   2 润色   3 更正式   4 更简洁   5 转成中文   6 整理")
+        XCTAssertEqual(choosing?.body, "1 转成英文   2 润色   3 更正式   4 更简洁   5 转成中文   6 整理   7 解释")
         XCTAssertTrue(choosing?.hint.contains("⏎ 转成英文") == true)
         XCTAssertTrue(choosing?.hint.contains("请先选中") == true)
         XCTAssertNil(TranslationPopup.content(for: .idle))

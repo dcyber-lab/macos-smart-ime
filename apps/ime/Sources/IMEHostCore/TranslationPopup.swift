@@ -62,7 +62,7 @@ final class TranslationPopup {
         case .running(let action, let text):
             return ("✨ \(action.title)", text, "生成中…", "Esc 取消")
         case .result(let action, let original, let rewritten):
-            return ("✨ \(action.title)", original, rewritten, "⏎ 替换 · Esc 取消")
+            return ("✨ \(action.title)", original, rewritten, action == .explain ? "Esc 关闭" : "⏎ 替换 · Esc 取消")
         case .message(let text):
             return ("✨ AI 改写", "", text, "Esc 关闭")
         }

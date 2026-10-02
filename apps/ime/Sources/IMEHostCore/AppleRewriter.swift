@@ -70,17 +70,17 @@ extension AIPrompt {
     /// A plain-text answer from the on-device model, kept only if it looks like a rewrite of `source`:
     /// a leading "Here is the translation:" line is dropped, quotes are trimmed, and code or anything
     /// far longer than the source (an essay instead of a translation) is rejected.
-    static func cleanFreeText(_ output: String, source: String, colonIsContent: Bool = false) -> String? {
+    static func cleanFreeText(_ output: String, source: String, longForm: Bool = false) -> String? {
         var lines = output.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\n")
         if let first = lines.first?.trimmingCharacters(in: .whitespaces).lowercased(),
-           (!colonIsContent && (first.hasSuffix(":") || first.hasSuffix("："))) || first.hasPrefix("here is") || first.hasPrefix("translation") {
+           (!longForm && (first.hasSuffix(":") || first.hasSuffix("："))) || first.hasPrefix("here is") || first.hasPrefix("translation") {
             lines.removeFirst()
         }
         guard !output.contains("```") else {
             return nil
         }
         let text = lines.joined(separator: "\n").trimmingCharacters(in: CharacterSet(charactersIn: "\"“”'").union(.whitespacesAndNewlines))
-        guard !text.isEmpty, text.count <= max(80, source.count * 6) else {
+        guard !text.isEmpty, text.count <= (longForm ? max(600, source.count * 3) : max(80, source.count * 6)) else {
             return nil
         }
         return text
@@ -104,6 +104,7 @@ extension AIPrompt {
         case .polish: ("rewritten", "The source text with better wording, in the same language as the source text")
         case .formal: ("rewritten", "The source text in a more formal tone, in the same language as the source text")
         case .concise: ("rewritten", "The source text made shorter, in the same language as the source text")
+        case .explain: ("explanation", "A Chinese explanation of the source text: for a word or phrase its part of speech, meaning and one example sentence; for a sentence its meaning and a short note")
         case .organize: ("organized", "The source text with punctuation, paragraphs and lists fixed, in the same language as the source text, with nothing added or removed")
         }
     }
@@ -126,6 +127,15 @@ extension AIPrompt {
             + "\(answerLabel):\n登录页面现在有两个问题：\n1. 验证码刷新太慢\n2. 手机号格式没有校验\n\n我先修验证码，手机号明天再看。\n\n麻烦你帮我确认下，验证码是不是走的 CDN。"
     }
 
+    /// The dictionary layout. Measured with Qwen2.5-3B: usable, but it can get a part of speech or a rare
+    /// word wrong ("bikeshedding"), which a larger model fixes.
+    static func explainStyle(answerLabel: String) -> String {
+        " For a word or short phrase, reply with two lines: the part of speech and a short Chinese meaning (the software meaning first if it has one), "
+            + "then 例句： with one short English example and its Chinese translation in parentheses. "
+            + "For a full sentence, reply with two lines: 意思： the Chinese meaning, then 说明： one short note on an idiom, tone, or tricky word.\n\n"
+            + "Example:\nSource: deprecate\n\(answerLabel):\n动词：弃用（标记为不再推荐使用的功能）\n例句：This API is deprecated. （这个 API 已被弃用。）"
+    }
+
     /// The label before the answer in the Ollama chat, so the model continues the examples' pattern.
     static func answerLabel(for action: AIAction) -> String {
         action == .toEnglish ? "Translation" : "Result"
@@ -141,6 +151,7 @@ extension AIPrompt {
         case .polish: (engine, task) = ("editing", "Improve the wording of the source text so it reads clearly and fluently. Keep its language and meaning.")
         case .formal: (engine, task) = ("editing", "Make the source text more formal. Keep its language and meaning.")
         case .concise: (engine, task) = ("editing", "Make the source text shorter. Keep its language and meaning.")
+        case .explain: (engine, task) = ("dictionary", "Explain the source text in Simplified Chinese.")
         case .organize: (engine, task) = ("editing", "Reorganize the source text: fix punctuation, split it into short paragraphs, use a numbered or bulleted list when it lists several items or steps, and order it logically (background, problem, request). Keep its language and every fact, name, number, and term. Never add, invent, or remove information, and add no title or comment.")
         }
         let terms = engineeringTerms.map { "\($0.0) = \($0.1)" }.joined(separator: ", ")
@@ -150,6 +161,7 @@ extension AIPrompt {
         switch action {
         case .toEnglish: return base + englishStyle(answerLabel: answerLabel ?? "english")
         case .organize: return base + organizeExample(answerLabel: answerLabel ?? "organized")
+        case .explain: return base + explainStyle(answerLabel: answerLabel ?? "explanation")
         default: return base
         }
     }

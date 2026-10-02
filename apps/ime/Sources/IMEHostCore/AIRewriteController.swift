@@ -22,8 +22,8 @@ final class AIRewriteController {
         case handled
     }
 
-    /// Number keys 1–6 (ANSI key codes) pick the actions in `AIAction.allCases` order.
-    static let actionKeys: [UInt16: AIAction] = Dictionary(uniqueKeysWithValues: zip([18, 19, 20, 21, 23, 22], AIAction.allCases))
+    /// Number keys 1–7 (ANSI key codes) pick the actions in `AIAction.allCases` order.
+    static let actionKeys: [UInt16: AIAction] = Dictionary(uniqueKeysWithValues: zip([18, 19, 20, 21, 23, 22, 26], AIAction.allCases))
     private static let returnKeys: Set<UInt16> = [36, 76]
     private static let escapeKey: UInt16 = 53
 
@@ -48,7 +48,12 @@ final class AIRewriteController {
     /// Chinese text defaults to 转成英文, anything else to 润色.
     nonisolated static func defaultAction(for text: String) -> AIAction {
         let (han, english) = InputMemory.languageCounts(text)
-        return han > 0 && Double(han) / Double(han + english) >= 0.5 ? .toEnglish : .polish
+        if han > 0 && Double(han) / Double(han + english) >= 0.5 {
+            return .toEnglish
+        }
+        // A word or short phrase of English is most likely something to look up.
+        let words = text.split { $0.isWhitespace }.count
+        return han == 0 && english > 0 && words <= 4 ? .explain : .polish
     }
 
     /// `text` is nil when the app does not report its text.
@@ -88,11 +93,12 @@ final class AIRewriteController {
             if Self.returnKeys.contains(keyCode) {
                 return .handled
             }
-        case .result(_, _, let rewritten):
+        case .result(let action, _, let rewritten):
             if Self.returnKeys.contains(keyCode) {
                 let range = self.range
                 dismiss()
-                return .replace(rewritten, range)
+                // An explanation is for reading; it never replaces the selected text.
+                return action == .explain ? .dismissed(consumed: true) : .replace(rewritten, range)
             }
         case .message:
             break
