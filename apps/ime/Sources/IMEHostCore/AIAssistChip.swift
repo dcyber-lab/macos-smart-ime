@@ -110,12 +110,15 @@ final class AIAssistChipController {
         }
     }
 
-    func handleKey(_ keyCode: UInt16) -> KeyOutcome? {
+    /// Only a bare `Tab` or `→` accepts: with a modifier they move or select (⇧→, ⌥→, ⌘→), so they dismiss
+    /// like other keys. Once only a message is left, they are the app's again.
+    func handleKey(_ keyCode: UInt16, modifiers: NSEvent.ModifierFlags = []) -> KeyOutcome? {
         guard let display else {
             return nil
         }
+        let bare = modifiers.isDisjoint(with: [.shift, .control, .option, .command])
         switch keyCode {
-        case Self.tabKey, Self.rightArrowKey:
+        case Self.tabKey where bare, Self.rightArrowKey where bare:
             switch display {
             case .ready:
                 applyResult()
@@ -125,6 +128,7 @@ final class AIAssistChipController {
                 show(.generating(accepted: true))
             case .done, .failed:
                 dismiss(reason: nil)
+                return .passThrough
             }
             return .consumed
         case Self.escapeKey:

@@ -127,9 +127,9 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
         shiftToggle.keyDown()
 
-        // While a ✨ chip shows: Tab accepts, Esc dismisses, any other key dismisses and is typed.
-        let keyCode = event.keyCode
-        if MainActor.assumeIsolated({ Self.aiChip.handleKey(keyCode) }) == .consumed {
+        // While a ✨ chip shows: a bare Tab or → accepts, Esc dismisses, any other key dismisses and is typed.
+        let keyCode = event.keyCode, modifiers = event.modifierFlags
+        if MainActor.assumeIsolated({ Self.aiChip.handleKey(keyCode, modifiers: modifiers) }) == .consumed {
             return true
         }
 

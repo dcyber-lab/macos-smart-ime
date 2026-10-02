@@ -71,6 +71,26 @@ final class AIAssistChipTests: XCTestCase {
         XCTAssertEqual(applied.map(\.0), ["This feature ships next week."])
     }
 
+    func testModifiedArrowsMoveOrSelectInsteadOfAccepting() async {
+        chip.offer(offer())
+        await waitUntil { if case .ready = self.chip.display { true } else { false } }
+
+        // Arrow keys carry .function and .numericPad; those alone still accept.
+        for modifiers: NSEvent.ModifierFlags in [.shift, .option, .command, [.shift, .command]] {
+            chip.offer(offer(app: "app-\(modifiers.rawValue)"))
+            await waitUntil { if case .ready = self.chip.display { true } else { false } }
+            XCTAssertEqual(chip.handleKey(AIAssistChipController.rightArrowKey, modifiers: modifiers.union([.function, .numericPad])), .passThrough)
+            XCTAssertNil(chip.display)
+        }
+        XCTAssertTrue(applied.isEmpty)
+
+        chip.offer(offer(app: "plain"))
+        await waitUntil { if case .ready = self.chip.display { true } else { false } }
+        XCTAssertEqual(chip.handleKey(AIAssistChipController.rightArrowKey, modifiers: [.function, .numericPad]), .consumed)
+        XCTAssertEqual(applied.count, 1)
+        XCTAssertEqual(chip.handleKey(AIAssistChipController.rightArrowKey), .passThrough, "after 已替换, → moves the cursor again")
+    }
+
     func testTabWhileGeneratingReplacesWhenReady() async {
         rewriter.delay = 0.05
         chip.offer(offer())
