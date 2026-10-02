@@ -322,6 +322,27 @@ final class AIOrganizeTests: XCTestCase {
         XCTAssertTrue(AIPrompt.localInstructions(for: .explain, answerLabel: "Result").contains("例句："))
     }
 
+    func testReadOnlyModeCopiesTheResultAndDefaultsToChineseForLongEnglish() async throws {
+        let sentence = "Mods can rewrite or replace what Claude Code does."
+        XCTAssertEqual(AIRewriteController.defaultAction(for: sentence, readOnly: true), .toChinese)
+        XCTAssertEqual(AIRewriteController.defaultAction(for: sentence), .polish)
+        XCTAssertEqual(AIRewriteController.defaultAction(for: "hooks", readOnly: true), .explain)
+
+        struct Fixed: AIRewriter {
+            func rewrite(_ text: String, action: AIAction) async throws -> String { "译文" }
+        }
+        var last = AIRewriteController.State.idle
+        let controller = AIRewriteController(rewriter: { Fixed() }, present: { last = $0 })
+        controller.start(text: sentence, range: NSRange(location: NSNotFound, length: 0), readOnly: true)
+        XCTAssertEqual(controller.handleKey(36), .handled)
+        for _ in 0..<50 where { if case .result = last { return false } else { return true } }() {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertEqual(controller.handleKey(36), .copy("译文"))
+        XCTAssertEqual(last, .idle)
+        XCTAssertEqual(TranslationPopup.content(for: .result(action: .toChinese, original: sentence, rewritten: "译文"), readOnly: true)?.hint, "⏎ 复制 · Esc 关闭")
+    }
+
     func testAColonLineIsContentWhenOrganizing() {
         let output = "有两个问题：\n1. 慢\n2. 贵"
         XCTAssertEqual(AIPrompt.cleanFreeText(output, source: "有两个问题 慢 贵", longForm: true), output)

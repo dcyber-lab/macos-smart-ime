@@ -17,6 +17,8 @@ final class AIRewriteController {
 
     enum KeyOutcome: Equatable {
         case replace(String, NSRange)
+        /// Read-only mode (no text field): the result is copied instead of replacing anything.
+        case copy(String)
         /// `consumed` is false when the key should still be handled as normal input.
         case dismissed(consumed: Bool)
         case handled
@@ -35,6 +37,8 @@ final class AIRewriteController {
     private var range = NSRange(location: NSNotFound, length: 0)
     private var task: Task<Void, Never>?
     private var requestID = 0
+    /// True when the text is not in a text field (a web page): results are copied, never replaced.
+    private(set) var readOnly = false
 
     init(rewriter: @escaping () -> AIRewriter?, present: @escaping @MainActor (State) -> Void) {
         self.rewriter = rewriter
@@ -46,22 +50,27 @@ final class AIRewriteController {
     }
 
     /// Chinese text defaults to 转成英文, anything else to 润色.
-    nonisolated static func defaultAction(for text: String) -> AIAction {
+    nonisolated static func defaultAction(for text: String, readOnly: Bool = false) -> AIAction {
         let (han, english) = InputMemory.languageCounts(text)
         if han > 0 && Double(han) / Double(han + english) >= 0.5 {
             return .toEnglish
         }
         // A word or short phrase of English is most likely something to look up.
         let words = text.split { $0.isWhitespace }.count
-        return han == 0 && english > 0 && words <= 4 ? .explain : .polish
+        if han == 0 && english > 0 && words <= 4 {
+            return .explain
+        }
+        // Reading, not writing: a long English text is most likely wanted in Chinese.
+        return readOnly && han == 0 ? .toChinese : .polish
     }
 
     /// `text` is nil when the app does not report its text.
-    func start(text: String?, range: NSRange, truncated: Bool = false) {
+    func start(text: String?, range: NSRange, truncated: Bool = false, readOnly: Bool = false) {
         cancel()
+        self.readOnly = readOnly
         self.range = range
         guard let text else {
-            state = .message("这个应用不提供文字给输入法，先选中文字再按 ⌃⌥R")
+            state = .message(readOnly ? "没有读到选中的文字：先选中，再按 ⌃⌥R" : "这个应用不提供文字给输入法，先选中文字再按 ⌃⌥R")
             return
         }
         let source = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -73,7 +82,7 @@ final class AIRewriteController {
             state = .message("没有可用的模型：打开 Apple Intelligence 或安装 Codex")
             return
         }
-        state = .choosing(text: source, defaultAction: Self.defaultAction(for: source), truncated: truncated)
+        state = .choosing(text: source, defaultAction: Self.defaultAction(for: source, readOnly: readOnly), truncated: truncated)
     }
 
     func handleKey(_ keyCode: UInt16) -> KeyOutcome {
@@ -98,6 +107,9 @@ final class AIRewriteController {
                 let range = self.range
                 dismiss()
                 // An explanation is for reading; it never replaces the selected text.
+                if readOnly {
+                    return .copy(rewritten)
+                }
                 return action == .explain ? .dismissed(consumed: true) : .replace(rewritten, range)
             }
         case .message:

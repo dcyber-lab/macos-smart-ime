@@ -5,12 +5,16 @@ import AppKit
 final class TranslationPopup {
     static let shared = TranslationPopup()
 
-    private let window: NSPanel
+    private let window: PopupPanel
     private let contentView = TranslationPopupView()
     private var lastCaretRect: CGRect?
+    /// Receives key codes while the popup is the key window (read-only mode, where no text field forwards keys).
+    var keyHandler: ((UInt16) -> Void)? {
+        didSet { window.onKey = keyHandler }
+    }
 
     private init() {
-        window = NSPanel(
+        window = PopupPanel(
             contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -42,16 +46,20 @@ final class TranslationPopup {
     }
 
     /// The AI rewrite popup in the same style: badge and source line, body, key hint.
-    func show(_ state: AIRewriteController.State, caretRect reportedCaretRect: CGRect) {
-        guard let content = Self.content(for: state) else {
+    func show(_ state: AIRewriteController.State, caretRect reportedCaretRect: CGRect, readOnly: Bool = false) {
+        guard let content = Self.content(for: state, readOnly: readOnly) else {
             hide()
             return
         }
+        window.acceptsKeys = readOnly
         contentView.configure(badge: content.badge, source: content.source, body: content.body, hint: content.hint)
         place(near: reportedCaretRect)
+        if readOnly {
+            window.makeKey()
+        }
     }
 
-    static func content(for state: AIRewriteController.State) -> (badge: String, source: String, body: String, hint: String)? {
+    static func content(for state: AIRewriteController.State, readOnly: Bool = false) -> (badge: String, source: String, body: String, hint: String)? {
         switch state {
         case .idle:
             return nil
@@ -65,7 +73,7 @@ final class TranslationPopup {
         case .running(let action, let text):
             return ("✨ \(action.title)", text, "生成中…", "Esc 取消")
         case .result(let action, let original, let rewritten):
-            return ("✨ \(action.title)", original, rewritten, action == .explain ? "Esc 关闭" : "⏎ 替换 · Esc 取消")
+            return ("✨ \(action.title)", original, rewritten, readOnly ? "⏎ 复制 · Esc 关闭" : action == .explain ? "Esc 关闭" : "⏎ 替换 · Esc 取消")
         case .message(let text):
             return ("✨ AI 改写", "", text, "Esc 关闭")
         }
@@ -92,7 +100,24 @@ final class TranslationPopup {
     }
 
     func hide() {
+        window.acceptsKeys = false
         window.orderOut(nil)
+    }
+}
+
+/// A non-activating panel that can take the keyboard when asked, so a popup over a web page gets its keys.
+final class PopupPanel: NSPanel {
+    var acceptsKeys = false
+    var onKey: ((UInt16) -> Void)?
+
+    override var canBecomeKey: Bool { acceptsKeys }
+
+    override func keyDown(with event: NSEvent) {
+        if let onKey {
+            onKey(event.keyCode)
+        } else {
+            super.keyDown(with: event)
+        }
     }
 }
 

@@ -405,7 +405,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         case .replace(let text, let range)?:
             _ = replaceText(in: range, with: text)
             return true
-        case .handled?, .dismissed(consumed: true)?:
+        case .handled?, .dismissed(consumed: true)?, .copy?:
             return true
         case .dismissed(consumed: false)?, nil:
             break
@@ -414,6 +414,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         guard settings.hotkey.matches(keyCode: keyCode, modifierFlags: event.modifierFlags), !sessionStore.hasActiveComposition else {
             return nil
         }
+        GlobalSelectionAssist.lastHandledByInputMethod = Date()
         startAIRewrite()
         return true
     }
