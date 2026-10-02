@@ -140,6 +140,14 @@ final class AIAssistChipTests: XCTestCase {
         log.flush()
     }
 
+    func testTheSentenceIsOfferedWhereItIsInTheField() {
+        // The field read starts at 7 in the client and ends at the cursor, after the full stop.
+        let field = FieldText("第一句。这个功能下周上线。", cursor: 20)
+        let sentence = IntelligenceRecorder.sentence(endingAt: field)
+        XCTAssertEqual(sentence?.text, "这个功能下周上线。")
+        XCTAssertEqual(sentence.flatMap { field.range(ofTail: $0.text) }, NSRange(location: 11, length: 9))
+    }
+
     func testNoCodexMeansNoChip() {
         let chip = AIAssistChipController(rewriter: { nil }, present: { [unowned self] display, _ in shown.append(display) })
         chip.offer(offer())

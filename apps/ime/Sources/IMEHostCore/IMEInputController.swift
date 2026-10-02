@@ -236,7 +236,6 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         Self.userTranslations.reloadIfChanged()
         clientBundleIdentifier = ((sender as? IMKTextInput) ?? client())?.bundleIdentifier()
         MainActor.assumeIsolated {
-            Self.intelligence.onFieldSentence = { [weak self] end in self?.offerAIRewrite(end) }
             Self.translationLearner.runIfDue()
             if Date().timeIntervalSince(Self.lastJournalPrune) > 24 * 60 * 60 {
                 Self.lastJournalPrune = Date()
@@ -346,6 +345,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                 Self.intelligence.commit(committedText, app: app, session: session, secureInput: secureInput,
                                          readField: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
+            offerAIRewrite(after: committedText, app: app, secureInput: secureInput)
             sessionStore.reset(committedText: committedText)
         }
         syncPresentation()
@@ -463,20 +463,26 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     }
 
     /// Offers ✨ 转成英文 for a sentence that just ended, if this app has AI hints on and it qualifies.
-    private func offerAIRewrite(_ end: FieldSentenceEnd) {
-        guard AIAssistSettings().chipApps.contains(end.app), AIAssistChipController.qualifies(end.text),
-              !sessionStore.hasActiveComposition, end.app == clientBundleIdentifier else {
+    /// Learning and the journal play no part. The field is read after the key, only when the commit
+    /// ends with sentence punctuation.
+    private func offerAIRewrite(after committedText: String, app: String?, secureInput: Bool) {
+        guard let app, !secureInput, let last = committedText.trimmingCharacters(in: .whitespaces).last,
+              SentenceAssembler.enders.contains(last), AIAssistSettings().chipApps.contains(app) else {
             return
         }
-        let length = (end.text as NSString).length
-        guard end.cursor >= length else {
-            return
+        Task { @MainActor [weak self] in
+            guard let self, let field = self.textBeforeCursor(),
+                  let sentence = IntelligenceRecorder.sentence(endingAt: field).flatMap({ IntelligenceRecorder.consistent($0, with: committedText) }),
+                  !sentence.startsMidway, let range = field.range(ofTail: sentence.text),
+                  AIAssistChipController.qualifies(sentence.text), !self.sessionStore.hasActiveComposition, app == self.clientBundleIdentifier else {
+                return
+            }
+            let offer = AIAssistChipController.Offer(
+                app: app, sentence: sentence.text, range: range, caret: self.caretRect(),
+                apply: { [weak self] text, range in self?.replaceText(in: range, with: text, expecting: sentence.text) ?? .refused }
+            )
+            Self.aiChip.offer(offer)
         }
-        let offer = AIAssistChipController.Offer(
-            app: end.app, sentence: end.text, range: NSRange(location: end.cursor - length, length: length), caret: caretRect(),
-            apply: { [weak self] text, range in self?.replaceText(in: range, with: text, expecting: end.text) ?? .refused }
-        )
-        MainActor.assumeIsolated { Self.aiChip.offer(offer) }
     }
 
     /// Replaces the range in the client if it still holds `original` (the user may have clicked elsewhere

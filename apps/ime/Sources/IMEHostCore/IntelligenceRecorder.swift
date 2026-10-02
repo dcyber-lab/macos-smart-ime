@@ -32,13 +32,6 @@ struct FieldText: Equatable, Sendable {
     }
 }
 
-/// A sentence that just ended with punctuation, as the field has it, ending at `cursor`.
-struct FieldSentenceEnd: Equatable, Sendable {
-    let app: String
-    let text: String
-    let cursor: Int
-}
-
 /// Feeds committed text into the input memory and journal, under the privacy rules: nothing while
 /// learning is off, in excluded apps, or under secure input; sensitive spans (links, emails, codes,
 /// tokens) are masked. Called on commit and on `Return` only, never per keystroke.
@@ -88,8 +81,6 @@ final class IntelligenceRecorder {
 
     private var ending = Ending.quiet
     private var readWindowTitle: (() -> String?)?
-    /// Called after a sentence ending in punctuation was read from the field (AI assist offers a rewrite).
-    var onFieldSentence: ((FieldSentenceEnd) -> Void)?
 
     /// `later` runs work after the current key has been handled; tests pass `{ $0() }`.
     init(
@@ -194,9 +185,6 @@ final class IntelligenceRecorder {
                 let field = readField.flatMap { read in Self.timed(read, into: &contextStats[app, default: ContextStats()]) { !$0.text.isEmpty } }
                 let fromField = field.flatMap { Self.sentence(endingAt: $0) }.flatMap { Self.consistent($0, with: sentence.text) }
                 record(Self.text(fromField, assembled: sentence.text), app: app, context: fromField?.context, window: title(readTitle, app: app))
-                if let fromField, !fromField.startsMidway, let cursor = field?.cursor {
-                    onFieldSentence?(FieldSentenceEnd(app: app, text: fromField.text, cursor: cursor))
-                }
             }
         }
     }
