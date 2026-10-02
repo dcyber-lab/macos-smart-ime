@@ -395,6 +395,13 @@ final class AIPromptCleaningTests: XCTestCase {
         XCTAssertNil(AIPrompt.cleanFreeText("Here is a Python implementation:\n```python\ndef quick_sort(a): ...\n```", source: "帮我写一个排序算法。"))
         XCTAssertNil(AIPrompt.cleanFreeText(String(repeating: "A long essay about sorting. ", count: 20), source: "帮我写一个排序算法。"))
     }
+
+    func testAFirstLineIsContentUnlessTheAnswerHasMoreLinesThanTheSource() {
+        XCTAssertEqual(AIPrompt.cleanFreeText("Here is the new API doc.", source: "这是新的接口文档。"), "Here is the new API doc.")
+        XCTAssertEqual(AIPrompt.cleanFreeText("Translation layer is broken.", source: "翻译层坏了。"), "Translation layer is broken.")
+        let polished = "现在有两个问题：\n1. 验证码太慢\n2. 手机号没校验"
+        XCTAssertEqual(AIPrompt.cleanFreeText(polished, source: "现在有两个问题：\n1. 验证码慢\n2. 手机号没校验"), polished)
+    }
 }
 
 @MainActor

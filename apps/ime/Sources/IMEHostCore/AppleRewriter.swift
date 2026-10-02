@@ -69,11 +69,14 @@ struct AppleRewriter: AIRewriter {
 extension AIPrompt {
     /// A plain-text answer from the on-device model, kept only if it looks like a rewrite of `source`:
     /// a leading "Here is the translation:" line is dropped, quotes are trimmed, and code or anything
-    /// far longer than the source (an essay instead of a translation) is rejected.
+    /// far longer than the source (an essay instead of a translation) is rejected. The first line counts
+    /// as a preface only when the answer has more lines than the source: otherwise it is content, such as
+    /// "Here is the new doc." or a heading ending in a colon.
     static func cleanFreeText(_ output: String, source: String, longForm: Bool = false) -> String? {
         var lines = output.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\n")
         if let first = lines.first?.trimmingCharacters(in: .whitespaces).lowercased(),
-           (!longForm && (first.hasSuffix(":") || first.hasSuffix("："))) || first.hasPrefix("here is") || first.hasPrefix("translation") {
+           (!longForm && (first.hasSuffix(":") || first.hasSuffix("："))) || first.hasPrefix("here is") || first.hasPrefix("translation"),
+           lineCount(output) > lineCount(source) {
             lines.removeFirst()
         }
         guard !output.contains("```") else {
@@ -84,6 +87,10 @@ extension AIPrompt {
             return nil
         }
         return text
+    }
+
+    private static func lineCount(_ text: String) -> Int {
+        text.split(whereSeparator: \.isNewline).filter { !$0.allSatisfy(\.isWhitespace) }.count
     }
 
     /// Terms the small on-device model gets wrong without help ("回归" became "review it again").
