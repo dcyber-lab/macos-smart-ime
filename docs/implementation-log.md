@@ -2,6 +2,14 @@
 
 ## 2026-10-02
 
+### Shorter input menu, settings window
+
+- The user found the flat input menu too long (about 25 of our items). Submenus are not an option (their actions are never delivered), so the menu now keeps only what is switched while typing: 智能学习, 不在「App」中学习, 在「App」中启用 AI 提示, 查看学习记录…, 设置… (`InputMenu`, replacing `CommitEffectMenu`, `IntelligenceMenu`, `AIAssistMenu`).
+- 设置… opens `SettingsWindow` (toolbar panes 外观, 智能中心, AI 助手; SwiftUI grouped forms). It holds the commit effect pickers with a preview, the journal and window title switches, clearing, the AI model with its status, the apps with AI hints, and the hotkeys.
+- The window lives in the input method process for now (no Companion app yet) and only touches the defaults and three controller actions. It refreshes on `UserDefaults.didChangeNotification`, so a menu change shows up in an open window.
+- The AI hints item stays enabled while it is on, so it can be turned off when no model runs.
+- Tests: `InputMenuTests` (7) replace the three menu test files; 2 new cases for the status text and hotkey symbols. 186 host tests pass locally. The panes were rendered offscreen from a scratch app linking the harness build; the menu and focus hand-back need a live check (Input Menu and Settings Window checklist).
+
 ### AI assist review fixes (PR #16)
 
 - A review of PR #16 found these problems; each fix below is its own commit.
