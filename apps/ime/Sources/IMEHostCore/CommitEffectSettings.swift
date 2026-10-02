@@ -1,12 +1,12 @@
 import Foundation
 
 /// The motion setting: a fixed style, a new random style per commit, or no effect.
-enum CommitEffectMotionChoice: Equatable, Sendable {
+enum CommitEffectMotionChoice: Hashable, Sendable {
     case style(CommitEffectStyle)
     case random
     case off
 
-    /// Menu order.
+    /// Settings order.
     static let allChoices: [CommitEffectMotionChoice] = CommitEffectStyle.allCases.map { .style($0) } + [.random, .off]
 
     init?(rawValue: String) {
@@ -39,11 +39,11 @@ enum CommitEffectMotionChoice: Equatable, Sendable {
 }
 
 /// The palette setting: a fixed palette or a new random one per commit.
-enum CommitEffectPaletteChoice: Equatable, Sendable {
+enum CommitEffectPaletteChoice: Hashable, Sendable {
     case palette(CommitEffectPalette)
     case random
 
-    /// Menu order.
+    /// Settings order.
     static let allChoices: [CommitEffectPaletteChoice] = CommitEffectPalette.allCases.map { .palette($0) } + [.random]
 
     init?(rawValue: String) {

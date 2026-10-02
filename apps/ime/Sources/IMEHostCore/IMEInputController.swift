@@ -367,35 +367,54 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     public override func menu() -> NSMenu! {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        CommitEffectMenu.items(
-            motion: commitEffectSettings.motion,
-            palette: commitEffectSettings.palette,
-            motionAction: #selector(selectCommitEffectMotion(_:)),
-            paletteAction: #selector(selectCommitEffectPalette(_:))
-        ).forEach(menu.addItem)
-        menu.addItem(.separator())
         let currentApp = clientBundleIdentifier.map { (id: $0, name: AppNames.displayName(for: $0)) }
-        IntelligenceMenu.items(settings: IntelligenceSettings(), currentApp: currentApp, isAccessibilityTrusted: WindowTitleReader.isTrusted,
-                               action: #selector(intelligenceMenuCommand(_:)))
-            .forEach(menu.addItem)
-        menu.addItem(.separator())
         let ai = AIAssistSettings()
-        AIAssistMenu.items(settings: ai, currentApp: currentApp, active: ai.activeProvider(), action: #selector(aiMenuCommand(_:)))
+        InputMenu.items(intelligence: IntelligenceSettings(), ai: ai, currentApp: currentApp, aiAvailable: currentApp != nil && ai.activeProvider() != nil,
+                        action: #selector(inputMenuCommand(_:)))
             .forEach(menu.addItem)
         return menu
     }
 
-    @objc func aiMenuCommand(_ sender: Any?) {
-        let settings = AIAssistSettings()
-        switch AIAssistMenu.command(from: sender) {
-        case .toggleChips:
-            if let app = clientBundleIdentifier {
-                settings.toggleChips(in: app)
+    @objc func inputMenuCommand(_ sender: Any?) {
+        guard let command = InputMenu.command(from: sender) else {
+            NSLog("SmartIME: unrecognized input menu item: %@", String(describing: sender))
+            return
+        }
+        let app = clientBundleIdentifier
+        MainActor.assumeIsolated {
+            switch command {
+            case .learning:
+                Self.setLearning(!IntelligenceSettings().isLearningEnabled)
+            case .excludeApp:
+                if let app {
+                    Self.intelligence.closeQuietly()
+                    IntelligenceSettings().toggleExcluded(app)
+                }
+            case .aiHints:
+                if let app {
+                    AIAssistSettings().toggleChips(in: app)
+                }
+            case .viewLearning:
+                Self.openLearningPage()
+            case .settings:
+                SettingsWindow.show(actions: Self.settingsActions)
             }
-        case .provider(let provider):
-            settings.provider = provider
-        case nil:
-            NSLog("SmartIME: unrecognized AI menu item: %@", String(describing: sender))
+            NSLog("SmartIME: input menu %@", String(describing: command))
+        }
+    }
+
+    /// What the settings window cannot do through the defaults alone.
+    @MainActor private static let settingsActions = SettingsModel.Actions(
+        setLearning: { IMEInputController.setLearning($0) },
+        openLearningPage: { IMEInputController.openLearningPage() },
+        clearLearning: { IMEInputController.confirmAndClearLearning() }
+    )
+
+    /// Turning learning off also ends the sentence being assembled, without recording it.
+    @MainActor private static func setLearning(_ isEnabled: Bool) {
+        intelligence.settings.isLearningEnabled = isEnabled
+        if !isEnabled {
+            intelligence.closeQuietly()
         }
     }
 
@@ -506,42 +525,6 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         return outcome
     }
 
-    @objc func intelligenceMenuCommand(_ sender: Any?) {
-        guard let command = IntelligenceMenu.command(from: sender) else {
-            NSLog("SmartIME: unrecognized intelligence menu item: %@", String(describing: sender))
-            return
-        }
-        let app = clientBundleIdentifier
-        MainActor.assumeIsolated {
-            let settings = Self.intelligence.settings
-            switch command {
-            case .learning:
-                settings.isLearningEnabled.toggle()
-                if !settings.isLearningEnabled {
-                    Self.intelligence.closeQuietly()
-                }
-            case .journal:
-                settings.isJournalEnabled.toggle()
-            case .windowTitles:
-                settings.isWindowTitlesEnabled.toggle()
-                if settings.isWindowTitlesEnabled, !WindowTitleReader.isTrusted {
-                    WindowTitleReader.requestTrust()
-                }
-            case .excludeApp:
-                if let app {
-                    Self.intelligence.closeQuietly()
-                    settings.toggleExcluded(app)
-                }
-            case .view:
-                Self.openLearningPage()
-            case .clear:
-                Self.confirmAndClearLearning()
-            }
-            NSLog("SmartIME: intelligence menu %@ (learning %@, journal %@)", String(describing: command),
-                  settings.isLearningEnabled ? "on" : "off", settings.isJournalEnabled ? "on" : "off")
-        }
-    }
-
     /// Reads the client app's focused window title when that setting is on; nil otherwise.
     private func windowTitleReader() -> (() -> String?)? {
         guard let app = clientBundleIdentifier, IntelligenceSettings().isWindowTitlesEnabled else {
@@ -636,36 +619,6 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     public override func doCommand(by aSelector: Selector!, command infoDictionary: [AnyHashable: Any]!) {
         NSLog("SmartIME: menu command %@", aSelector.map(NSStringFromSelector) ?? "nil")
         super.doCommand(by: aSelector, command: infoDictionary)
-    }
-
-    @objc func selectCommitEffectMotion(_ sender: Any?) {
-        guard let choice = CommitEffectMenu.motionChoice(from: sender) else {
-            NSLog("SmartIME: unrecognized commit effect menu item: %@", String(describing: sender))
-            return
-        }
-        commitEffectSettings.motion = choice
-        NSLog("SmartIME: commit effect motion set to %@", choice.rawValue)
-        previewCommitEffect()
-    }
-
-    @objc func selectCommitEffectPalette(_ sender: Any?) {
-        guard let choice = CommitEffectMenu.paletteChoice(from: sender) else {
-            NSLog("SmartIME: unrecognized commit effect menu item: %@", String(describing: sender))
-            return
-        }
-        commitEffectSettings.palette = choice
-        NSLog("SmartIME: commit effect palette set to %@", choice.rawValue)
-        previewCommitEffect()
-    }
-
-    /// Ignores Reduce Motion: the user just asked to see the effect.
-    private func previewCommitEffect() {
-        var generator = SystemRandomNumberGenerator()
-        guard let skin = commitEffectSettings.resolve(reduceMotion: false, using: &generator) else {
-            return
-        }
-        let pointer = NSEvent.mouseLocation
-        withCandidatePanel { $0.previewCommitEffect(style: skin.style, palette: skin.palette, below: pointer) }
     }
 
     private func syncPresentation() {

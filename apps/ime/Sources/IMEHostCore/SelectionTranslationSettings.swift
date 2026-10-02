@@ -46,6 +46,13 @@ struct TranslationHotkey: Equatable {
         self.init(keyCode: keyCode, modifiers: modifiers)
     }
 
+    /// The hotkey as macOS menus write it, e.g. "⌃⌥R".
+    var displayString: String {
+        let symbols: [(NSEvent.ModifierFlags, String)] = [(.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘")]
+        let letter = Self.letterKeyCodes.first { $0.value == keyCode }.map { String($0.key).uppercased() } ?? "?"
+        return symbols.filter { modifiers.contains($0.0) }.map(\.1).joined() + letter
+    }
+
     func matches(keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) -> Bool {
         keyCode == self.keyCode && modifierFlags.intersection(Self.relevantModifiers) == modifiers
     }

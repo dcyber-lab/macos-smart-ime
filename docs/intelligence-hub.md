@@ -18,7 +18,7 @@ TL;DR: The input method turns what the user commits into a local memory and offe
 - **Conclusions always, text optionally**: memory keeps counts and fingerprints. The input journal (保存输入原文) adds the sentences themselves: on by default, 30-day retention, one file per day, mode 0600, excluded from Time Machine. It is not encrypted during the trial: any process running as the user can read it.
 - **Mask sensitive spans**: URLs, email addresses, token-like strings, and six or more digits in a row become 〔链接〕〔邮箱〕〔密钥〕〔数字〕 before anything is learned; the rest of the sentence is kept. Dropping whole sentences was the first design; it lost every work message that contained a link.
 - **Excluded apps**: password managers and terminals by default, plus any app the user excludes from the menu. A default can be lifted from the menu, for example for a terminal used to talk to AI tools. Secure text fields are already closed to input methods.
-- **Visible and erasable**: the menu shows what was learned and clears it.
+- **Visible and erasable**: the menu shows what was learned; 设置… › 智能中心 clears it.
 - **Off the key path**: recording happens on commit and costs microseconds; analysis and models run asynchronously after the key is handled.
 
 ## Four kinds of help
@@ -42,7 +42,7 @@ TL;DR: The input method turns what the user commits into a local memory and offe
 
 - **Text before the cursor** (no extra permission, in step 1): through IMK, once per sentence, after the key. Timed per app; stops for apps slower than 100 ms. Shown on the learning page.
 - **Sessions**: the journal is shown as conversations (same app, gaps of 10 minutes or less).
-- **Window titles** (`add-window-context`, needs Accessibility, off by default; menu 读取窗口标题):
+- **Window titles** (`add-window-context`, needs Accessibility, off by default; 设置… › 智能中心 › 读取窗口标题):
   - The permission itself costs nothing. Each read is a round trip to the app, usually 0.1 to a few ms, but up to the 6 s default messaging timeout if the app hangs. So reads happen only on app switch or sentence end, off the key path, with a 0.25 s timeout.
   - The plan reads only the focused window's title, never web content: Chromium and Electron apps switch on full accessibility support, and use more CPU and memory, when assistive clients read their content.
   - One generic call works for almost every app; how useful the title is varies. Browser page titles, editor file names, and terminal titles are informative. Chat apps such as WeChat and SeaTalk may only show the app name, and the conversation name or a browser URL would need per-app adapters that break with app updates. The learning page shows sample titles per app before any adapter is written.
