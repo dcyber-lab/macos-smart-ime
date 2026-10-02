@@ -414,7 +414,6 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         guard settings.hotkey.matches(keyCode: keyCode, modifierFlags: event.modifierFlags), !sessionStore.hasActiveComposition else {
             return nil
         }
-        GlobalSelectionAssist.lastHandledByInputMethod = Date()
         startAIRewrite()
         return true
     }

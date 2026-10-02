@@ -77,7 +77,7 @@ final class AIRewriteController {
         self.readOnly = readOnly
         self.range = range
         guard let text else {
-            state = .message(readOnly ? "没有读到选中的文字：先选中，再按 ⌃⌥R" : "这个应用不提供文字给输入法，先选中文字再按 ⌃⌥R")
+            state = .message(readOnly ? "没有读到文字：先选中并按 ⌘C，再按 ⌃⌥E" : "这个应用不提供文字给输入法，先选中文字再按 ⌃⌥R")
             return
         }
         let source = text.trimmingCharacters(in: .whitespacesAndNewlines)

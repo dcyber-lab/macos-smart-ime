@@ -7,6 +7,9 @@ struct AIAssistSettings {
     static let hotkeyKey = "AIAssistHotkey"
     /// ⌃⌥R: R is ANSI key code 15.
     static let defaultHotkey = TranslationHotkey(keyCode: 15, modifiers: [.control, .option])
+    static let readHotkeyKey = "AIReadHotkey"
+    /// ⌃⌥E for text outside text fields (E is ANSI key code 14); ⌃⌥R is taken by the input method inside them.
+    static let defaultReadHotkey = TranslationHotkey(keyCode: 14, modifiers: [.control, .option])
     static let codexPathKey = "AICodexPath"
     static let codexModelKey = "AICodexModel"
     static let codexEffortKey = "AICodexReasoningEffort"
@@ -49,6 +52,10 @@ struct AIAssistSettings {
     /// The rewrite hotkey, as `modifier+…+letter` like the translation hotkey; default ⌃⌥R.
     var hotkey: TranslationHotkey {
         defaults.string(forKey: Self.hotkeyKey).flatMap(TranslationHotkey.init(string:)) ?? Self.defaultHotkey
+    }
+
+    var readHotkey: TranslationHotkey {
+        defaults.string(forKey: Self.readHotkeyKey).flatMap(TranslationHotkey.init(string:)) ?? Self.defaultReadHotkey
     }
 
     var provider: Provider {
