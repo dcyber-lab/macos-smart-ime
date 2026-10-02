@@ -375,7 +375,7 @@ final class AIOrganizeTests: XCTestCase {
         var last = AIRewriteController.State.idle
         let controller = AIRewriteController(rewriter: { nil }, messageLifetime: .milliseconds(50)) { last = $0 }
         controller.start(text: "你好", range: NSRange(location: 0, length: 2))
-        XCTAssertEqual(last, .message("没有可用的模型：打开 Apple Intelligence 或安装 Codex"))
+        XCTAssertEqual(last, .message("没有可用的模型：启动 Ollama、打开 Apple Intelligence 或安装 Codex"))
         try await Task.sleep(for: .milliseconds(200))
         XCTAssertEqual(last, .idle)
     }
@@ -485,7 +485,7 @@ final class AIRewriteControllerTests: XCTestCase {
 
         let none = AIRewriteController(rewriter: { nil }) { _ in }
         none.start(text: "你好世界", range: range)
-        XCTAssertEqual(none.state, .message("没有可用的模型：打开 Apple Intelligence 或安装 Codex"))
+        XCTAssertEqual(none.state, .message("没有可用的模型：启动 Ollama、打开 Apple Intelligence 或安装 Codex"))
 
         rewriter.reply = .failure(.unavailable("本机模型拒绝处理这句"))
         controller.start(text: "你好世界", range: range)

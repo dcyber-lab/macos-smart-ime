@@ -104,7 +104,7 @@ final class AIRewriteController {
             return
         }
         guard rewriter() != nil else {
-            state = .message("没有可用的模型：打开 Apple Intelligence 或安装 Codex")
+            state = .message("没有可用的模型：启动 Ollama、打开 Apple Intelligence 或安装 Codex")
             return
         }
         state = .choosing(text: source, defaultAction: Self.defaultAction(for: source, readOnly: readOnly), truncated: truncated)
@@ -160,7 +160,7 @@ final class AIRewriteController {
 
     private func run(_ action: AIAction, on text: String) {
         guard let rewriter = rewriter() else {
-            state = .message("没有可用的模型：打开 Apple Intelligence 或安装 Codex")
+            state = .message("没有可用的模型：启动 Ollama、打开 Apple Intelligence 或安装 Codex")
             return
         }
         requestID += 1
