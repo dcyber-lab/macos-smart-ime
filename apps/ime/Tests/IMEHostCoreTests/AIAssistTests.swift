@@ -340,7 +340,7 @@ final class AIOrganizeTests: XCTestCase {
         }
         XCTAssertEqual(controller.handleKey(36), .copy("译文"))
         XCTAssertEqual(last, .idle)
-        XCTAssertEqual(TranslationPopup.content(for: .result(action: .toChinese, original: sentence, rewritten: "译文"), readOnly: true)?.hint, "⏎ 复制 · Esc 关闭")
+        XCTAssertEqual(TranslationPopup.content(for: .result(action: .toChinese, original: sentence, rewritten: "译文"), readOnly: true)?.hint, "⏎ 复制 · Esc 或点击关闭")
     }
 
     func testAMessageGoesAwayByItself() async throws {

@@ -12,6 +12,9 @@ final class TranslationPopup {
     var keyHandler: ((UInt16) -> Void)? {
         didSet { window.onKey = keyHandler }
     }
+    var dismissHandler: (() -> Void)? {
+        didSet { window.onDismiss = dismissHandler }
+    }
 
     private init() {
         window = PopupPanel(
@@ -55,7 +58,9 @@ final class TranslationPopup {
         contentView.configure(badge: content.badge, source: content.source, body: content.body, hint: content.hint)
         place(near: reportedCaretRect)
         if readOnly {
-            window.makeKey()
+            // An accessory app must be active for its panel to take the keyboard from the app in front.
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
         }
     }
 
@@ -73,7 +78,7 @@ final class TranslationPopup {
         case .running(let action, let text):
             return ("✨ \(action.title)", text, "生成中…", "Esc 取消")
         case .result(let action, let original, let rewritten):
-            return ("✨ \(action.title)", original, rewritten, readOnly ? "⏎ 复制 · Esc 关闭" : action == .explain ? "Esc 关闭" : "⏎ 替换 · Esc 取消")
+            return ("✨ \(action.title)", original, rewritten, readOnly ? "⏎ 复制 · Esc 或点击关闭" : action == .explain ? "Esc 关闭" : "⏎ 替换 · Esc 取消")
         case .message(let text):
             return ("✨ AI 改写", "", text, "Esc 关闭")
         }
@@ -109,8 +114,25 @@ final class TranslationPopup {
 final class PopupPanel: NSPanel {
     var acceptsKeys = false
     var onKey: ((UInt16) -> Void)?
+    /// A click on the popup, or the popup losing the keyboard (a click elsewhere): read-only popups close.
+    var onDismiss: (() -> Void)?
 
     override var canBecomeKey: Bool { acceptsKeys }
+
+    override func sendEvent(_ event: NSEvent) {
+        if acceptsKeys, event.type == .leftMouseDown {
+            onDismiss?()
+            return
+        }
+        super.sendEvent(event)
+    }
+
+    override func resignKey() {
+        super.resignKey()
+        if acceptsKeys {
+            onDismiss?()
+        }
+    }
 
     override func keyDown(with event: NSEvent) {
         if let onKey {

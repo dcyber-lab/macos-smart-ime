@@ -51,6 +51,9 @@ public final class GlobalSelectionAssist {
         TranslationPopup.shared.keyHandler = { [weak self] keyCode in
             self?.handlePopupKey(keyCode)
         }
+        TranslationPopup.shared.dismissHandler = { [weak self] in
+            self?.controller.dismiss()
+        }
         log("global hotkey: registered (status \(status)), accessibility=\(WindowTitleReader.isTrusted)")
     }
 

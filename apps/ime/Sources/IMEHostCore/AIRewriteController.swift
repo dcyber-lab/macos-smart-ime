@@ -34,6 +34,8 @@ final class AIRewriteController {
             present(state)
             if case .message = state {
                 dismissMessageLater()
+            } else if readOnly, case .result = state {
+                dismissMessageLater(after: .seconds(45))
             }
         }
     }
@@ -161,9 +163,9 @@ final class AIRewriteController {
     }
 
     /// A message needs no key to go away: the popup may be over an app that sends no keys to the input method.
-    private func dismissMessageLater() {
+    private func dismissMessageLater(after delay: Duration? = nil) {
         let shown = state
-        let lifetime = messageLifetime
+        let lifetime = delay ?? messageLifetime
         Task { [weak self] in
             try? await Task.sleep(for: lifetime)
             if let self, self.state == shown {
