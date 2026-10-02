@@ -1,5 +1,12 @@
 # Implementation Log
 
+## 2026-10-02
+
+### AI rewrite hotkey (⌃⌥R)
+
+- `AIRewriteController` rewrites the selection, or the line before the cursor, in the same popup style as selection translation. It offers five actions (1–5, Return for the default), shows the result before replacing, and sends nothing before an action is picked. It uses the chip's provider (Apple Intelligence first).
+- A reboot wiped `/private/tmp` and the local test harness with it. It now lives in `~/Library/Caches/smartime-harness` (stand-in XCTest, librime 1.17.0 headers, `run.sh host|data`, `fetch-build.sh`). 173 host and 120 data tests pass locally.
+
 ## 2026-10-01
 
 ### AI assist proof of concept (Codex)

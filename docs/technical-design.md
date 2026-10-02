@@ -134,6 +134,10 @@ Owns explicit and async workflows:
   - `Tab` before the result arrives replaces it on arrival. `Esc` or any other key dismisses the chip and cancels the request.
   - There is at most one offer per app every 5 seconds.
   - Events (never text) are appended to `ai-assist-events.log` for diagnosis.
+- ⌃⌥R (`AIAssistHotkey`, default `ctrl+option+r`) opens `AIRewriteController` on the selection, or on the line before the cursor (field read; a cut-off Chromium line says to select instead).
+  - The popup (`TranslationPopup.show(_: AIRewriteController.State)`) lists 1 转成英文, 2 润色, 3 更正式, 4 更简洁, 5 转成中文. `Return` runs the default: 转成英文 for Chinese, 润色 otherwise.
+  - The result is shown before `Return` replaces the range (`replaceText`, with the clipboard fallback). Nothing is sent before an action is picked.
+  - It is blocked under secure input and in apps that are excluded from learning and have no AI hints.
 - The provider is `AIProvider`: `auto` (default) uses `AppleRewriter` when Apple Intelligence is available, else Codex; `apple` or `codex` forces one.
   - `AppleRewriter` calls Foundation Models with a one-field dynamic schema named for the target (`english`, `chinese`, `rewritten`), temperature 0, and the text labelled as data.
   - Its instructions carry engineering terms and avoid the word "polish" (read as the Polish language).

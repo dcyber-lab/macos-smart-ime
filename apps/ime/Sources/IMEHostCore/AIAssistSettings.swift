@@ -4,6 +4,9 @@ import Foundation
 struct AIAssistSettings {
     static let chipAppsKey = "AIAssistChipApps"
     static let providerKey = "AIProvider"
+    static let hotkeyKey = "AIAssistHotkey"
+    /// ⌃⌥R: R is ANSI key code 15.
+    static let defaultHotkey = TranslationHotkey(keyCode: 15, modifiers: [.control, .option])
     static let codexPathKey = "AICodexPath"
     static let codexModelKey = "AICodexModel"
     static let codexEffortKey = "AICodexReasoningEffort"
@@ -37,6 +40,11 @@ struct AIAssistSettings {
 
     func toggleChips(in app: String) {
         chipApps = chipApps.symmetricDifference([app])
+    }
+
+    /// The rewrite hotkey, as `modifier+…+letter` like the translation hotkey; default ⌃⌥R.
+    var hotkey: TranslationHotkey {
+        defaults.string(forKey: Self.hotkeyKey).flatMap(TranslationHotkey.init(string:)) ?? Self.defaultHotkey
     }
 
     var provider: Provider {

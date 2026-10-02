@@ -300,3 +300,85 @@ final class AIPromptCleaningTests: XCTestCase {
         XCTAssertNil(AIPrompt.cleanFreeText(String(repeating: "A long essay about sorting. ", count: 20), source: "帮我写一个排序算法。"))
     }
 }
+
+@MainActor
+final class AIRewriteControllerTests: XCTestCase {
+    private var rewriter: FakeRewriter!
+    private var states: [AIRewriteController.State] = []
+    private var controller: AIRewriteController!
+    private let range = NSRange(location: 4, length: 10)
+
+    override func setUp() async throws {
+        rewriter = FakeRewriter()
+        states = []
+        controller = AIRewriteController(rewriter: { [unowned self] in rewriter }) { [unowned self] in states.append($0) }
+    }
+
+    func testChineseDefaultsToEnglishAndReturnReplaces() async {
+        controller.start(text: " 这个功能下周上线 ", range: range)
+        XCTAssertEqual(controller.state, .choosing(text: "这个功能下周上线", defaultAction: .toEnglish, truncated: false))
+        XCTAssertTrue(rewriter.calls.isEmpty, "nothing is sent before an action is picked")
+
+        XCTAssertEqual(controller.handleKey(36), .handled)
+        XCTAssertEqual(controller.state, .running(action: .toEnglish, text: "这个功能下周上线"))
+        await waitUntil { if case .result = self.controller.state { true } else { false } }
+
+        XCTAssertEqual(controller.handleKey(36), .replace("This feature ships next week.", range))
+        XCTAssertEqual(controller.state, .idle)
+    }
+
+    func testNumberKeysPickActionsAndEnglishDefaultsToPolish() async {
+        controller.start(text: "this change need more test", range: range)
+        XCTAssertEqual(controller.state, .choosing(text: "this change need more test", defaultAction: .polish, truncated: false))
+
+        XCTAssertEqual(controller.handleKey(21), .handled) // 4 更简洁
+        XCTAssertEqual(controller.state, .running(action: .concise, text: "this change need more test"))
+    }
+
+    func testEscapeWhileRunningDropsTheLateResult() async {
+        rewriter.delay = 0.05
+        controller.start(text: "这个功能下周上线", range: range)
+        _ = controller.handleKey(36)
+        XCTAssertEqual(controller.handleKey(53), .dismissed(consumed: true))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(controller.state, .idle)
+    }
+
+    func testOtherKeysDismissAndAreTyped() {
+        controller.start(text: "这个功能下周上线", range: range)
+        XCTAssertEqual(controller.handleKey(0), .dismissed(consumed: false))
+        XCTAssertEqual(controller.state, .idle)
+    }
+
+    func testMessagesForMissingTextModelAndErrors() async {
+        controller.start(text: nil, range: range)
+        XCTAssertEqual(controller.state, .message("这个应用不提供文字给输入法，先选中文字再按 ⌃⌥R"))
+        controller.start(text: "  ", range: range)
+        guard case .message = controller.state else { return XCTFail("empty text") }
+
+        let none = AIRewriteController(rewriter: { nil }) { _ in }
+        none.start(text: "你好世界", range: range)
+        XCTAssertEqual(none.state, .message("没有可用的模型：打开 Apple Intelligence 或安装 Codex"))
+
+        rewriter.reply = .failure(.unavailable("本机模型拒绝处理这句"))
+        controller.start(text: "你好世界", range: range)
+        _ = controller.handleKey(36)
+        await waitUntil { if case .message = self.controller.state { true } else { false } }
+        XCTAssertEqual(controller.state, .message("本机模型拒绝处理这句"))
+    }
+
+    func testPopupContent() {
+        let choosing = TranslationPopup.content(for: .choosing(text: "你好", defaultAction: .toEnglish, truncated: true))
+        XCTAssertEqual(choosing?.body, "1 转成英文   2 润色   3 更正式   4 更简洁   5 转成中文")
+        XCTAssertTrue(choosing?.hint.contains("⏎ 转成英文") == true)
+        XCTAssertTrue(choosing?.hint.contains("请先选中") == true)
+        XCTAssertNil(TranslationPopup.content(for: .idle))
+        XCTAssertEqual(AIAssistSettings(defaults: UserDefaults(suiteName: "AIRewriteHotkey")!).hotkey, AIAssistSettings.defaultHotkey)
+    }
+
+    private func waitUntil(_ condition: @escaping () -> Bool) async {
+        for _ in 0..<200 where !condition() {
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+    }
+}

@@ -11,7 +11,7 @@ The user asked to try the chip before the full change. The POC implements:
 
 - **Pacing.** At most one chip per app every 5 seconds. The first build used one per minute, and a dismissed chip then blocked a minute of test sentences.
 
-⌃⌥R, the other actions, the English-profile rule, and dismissal back-off follow after the POC.
+⌃⌥R with all five actions followed on 2026-10-02 (it uses the same provider setting as the chip). The English-profile rule and dismissal back-off follow after the POC.
 
 ## What Changes
 

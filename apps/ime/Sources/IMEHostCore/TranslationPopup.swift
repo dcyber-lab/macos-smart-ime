@@ -38,6 +38,37 @@ final class TranslationPopup {
             hide()
             return
         }
+        place(near: reportedCaretRect)
+    }
+
+    /// The AI rewrite popup in the same style: badge and source line, body, key hint.
+    func show(_ state: AIRewriteController.State, caretRect reportedCaretRect: CGRect) {
+        guard let content = Self.content(for: state) else {
+            hide()
+            return
+        }
+        contentView.configure(badge: content.badge, source: content.source, body: content.body, hint: content.hint)
+        place(near: reportedCaretRect)
+    }
+
+    static func content(for state: AIRewriteController.State) -> (badge: String, source: String, body: String, hint: String)? {
+        switch state {
+        case .idle:
+            return nil
+        case .choosing(let text, let defaultAction, let truncated):
+            let actions = AIAction.allCases.enumerated().map { "\($0.offset + 1) \($0.element.title)" }.joined(separator: "   ")
+            let note = truncated ? " · 只读到这一行的末尾部分，长消息请先选中" : ""
+            return ("✨ AI 改写", text, actions, "数字选择 · ⏎ \(defaultAction.title) · Esc 取消\(note)")
+        case .running(let action, let text):
+            return ("✨ \(action.title)", text, "生成中…", "Esc 取消")
+        case .result(let action, let original, let rewritten):
+            return ("✨ \(action.title)", original, rewritten, "⏎ 替换 · Esc 取消")
+        case .message(let text):
+            return ("✨ AI 改写", "", text, "Esc 关闭")
+        }
+    }
+
+    private func place(near reportedCaretRect: CGRect) {
         let size = contentView.fittingSize
         let caretRect = CandidatePanelPlacement.caretRect(
             reported: reportedCaretRect,
@@ -132,6 +163,11 @@ final class TranslationPopupView: NSView {
         }
         layoutSubtreeIfNeeded()
         return true
+    }
+
+    func configure(badge: String, source: String, body: String, hint: String) {
+        fill(badge: badge, source: source, body: body, hint: hint)
+        layoutSubtreeIfNeeded()
     }
 
     private func fill(badge text: String, source: String, body: String, hint: String) {

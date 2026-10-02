@@ -58,6 +58,13 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     private var shiftToggle = ShiftToggleDetector()
     /// Where the selection-translation popup is anchored (first character of the selection).
     private var translationAnchor = NSRect.zero
+    /// Where the AI rewrite popup is anchored (start of the text being rewritten).
+    private var aiRewriteAnchor = NSRect.zero
+    private lazy var aiRewrite = MainActor.assumeIsolated {
+        AIRewriteController(rewriter: { AIAssistSettings().rewriter() }) { [weak self] state in
+            TranslationPopup.shared.show(state, caretRect: self?.aiRewriteAnchor ?? .zero)
+        }
+    }
     private lazy var selectionTranslation = MainActor.assumeIsolated {
         SelectionTranslationController(translator: AppleSelectionTranslator()) { [weak self] state in
             TranslationPopup.shared.show(state, caretRect: self?.translationAnchor ?? .zero)
@@ -133,6 +140,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                 Self.intelligence.endLine(app: app, secureInput: secureInput,
                                           readField: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
+        }
+
+        if let handled = handleAIRewriteKey(event) {
+            return handled
         }
 
         if let handled = handleSelectionTranslationKey(event) {
@@ -385,6 +396,62 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     }
 
     // MARK: AI assist
+
+    /// ⌃⌥R starts a rewrite; while its popup is open, keys go to it first.
+    private func handleAIRewriteKey(_ event: NSEvent) -> Bool? {
+        let keyCode = event.keyCode
+        let outcome = MainActor.assumeIsolated { aiRewrite.isActive ? aiRewrite.handleKey(keyCode) : nil }
+        switch outcome {
+        case .replace(let text, let range)?:
+            _ = replaceText(in: range, with: text)
+            return true
+        case .handled?, .dismissed(consumed: true)?:
+            return true
+        case .dismissed(consumed: false)?, nil:
+            break
+        }
+        let settings = AIAssistSettings()
+        guard settings.hotkey.matches(keyCode: keyCode, modifierFlags: event.modifierFlags), !sessionStore.hasActiveComposition else {
+            return nil
+        }
+        startAIRewrite()
+        return true
+    }
+
+    /// The selection, or the line before the cursor; nothing is sent until an action is picked.
+    private func startAIRewrite() {
+        let app = clientBundleIdentifier
+        let blocked = IsSecureEventInputEnabled() || !IntelligenceSettings().allows(app: app) && !AIAssistSettings().chipApps.contains(app ?? "")
+        let client = self.client()
+        var text: String?
+        var range = NSRange(location: NSNotFound, length: 0)
+        var truncated = false
+        if !blocked, let client {
+            let selection = client.selectedRange()
+            if selection.location != NSNotFound, selection.length > 0 {
+                range = selection
+                text = client.attributedSubstring(from: selection)?.string
+            } else if let field = textBeforeCursor(), let line = IntelligenceRecorder.line(endingAt: field), let cursor = field.cursor {
+                let length = (line.text as NSString).length
+                range = NSRange(location: cursor - length, length: length)
+                text = line.text
+                truncated = line.startsMidway
+            }
+            var anchor = NSRect.zero
+            if range.location != NSNotFound {
+                _ = client.attributes(forCharacterIndex: range.location, lineHeightRectangle: &anchor)
+            }
+            aiRewriteAnchor = anchor.height > 0 ? anchor : caretRect()
+        }
+        let start = (text: text, range: range, truncated: truncated)
+        MainActor.assumeIsolated {
+            if blocked {
+                aiRewrite.start(text: nil, range: range)
+            } else {
+                aiRewrite.start(text: start.text, range: start.range, truncated: start.truncated)
+            }
+        }
+    }
 
     /// Offers ✨ 转成英文 for a sentence that just ended, if this app has AI hints on and it qualifies.
     private func offerAIRewrite(_ end: FieldSentenceEnd) {

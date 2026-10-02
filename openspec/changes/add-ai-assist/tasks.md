@@ -14,9 +14,9 @@
 
 ## 2. Rewrite Flow
 
-- [ ] 2.1 `AIAssistController` state machine with tests (fake provider: defaults, digits, cancel, stale results, errors)
-- [ ] 2.2 Popup: action list, running with seconds, result, messages (reuse `TranslationPopup` style)
-- [ ] 2.3 ⌃⌥R in `IMEInputController`: selection or line before the cursor, replacement with clipboard fallback
+- [x] 2.1 `AIRewriteController` state machine with tests (fake provider: defaults, digits, cancel, stale results, errors)
+- [x] 2.2 Popup: action list, running, result, messages (`TranslationPopup.show(_: AIRewriteController.State)`)
+- [x] 2.3 ⌃⌥R in `IMEInputController`: selection or line before the cursor, replacement with clipboard fallback
 
 ## 3. Suggestion Chip
 
