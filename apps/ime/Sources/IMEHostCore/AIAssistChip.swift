@@ -3,8 +3,9 @@ import UserData
 
 /// The ✨ suggestion after a sentence (proof of concept: 转成英文 only). When a sentence qualifies in
 /// an app the user enabled, it is sent to the AI right away, so the result is usually ready by the
-/// time the user looks at the chip. `Tab` replaces the sentence (or does so as soon as the result
-/// arrives); `Esc` dismisses; any other key dismisses and is typed normally.
+/// time the user looks at the chip. `Tab` or `→` replaces the sentence (or does so as soon as the
+/// result arrives); `Esc` dismisses; any other key dismisses and is typed normally. `→` is there
+/// because some apps (Sublime Text) keep `Tab` for themselves and never pass it to the input method.
 @MainActor
 final class AIAssistChipController {
     struct Offer {
@@ -33,6 +34,7 @@ final class AIAssistChipController {
     static let minimumInterval: TimeInterval = 5
     static let lifetime: TimeInterval = 8
     static let tabKey: UInt16 = 48
+    static let rightArrowKey: UInt16 = 124
     static let escapeKey: UInt16 = 53
 
     private(set) var display: Display?
@@ -113,7 +115,7 @@ final class AIAssistChipController {
             return nil
         }
         switch keyCode {
-        case Self.tabKey:
+        case Self.tabKey, Self.rightArrowKey:
             switch display {
             case .ready:
                 applyResult()
@@ -237,8 +239,8 @@ final class SuggestionChip {
         }
         let text: String
         switch display {
-        case .generating(let accepted): text = accepted ? "✨ 转成英文 · 生成中，好了自动替换…" : "✨ 转成英文 · 生成中…   Tab 好了就替换"
-        case .ready(let preview): text = "✨ \(preview)   Tab 替换 · Esc 关闭"
+        case .generating(let accepted): text = accepted ? "✨ 转成英文 · 生成中，好了自动替换…" : "✨ 转成英文 · 生成中…   Tab / → 好了就替换"
+        case .ready(let preview): text = "✨ \(preview)   Tab / → 替换 · Esc 关闭"
         case .done(let message): text = "✨ \(message)"
         case .failed(let message): text = "✨ \(message)"
         }

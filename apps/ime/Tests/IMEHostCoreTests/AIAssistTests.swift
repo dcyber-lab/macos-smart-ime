@@ -62,6 +62,14 @@ final class AIAssistChipTests: XCTestCase {
         XCTAssertEqual(rewriter.calls, ["这个功能下周上线。"])
     }
 
+    func testRightArrowAcceptsWhereAppsKeepTab() async {
+        chip.offer(offer())
+        await waitUntil { if case .ready = self.chip.display { true } else { false } }
+
+        XCTAssertEqual(chip.handleKey(AIAssistChipController.rightArrowKey), .consumed)
+        XCTAssertEqual(applied.map(\.0), ["This feature ships next week."])
+    }
+
     func testTabWhileGeneratingReplacesWhenReady() async {
         rewriter.delay = 0.05
         chip.offer(offer())
@@ -120,10 +128,10 @@ final class AIAssistChipTests: XCTestCase {
         )
         chip.offer(offer())
         await waitUntil { events.count >= 2 }
-        _ = chip.handleKey(124) // right arrow
+        _ = chip.handleKey(51) // delete
         XCTAssertEqual(events.first, "notes: offered")
         XCTAssertTrue(events[1].hasPrefix("notes: ready after"))
-        XCTAssertEqual(events.last, "notes: dismissed by key 124")
+        XCTAssertEqual(events.last, "notes: dismissed by key 51")
         XCTAssertFalse(events.joined().contains("这个功能"))
 
         let log = AIAssistEventLog(url: FileManager.default.temporaryDirectory.appendingPathComponent("ai-log-\(UUID().uuidString).log"))

@@ -130,7 +130,7 @@ Owns explicit and async workflows:
 
 - After a sentence ending in punctuation is read from the field, `IntelligenceRecorder.onFieldSentence` reports it with the cursor. In apps listed in `AIAssistChipApps`, `AIAssistChipController.qualifies` checks the sentence: 6+ characters, mostly Han characters against English words.
 - For a qualifying sentence the controller shows the ✨ chip (`SuggestionChip`) and starts `CodexRewriter` at once (prefetch).
-  - `Tab` replaces `[cursor − length, cursor)` via `insertText(_:replacementRange:)` and reads it back; if the app did not take it, the text goes to the clipboard.
+  - `Tab` or `→` (some apps keep `Tab`) replaces `[cursor − length, cursor)` via `insertText(_:replacementRange:)` and reads it back; if the app did not take it, the text goes to the clipboard.
   - `Tab` before the result arrives replaces it on arrival. `Esc` or any other key dismisses the chip and cancels the request.
   - There is at most one offer per app every 5 seconds.
   - Events (never text) are appended to `ai-assist-events.log` for diagnosis.

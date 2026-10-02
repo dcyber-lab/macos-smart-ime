@@ -238,7 +238,7 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 
 1. Open Notes (or TextEdit), open the input menu, and choose 在「Notes」中启用 AI 提示; the status line shows Codex and the model
 2. Type 这个功能下周上线，麻烦大家帮忙回归一下。: a chip "✨ 转成英文 · 生成中… ⇥" appears below the caret, then after about 7–9 s an English preview
-3. Press Tab: the sentence is replaced by the English text and the chip says 已替换
+3. Press Tab (or →, needed in Sublime Text): the sentence is replaced by the English text and the chip says 已替换
 4. Type another sentence and press Tab before the preview appears: it is replaced as soon as the result arrives
 5. Type another sentence and keep typing: the chip disappears and nothing is replaced
 6. In an app that was not enabled, type the same sentence: no chip appears
