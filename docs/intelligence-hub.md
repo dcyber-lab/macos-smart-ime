@@ -92,7 +92,7 @@ The same rewrite prompt ("这个功能下周上线，麻烦大家帮忙回归一
   | "帮我写一个排序算法。" | translated, once the output is a single field named `english` (a generic `result` field made it write an essay) | translated |
   | English polish | good; the word "polish" in the instructions made it answer in Polish, so it is not used | good |
   | Chinese → more formal | returned unchanged | — |
-  | English → Chinese | refused once by Apple's guardrail ("Detected content likely to be unsafe") | — |
+  | English → Chinese, "让我看看效果啊。" | refused by the default guardrail ("Detected content likely to be unsafe"); now retried as plain text with `permissiveContentTransformations`, which only relaxes plain-text output: "Let's see the results.", "请在周五之前审阅部署计划。" | — |
   | long, nuanced sentence | gist right, details wrong (报错 → "report") | right |
 
 - The plan: chips use the local model; explicit rewrites (⌃⌥R) can choose Codex for quality.

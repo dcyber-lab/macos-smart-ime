@@ -282,3 +282,13 @@ final class AIAssistSettingsTests: XCTestCase {
         XCTAssertTrue(instructions.contains("回归 = regression testing"))
     }
 }
+
+final class AIPromptCleaningTests: XCTestCase {
+    func testPrefacesAreDroppedAndCodeOrEssaysRejected() {
+        XCTAssertEqual(AIPrompt.cleanFreeText("Let me see the results.", source: "让我看看效果啊。"), "Let me see the results.")
+        XCTAssertEqual(AIPrompt.cleanFreeText("Here is the translation:\n\nIt is necessary to add a timeout.", source: "这里需要加一个 timeout。"), "It is necessary to add a timeout.")
+        XCTAssertEqual(AIPrompt.cleanFreeText("\"Ship it.\"", source: "发吧。"), "Ship it.")
+        XCTAssertNil(AIPrompt.cleanFreeText("Here is a Python implementation:\n```python\ndef quick_sort(a): ...\n```", source: "帮我写一个排序算法。"))
+        XCTAssertNil(AIPrompt.cleanFreeText(String(repeating: "A long essay about sorting. ", count: 20), source: "帮我写一个排序算法。"))
+    }
+}

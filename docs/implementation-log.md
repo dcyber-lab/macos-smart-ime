@@ -15,6 +15,7 @@
   - temperature 0, the text labelled as data, and an engineering term list.
   - Added `AIProvider` (auto/apple/codex, default auto = local first), with menu items for it and a status line saying whether text leaves the Mac.
   - Measurements and failure cases are in `docs/intelligence-hub.md`. 165 host tests pass locally.
+- Live: "让我看看效果啊。" got "AI 出错：Detected content likely to be unsafe" from the on-device model. `SystemLanguageModel.Guardrails.permissiveContentTransformations` relaxes only plain-text output, not schemas (verified: schema output was refused under both guardrails). A refused sentence is now retried as plain text with permissive guardrails. `AIPrompt.cleanFreeText` drops a preface line and rejects code or essay-length answers; plain text alone wrote a QuickSort for "帮我写一个排序算法。".
 - The first `gh run download` attempts failed with connection resets from the artifact store. A resumable `curl -C -` loop on the artifact's redirect URL downloads it reliably.
 - Pending: live check (AI Assist checklist), especially whether Chromium apps honor `replacementRange`.
 
