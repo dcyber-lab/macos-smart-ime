@@ -70,11 +70,11 @@ final class AIAssistChipController {
         self.hideAfter = hideAfter
     }
 
-    /// A finished sentence worth offering: ends with sentence punctuation, 6+ characters, and mostly
+    /// A finished sentence worth offering: ends with sentence punctuation, 5+ characters, and mostly
     /// Chinese, weighing Han characters against English words ("加一个 timeout" is Chinese).
     nonisolated static func qualifies(_ sentence: String) -> Bool {
         let text = sentence.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard text.count >= 6, let last = text.last, SentenceAssembler.enders.contains(last) else {
+        guard text.count >= 5, let last = text.last, SentenceAssembler.enders.contains(last) else {
             return false
         }
         let (han, english) = InputMemory.languageCounts(text)

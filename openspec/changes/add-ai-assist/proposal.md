@@ -5,7 +5,7 @@ The intelligence hub learns locally (`add-input-memory`, `add-window-context`). 
 ## Proof of concept first (user request, 2026-10-01)
 
 The user asked to try the chip before the full change. The POC implements:
-- **The chip, 转成英文 only.** It shows in apps the user turns on from the menu (在「App」中启用 AI 提示), for sentences ending in punctuation that are mostly Chinese (Han characters against English words) and 6+ characters long.
+- **The chip, 转成英文 only.** It shows in apps the user turns on from the menu (在「App」中启用 AI 提示), for sentences ending in punctuation that are mostly Chinese (Han characters against English words) and 5+ characters long.
 - **Prefetch.** The sentence is sent to Codex as soon as the chip shows, so the result is usually ready when the user reacts. In enabled apps, qualifying sentences therefore leave the Mac before confirmation. The user accepted that for the POC by asking to see the effect; it is why chips are opt-in per app and not driven by the learned English profile.
 - **Applying the result.** `Tab` replaces the sentence through `insertText(_:replacementRange:)` and checks the result; if the app did not take it, the text is copied to the clipboard. `Tab` before the result arrives replaces it on arrival. `Esc` or any other key dismisses the chip and stops the request.
 

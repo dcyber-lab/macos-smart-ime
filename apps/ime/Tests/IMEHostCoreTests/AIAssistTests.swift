@@ -45,6 +45,7 @@ final class AIAssistChipTests: XCTestCase {
         XCTAssertTrue(AIAssistChipController.qualifies("这里需要加一个 timeout。"))
         XCTAssertFalse(AIAssistChipController.qualifies("这个功能下周上线"), "no sentence punctuation")
         XCTAssertFalse(AIAssistChipController.qualifies("好的。"), "too short")
+        XCTAssertTrue(AIAssistChipController.qualifies("有点麻烦。"), "five characters with the full stop")
         XCTAssertFalse(AIAssistChipController.qualifies("Please review the deploy plan."), "already English")
     }
 

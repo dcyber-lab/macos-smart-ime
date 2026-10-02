@@ -29,7 +29,7 @@ A chip for 转成英文 shows when all of these hold:
 - AI 提示 is on;
 - learning is on and the app is not excluded;
 - the sentence ended with punctuation;
-- the sentence has 6+ characters and at least 70% Han characters;
+- the sentence has 5+ characters and at least 70% Han characters;
 - the app's learned profile is at most 30% Chinese over at least 50 units;
 - the app has not had a chip in the last 60 s;
 - fewer than 3 chips were dismissed there in the last 24 h.
