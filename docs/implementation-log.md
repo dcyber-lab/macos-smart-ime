@@ -2,6 +2,18 @@
 
 ## 2026-10-02
 
+### AI assist review fixes (PR #16)
+
+- A review of PR #16 found these problems; each fix below is its own commit.
+  - **Shifted replacement:** ⌃⌥R on a line ending in spaces replaced the wrong range ("这个接口有问题 " became "这This API…"). The line's range now comes from where it is in the field (`AIRewriteController.line(before:)`, `FieldText.range(ofTail:)`).
+  - **Stale replacement:** every replacement first checks that the range still holds the text that was read. If not, the result is copied and the chip or popup says why (`AIReplacement`). Leaving a field closes the ⌃⌥R popup, so `Return` in the next field cannot replace there.
+  - **Chip tied to learning:** the chip fired from the learning recorder, so it needed 智能学习 (off by default) and the journal. The input controller now reads the field itself after a commit that ends a sentence, only in apps with AI hints on.
+  - **Modified keys accepted:** ⇧→, ⌥→ and ⌘→ accepted the chip. Only a bare `Tab` or `→` accepts now; once the chip shows only a message, both keys go to the app.
+  - **First line dropped:** `cleanFreeText` dropped a one-line answer starting "Here is" or "Translation" (an Ollama "AI 没有返回结果"), and the colon-ended first line of a multi-line polish. A first line is now dropped only when the answer has more lines than the source.
+  - **Old clipboard used:** ⌃⌥R in an empty field or on a blank line showed the old clipboard in the read-only popup. A field that reports its text now gets the "nothing to rewrite" message, and the input method's hand-over to the read-only flow uses only a selection copied with ⌘C. Without Accessibility access, a web page now needs select, ⌘C, ⌃⌥E.
+- Tests: 6 new cases. 188 host tests pass locally through the harness. The chip trigger and the ⌃⌥R text pick-up run through `IMKTextInput` and are not unit-tested; they need a live check.
+- Left open: when Ollama answers slowly, its availability check waits on the main thread (up to 0.6 s, cached for 30 s). ⌃⌥E is always registered and cannot be turned off.
+
 ### AI rewrite hotkey (⌃⌥R)
 
 - `AIRewriteController` rewrites the selection, or the line before the cursor, in the same popup style as selection translation. It offers five actions (1–5, Return for the default), shows the result before replacing, and sends nothing before an action is picked. It uses the chip's provider (Apple Intelligence first).

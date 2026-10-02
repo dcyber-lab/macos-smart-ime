@@ -128,20 +128,22 @@ Owns explicit and async workflows:
 
 ## AI Assist (proof of concept)
 
-- After a sentence ending in punctuation is read from the field, `IntelligenceRecorder.onFieldSentence` reports it with the cursor. In apps listed in `AIAssistChipApps`, `AIAssistChipController.qualifies` checks the sentence: 6+ characters, mostly Han characters against English words.
-- For a qualifying sentence the controller shows the ✨ chip (`SuggestionChip`) and starts `CodexRewriter` at once (prefetch).
-  - `Tab` or `→` (some apps keep `Tab`) replaces `[cursor − length, cursor)` via `insertText(_:replacementRange:)` and reads it back; if the app did not take it, the text goes to the clipboard.
-  - `Tab` before the result arrives replaces it on arrival. `Esc` or any other key dismisses the chip and cancels the request.
+- When a commit ends with sentence punctuation in an app listed in `AIAssistChipApps`, the input controller reads the field after the key (learning and the journal play no part). It takes the sentence that ends the field (`IntelligenceRecorder.sentence(endingAt:)`, matched to the commit) and its exact range (`FieldText.range(ofTail:)`); `AIAssistChipController.qualifies` checks it: 5+ characters, mostly Han characters against English words.
+- For a qualifying sentence the controller shows the ✨ chip (`SuggestionChip`) and starts the provider at once (prefetch).
+  - A bare `Tab` or `→` (some apps keep `Tab`) replaces the range via `insertText(_:replacementRange:)` if it still holds the sentence, and reads it back. Otherwise the text goes to the clipboard and the chip says why (`AIReplacement`).
+  - `Tab` before the result arrives replaces it on arrival. `Esc` or any other key, including `Tab` or `→` with a modifier, dismisses the chip and cancels the request.
   - There is at most one offer per app every 5 seconds.
   - Events (never text) are appended to `ai-assist-events.log` for diagnosis.
-- ⌃⌥R (`AIAssistHotkey`, default `ctrl+option+r`) opens `AIRewriteController` on the selection, or on the line before the cursor (field read; a cut-off Chromium line says to select instead).
-  - The popup (`TranslationPopup.show(_: AIRewriteController.State)`) lists 1 转成英文, 2 润色, 3 更正式, 4 更简洁, 5 转成中文. `Return` runs the default: 转成英文 for Chinese, 润色 otherwise.
-  - The result is shown before `Return` replaces the range (`replaceText`, with the clipboard fallback). Nothing is sent before an action is picked.
+- ⌃⌥R (`AIAssistHotkey`, default `ctrl+option+r`) opens `AIRewriteController` on the selection, or on the line before the cursor (`AIRewriteController.line(before:)`: its range without surrounding spaces; a blank line gets a message; a cut-off Chromium line says to select instead).
+  - The popup (`TranslationPopup.show(_: AIRewriteController.State)`) lists 1 转成英文, 2 润色, 3 更正式, 4 更简洁, 5 转成中文, 6 整理, 7 解释. `Return` runs the default: 转成英文 for Chinese, 解释 for a short English phrase, 润色 otherwise.
+  - The result is shown before `Return` replaces the range, only if the range still holds the text that was read (`replaceText`); otherwise it is copied and the popup says why. Leaving the field closes the popup. Nothing is sent before an action is picked.
   - It is blocked under secure input and in apps that are excluded from learning and have no AI hints.
-- The provider is `AIProvider`: `auto` (default) uses `AppleRewriter` when Apple Intelligence is available, else Codex; `apple` or `codex` forces one.
+  - Where the app reports no text (a web page), it hands over to the read-only flow, which uses only a selection copied with ⌘C.
+- ⌃⌥E (`AIReadHotkey`, a Carbon hotkey, no permission needed) opens the same popup read-only (`GlobalSelectionAssist`): the selection copied with ⌘C when Accessibility access is granted, else the clipboard. `Return` copies the result.
+- The provider is `AIProvider`: `auto` (default) uses `OllamaRewriter` when a local Ollama serves `AIOllamaModel`, else `AppleRewriter` when Apple Intelligence is available, else Codex; `ollama`, `apple` or `codex` forces one.
   - `AppleRewriter` calls Foundation Models with a one-field dynamic schema named for the target (`english`, `chinese`, `rewritten`), temperature 0, and the text labelled as data.
   - Its instructions carry engineering terms and avoid the word "polish" (read as the Polish language).
-  - A guardrail refusal is retried as plain text with `permissiveContentTransformations` (it relaxes plain text only); `AIPrompt.cleanFreeText` keeps that answer only without code and within 6× the source length.
+  - A guardrail refusal is retried as plain text with `permissiveContentTransformations` (it relaxes plain text only); `AIPrompt.cleanFreeText` keeps that answer only without code and within 6× the source length, and drops a preface line only when the answer has more lines than the source.
 - `CodexRewriter` runs `codex exec --skip-git-repo-check --ephemeral -s read-only -C <empty temp dir> -m gpt-6-luna -c model_reasoning_effort="low" -o <file> -` with the prompt on stdin and a 30 s timeout.
   - The binary comes from `AICodexPath`, else `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, or `~/.local/bin/codex`.
   - The model and effort come from `AICodexModel` and `AICodexReasoningEffort`.
