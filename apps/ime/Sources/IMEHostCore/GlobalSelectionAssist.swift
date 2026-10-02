@@ -29,10 +29,36 @@ public final class GlobalSelectionAssist {
 
     private init() {}
 
+    private var installedWhileTrusted = false
+
+    /// Installs the key monitor. macOS delivers no keys to a monitor made before Accessibility access is
+    /// granted, and a rebuilt (ad hoc signed) app loses the grant, so this asks once and keeps checking.
     public func install() {
-        guard monitor == nil else {
-            return
+        log("global hotkey: start, trusted=\(WindowTitleReader.isTrusted)")
+        if !WindowTitleReader.isTrusted {
+            _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
         }
+        installMonitor()
+        Task { @MainActor in
+            while !self.installedWhileTrusted {
+                try? await Task.sleep(for: .seconds(3))
+                if WindowTitleReader.isTrusted {
+                    self.installMonitor()
+                    self.log("global hotkey: access granted, monitor installed")
+                }
+            }
+        }
+    }
+
+    private func log(_ event: String) {
+        AIAssistEventLog.shared.append(event, app: "-")
+    }
+
+    private func installMonitor() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        installedWhileTrusted = WindowTitleReader.isTrusted
         monitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
             let keyCode = event.keyCode
             let flags = event.modifierFlags
@@ -49,10 +75,12 @@ public final class GlobalSelectionAssist {
         guard AIAssistSettings().hotkey.matches(keyCode: keyCode, modifierFlags: flags), !IsSecureEventInputEnabled() else {
             return
         }
+        log("global hotkey: seen")
         // The input method sees the key first when a text field has focus; give it a moment to say so.
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(150))
             guard Date().timeIntervalSince(Self.lastHandledByInputMethod) > 0.5 else {
+                self.log("global hotkey: left to the input method")
                 return
             }
             await self.start()
@@ -61,6 +89,7 @@ public final class GlobalSelectionAssist {
 
     /// Also used by the input method when the focused page reports no text of its own.
     func startReadOnly() {
+        log("global hotkey: handed over by the input method")
         Task { @MainActor in
             await self.start()
         }
@@ -71,6 +100,7 @@ public final class GlobalSelectionAssist {
         anchor = CGRect(x: mouse.x, y: mouse.y - 6, width: 1, height: 6)
         previousApp = NSWorkspace.shared.frontmostApplication
         let text = await SelectionCopier.copySelection()
+        log("global hotkey: copied \(text?.count ?? 0) characters")
         controller.start(text: text, range: NSRange(location: NSNotFound, length: 0), readOnly: true)
     }
 
