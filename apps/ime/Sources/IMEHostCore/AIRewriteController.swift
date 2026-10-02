@@ -22,8 +22,8 @@ final class AIRewriteController {
         case handled
     }
 
-    /// Number keys 1–5 (ANSI key codes) pick the actions in `AIAction.allCases` order.
-    static let actionKeys: [UInt16: AIAction] = Dictionary(uniqueKeysWithValues: zip([18, 19, 20, 21, 23], AIAction.allCases))
+    /// Number keys 1–6 (ANSI key codes) pick the actions in `AIAction.allCases` order.
+    static let actionKeys: [UInt16: AIAction] = Dictionary(uniqueKeysWithValues: zip([18, 19, 20, 21, 23, 22], AIAction.allCases))
     private static let returnKeys: Set<UInt16> = [36, 76]
     private static let escapeKey: UInt16 = 53
 

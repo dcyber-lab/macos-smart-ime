@@ -46,7 +46,7 @@ struct OllamaRewriter: AIRewriter {
         for label in ["Translation:", "Result:"] where answer.hasPrefix(label) {
             answer = String(answer.dropFirst(label.count))
         }
-        guard let result = AIPrompt.cleanFreeText(answer, source: text) else {
+        guard let result = AIPrompt.cleanFreeText(answer, source: text, colonIsContent: action == .organize) else {
             throw AIError.emptyResult
         }
         return result

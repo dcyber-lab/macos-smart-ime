@@ -116,6 +116,8 @@ final class TranslationPopupView: NSView {
         bodyLabel.font = .systemFont(ofSize: 16)
         bodyLabel.textColor = .labelColor
         bodyLabel.preferredMaxLayoutWidth = Self.maxTextWidth
+        bodyLabel.maximumNumberOfLines = 16
+        bodyLabel.cell?.truncatesLastVisibleLine = true
         hintLabel.font = .systemFont(ofSize: 11)
         hintLabel.textColor = .tertiaryLabelColor
 

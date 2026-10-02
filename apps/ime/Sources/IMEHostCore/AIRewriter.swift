@@ -7,6 +7,7 @@ enum AIAction: String, CaseIterable, Sendable {
     case formal
     case concise
     case toChinese
+    case organize
 
     var title: String {
         switch self {
@@ -15,6 +16,7 @@ enum AIAction: String, CaseIterable, Sendable {
         case .formal: "更正式"
         case .concise: "更简洁"
         case .toChinese: "转成中文"
+        case .organize: "整理"
         }
     }
 
@@ -25,6 +27,7 @@ enum AIAction: String, CaseIterable, Sendable {
         case .formal: "用原来的语言把文本改得更正式"
         case .concise: "用原来的语言把文本改得更简洁"
         case .toChinese: "把文本改写成自然的简体中文"
+        case .organize: "用原来的语言整理文本：补全标点，合理分段，并列的内容用编号或项目符号列出，按背景、问题、请求的逻辑排序。不增加、不删除任何信息，保留所有术语、名字和数字"
         }
     }
 }
