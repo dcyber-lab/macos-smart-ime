@@ -14,8 +14,8 @@ final class AIAssistChipController {
         /// The sentence's range in the client, valid while the cursor has not moved.
         let range: NSRange
         let caret: CGRect
-        /// Replaces the range with the text; returns false when the app did not take it.
-        let apply: (String, NSRange) -> Bool
+        /// Replaces the range with the text if it still holds the sentence.
+        let apply: (String, NSRange) -> AIReplacement
     }
 
     enum Display: Equatable {
@@ -179,9 +179,9 @@ final class AIAssistChipController {
         guard let offer, let result else {
             return
         }
-        let replaced = offer.apply(result, offer.range)
-        log(replaced ? "replaced" : "replacement refused, copied", offer.app)
-        show(.done(replaced ? "已替换" : "这个应用不支持替换，已复制，⌘V 粘贴"))
+        let outcome = offer.apply(result, offer.range)
+        log(outcome.event, offer.app)
+        show(.done(outcome.message))
         self.result = nil
         self.offer = nil
         hideLater(after: 1.5)
@@ -197,6 +197,32 @@ final class AIAssistChipController {
         hideAfter(delay) { [weak self] in
             guard let self, self.generation == current, self.display != nil else { return }
             self.dismiss(reason: "timed out")
+        }
+    }
+}
+
+/// What happened when an AI result was put back into the app. Unless it was replaced, the result is on the clipboard.
+enum AIReplacement: Equatable {
+    case replaced
+    /// The app did not take the replacement.
+    case refused
+    /// The text in the range is no longer what was read (edited, or the cursor went elsewhere), so nothing was replaced.
+    case textChanged
+
+    var message: String {
+        switch self {
+        case .replaced: "已替换"
+        case .refused: "这个应用不支持替换，已复制，⌘V 粘贴"
+        case .textChanged: "原文已改动，没有替换，已复制，⌘V 粘贴"
+        }
+    }
+
+    /// For the event log, which never holds text.
+    var event: String {
+        switch self {
+        case .replaced: "replaced"
+        case .refused: "replacement refused, copied"
+        case .textChanged: "text changed, copied"
         }
     }
 }

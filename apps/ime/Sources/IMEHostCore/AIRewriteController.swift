@@ -16,7 +16,8 @@ final class AIRewriteController {
     }
 
     enum KeyOutcome: Equatable {
-        case replace(String, NSRange)
+        /// `expecting` is the text the range held when it was read; replace only if it still does.
+        case replace(String, NSRange, expecting: String)
         /// Read-only mode (no text field): the result is copied instead of replacing anything.
         case copy(String)
         /// `consumed` is false when the key should still be handled as normal input.
@@ -43,6 +44,8 @@ final class AIRewriteController {
     private let present: @MainActor (State) -> Void
     private let messageLifetime: Duration
     private var range = NSRange(location: NSNotFound, length: 0)
+    /// The text exactly as `range` held it, before trimming.
+    private var original = ""
     private var task: Task<Void, Never>?
     private var requestID = 0
     /// True when the text is not in a text field (a web page): results are copied, never replaced.
@@ -73,11 +76,24 @@ final class AIRewriteController {
         return readOnly && han == 0 ? .toChinese : .polish
     }
 
+    /// The line before the cursor without surrounding spaces, and its range in the client; nil when it is
+    /// blank. `truncated` when the app reported only the end of it.
+    nonisolated static func line(before field: FieldText) -> (text: String, range: NSRange, truncated: Bool)? {
+        let text = field.text
+        let lineStart = text.lastIndex(where: \.isNewline).map(text.index(after:)) ?? text.startIndex
+        let line = text[lineStart...].trimmingCharacters(in: .whitespaces)
+        guard !line.isEmpty, let range = field.range(ofTail: line) else {
+            return nil
+        }
+        return (line, range, field.startsMidway && lineStart == text.startIndex)
+    }
+
     /// `text` is nil when the app does not report its text.
     func start(text: String?, range: NSRange, truncated: Bool = false, readOnly: Bool = false) {
         cancel()
         self.readOnly = readOnly
         self.range = range
+        original = text ?? ""
         guard let text else {
             state = .message(readOnly ? "没有读到文字：先选中并按 ⌘C，再按 ⌃⌥E" : "这个应用不提供文字给输入法，先选中文字再按 ⌃⌥R")
             return
@@ -113,13 +129,13 @@ final class AIRewriteController {
             }
         case .result(let action, _, let rewritten):
             if Self.returnKeys.contains(keyCode) {
-                let range = self.range
+                let (range, original) = (self.range, self.original)
                 dismiss()
                 // An explanation is for reading; it never replaces the selected text.
                 if readOnly {
                     return .copy(rewritten)
                 }
-                return action == .explain ? .dismissed(consumed: true) : .replace(rewritten, range)
+                return action == .explain ? .dismissed(consumed: true) : .replace(rewritten, range, expecting: original)
             }
         case .message:
             break
@@ -134,6 +150,12 @@ final class AIRewriteController {
         if state != .idle {
             state = .idle
         }
+    }
+
+    /// Shows a note that closes by itself, such as why a result was copied instead of replacing the text.
+    func report(_ message: String) {
+        cancel()
+        state = .message(message)
     }
 
     private func run(_ action: AIAction, on text: String) {

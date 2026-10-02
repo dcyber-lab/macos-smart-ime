@@ -15,6 +15,21 @@ struct FieldText: Equatable, Sendable {
         self.startsMidway = startsMidway
         self.cursor = cursor
     }
+
+    /// Where `tail` sits in the client (UTF-16) when the text, without trailing whitespace, ends with it;
+    /// nil when it does not (a sentence cut to a length limit) or the cursor is unknown.
+    func range(ofTail tail: String) -> NSRange? {
+        guard let cursor, !tail.isEmpty else {
+            return nil
+        }
+        let body = text[..<(text.lastIndex { !$0.isWhitespace }.map(text.index(after:)) ?? text.startIndex)]
+        guard body.hasSuffix(tail) else {
+            return nil
+        }
+        let end = cursor - text[body.endIndex...].utf16.count
+        let length = tail.utf16.count
+        return NSRange(location: end - length, length: length)
+    }
 }
 
 /// A sentence that just ended with punctuation, as the field has it, ending at `cursor`.

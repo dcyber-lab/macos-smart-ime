@@ -148,7 +148,7 @@ final class AIAssistChipTests: XCTestCase {
 
     private func offer(app: String = "notes") -> AIAssistChipController.Offer {
         .init(app: app, sentence: "这个功能下周上线。", range: NSRange(location: 3, length: 9), caret: .zero,
-              apply: { [unowned self] text, range in applied.append((text, range)); return applyWorks })
+              apply: { [unowned self] text, range in applied.append((text, range)); return applyWorks ? .replaced : .refused })
     }
 
     private func waitUntil(_ condition: @escaping () -> Bool) async {
@@ -391,8 +391,32 @@ final class AIRewriteControllerTests: XCTestCase {
         XCTAssertEqual(controller.state, .running(action: .toEnglish, text: "这个功能下周上线"))
         await waitUntil { if case .result = self.controller.state { true } else { false } }
 
-        XCTAssertEqual(controller.handleKey(36), .replace("This feature ships next week.", range))
+        XCTAssertEqual(controller.handleKey(36), .replace("This feature ships next week.", range, expecting: " 这个功能下周上线 "))
         XCTAssertEqual(controller.state, .idle)
+    }
+
+    func testTheLineIsReplacedWhereItIsWithoutTrailingSpaces() {
+        // The field read starts at 10 in the client; the cursor is after two trailing spaces.
+        let text = "前一行\n这个接口有问题  "
+        let line = AIRewriteController.line(before: FieldText(text, cursor: 10 + text.utf16.count))
+        XCTAssertEqual(line?.text, "这个接口有问题")
+        XCTAssertEqual(line?.range, NSRange(location: 14, length: 7))
+        XCTAssertEqual(line?.truncated, false)
+
+        XCTAssertNil(AIRewriteController.line(before: FieldText("第一行\n  ", cursor: 6)), "a blank line has nothing to rewrite")
+        XCTAssertEqual(AIRewriteController.line(before: FieldText("很长的一行 ", startsMidway: true, cursor: 100))?.truncated, true)
+    }
+
+    func testATailIsLocatedOnlyWhereTheTextEndsWithIt() {
+        XCTAssertEqual(FieldText("好👍 ", cursor: 10).range(ofTail: "好👍"), NSRange(location: 6, length: 3))
+        XCTAssertEqual(FieldText("abc def", cursor: 7).range(ofTail: "def"), NSRange(location: 4, length: 3))
+        XCTAssertNil(FieldText("abc def", cursor: 7).range(ofTail: "abc"), "a sentence cut to a limit is not where the cursor says")
+        XCTAssertNil(FieldText("abc").range(ofTail: "abc"), "no cursor")
+    }
+
+    func testAResultThatWasNotReplacedSaysWhy() {
+        controller.report(AIReplacement.textChanged.message)
+        XCTAssertEqual(controller.state, .message("原文已改动，没有替换，已复制，⌘V 粘贴"))
     }
 
     func testNumberKeysPickActionsAndEnglishDefaultsToPolish() async {

@@ -281,7 +281,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         englishEngine?.reset()
         sessionStore.reset()
         withCandidatePanel { $0.hide() }
-        MainActor.assumeIsolated { selectionTranslation.dismiss() }
+        MainActor.assumeIsolated {
+            selectionTranslation.dismiss()
+            // Its range belongs to this field: Return in the next one must not replace there.
+            aiRewrite.dismiss()
+        }
     }
 
     // MARK: Selection translation
@@ -402,8 +406,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         let keyCode = event.keyCode
         let outcome = MainActor.assumeIsolated { aiRewrite.isActive ? aiRewrite.handleKey(keyCode) : nil }
         switch outcome {
-        case .replace(let text, let range)?:
-            _ = replaceText(in: range, with: text)
+        case .replace(let text, let range, let original)?:
+            let outcome = replaceText(in: range, with: text, expecting: original)
+            if outcome != .replaced {
+                MainActor.assumeIsolated { aiRewrite.report(outcome.message) }
+            }
             return true
         case .handled?, .dismissed(consumed: true)?, .copy?:
             return true
@@ -431,11 +438,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             if selection.location != NSNotFound, selection.length > 0 {
                 range = selection
                 text = client.attributedSubstring(from: selection)?.string
-            } else if let field = textBeforeCursor(), let line = IntelligenceRecorder.line(endingAt: field), let cursor = field.cursor {
-                let length = (line.text as NSString).length
-                range = NSRange(location: cursor - length, length: length)
+            } else if let field = textBeforeCursor(), let line = AIRewriteController.line(before: field) {
                 text = line.text
-                truncated = line.startsMidway
+                range = line.range
+                truncated = line.truncated
             }
             var anchor = NSRect.zero
             if range.location != NSNotFound {
@@ -468,25 +474,27 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
         let offer = AIAssistChipController.Offer(
             app: end.app, sentence: end.text, range: NSRange(location: end.cursor - length, length: length), caret: caretRect(),
-            apply: { [weak self] text, range in self?.replaceText(in: range, with: text) ?? false }
+            apply: { [weak self] text, range in self?.replaceText(in: range, with: text, expecting: end.text) ?? .refused }
         )
         MainActor.assumeIsolated { Self.aiChip.offer(offer) }
     }
 
-    /// Replaces the range in the client and checks that it took; otherwise copies the text so the user
-    /// can paste it.
-    private func replaceText(in range: NSRange, with text: String) -> Bool {
-        guard let client = client() else {
-            return false
+    /// Replaces the range in the client if it still holds `original` (the user may have clicked elsewhere
+    /// or edited), and checks that it took; otherwise copies the text so the user can paste it.
+    private func replaceText(in range: NSRange, with text: String, expecting original: String) -> AIReplacement {
+        let outcome: AIReplacement
+        if let client = client(), client.attributedSubstring(from: range)?.string == original {
+            client.insertText(text, replacementRange: range)
+            let written = client.attributedSubstring(from: NSRange(location: range.location, length: (text as NSString).length))?.string
+            outcome = written == text ? .replaced : .refused
+        } else {
+            outcome = .textChanged
         }
-        client.insertText(text, replacementRange: range)
-        let written = client.attributedSubstring(from: NSRange(location: range.location, length: (text as NSString).length))?.string
-        if written == text {
-            return true
+        if outcome != .replaced {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
         }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-        return false
+        return outcome
     }
 
     @objc func intelligenceMenuCommand(_ sender: Any?) {
