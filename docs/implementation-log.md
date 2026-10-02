@@ -1,6 +1,43 @@
 # Implementation Log
 
+## 2026-10-02
+
+### AI assist review fixes (PR #16)
+
+- A review of PR #16 found these problems; each fix below is its own commit.
+  - **Shifted replacement:** ⌃⌥R on a line ending in spaces replaced the wrong range ("这个接口有问题 " became "这This API…"). The line's range now comes from where it is in the field (`AIRewriteController.line(before:)`, `FieldText.range(ofTail:)`).
+  - **Stale replacement:** every replacement first checks that the range still holds the text that was read. If not, the result is copied and the chip or popup says why (`AIReplacement`). Leaving a field closes the ⌃⌥R popup, so `Return` in the next field cannot replace there.
+  - **Chip tied to learning:** the chip fired from the learning recorder, so it needed 智能学习 (off by default) and the journal. The input controller now reads the field itself after a commit that ends a sentence, only in apps with AI hints on.
+  - **Modified keys accepted:** ⇧→, ⌥→ and ⌘→ accepted the chip. Only a bare `Tab` or `→` accepts now; once the chip shows only a message, both keys go to the app.
+  - **First line dropped:** `cleanFreeText` dropped a one-line answer starting "Here is" or "Translation" (an Ollama "AI 没有返回结果"), and the colon-ended first line of a multi-line polish. A first line is now dropped only when the answer has more lines than the source.
+  - **Old clipboard used:** ⌃⌥R in an empty field or on a blank line showed the old clipboard in the read-only popup. A field that reports its text now gets the "nothing to rewrite" message, and the input method's hand-over to the read-only flow uses only a selection copied with ⌘C. Without Accessibility access, a web page now needs select, ⌘C, ⌃⌥E.
+- Tests: 6 new cases. 188 host tests pass locally through the harness. The chip trigger and the ⌃⌥R text pick-up run through `IMKTextInput` and are not unit-tested; they need a live check.
+- Left open: when Ollama answers slowly, its availability check waits on the main thread (up to 0.6 s, cached for 30 s). ⌃⌥E is always registered and cannot be turned off.
+
+### AI rewrite hotkey (⌃⌥R)
+
+- `AIRewriteController` rewrites the selection, or the line before the cursor, in the same popup style as selection translation. It offers five actions (1–5, Return for the default), shows the result before replacing, and sends nothing before an action is picked. It uses the chip's provider (Apple Intelligence first).
+- A reboot wiped `/private/tmp` and the local test harness with it. It now lives in `~/Library/Caches/smartime-harness` (stand-in XCTest, librime 1.17.0 headers, `run.sh host|data`, `fetch-build.sh`). 173 host and 120 data tests pass locally.
+
 ## 2026-10-01
+
+### AI assist proof of concept (Codex)
+
+- The user chose their Codex subscription as the AI provider (Apple Intelligence is off on this Mac). They asked to see the ✨ suggestion with prefetch before the full change (OpenSpec `add-ai-assist`, POC section).
+- In apps enabled from the menu, a finished, mostly Chinese sentence read from the field gets a chip below the caret. Codex starts at once; `Tab` replaces the sentence, with a read-back and a clipboard fallback.
+- Codex measured 6–12 s across models in the terminal; `gpt-6-luna` at low effort took 6.6–7 s. Through the input method's code path it took 7.4–8.8 s for two sentences, with good results.
+- Tests: 12 new cases (chip flow with a fake provider, `codex` stand-in script for arguments, stdin, errors, timeout, empty output). 160 host and 120 data tests pass locally.
+- First live try in Sublime Text: a chip appeared once and was dismissed; seven more sentences within 50 s got none because of the one-per-minute limit. The limit is now 5 s per app, so a dismissed chip does not block the next sentence. (Repeated journal lines were the same test sentence retyped: identical text and context hashes.)
+- Second try: the result appeared but was not applied. The chip's "⇥" reads as an arrow; Right Arrow (like any key other than Tab) dismisses the chip. The chip now says "Tab 替换 · Esc 关闭". SmartIMEHost's NSLog lines do not reach `log show`, so chip events (offered, ready after N s, key that dismissed it, replaced or copied, failures; never text) go to `ai-assist-events.log` (0600, last 500 lines).
+- Apple Intelligence became available after the user matched the Mac and Siri languages. Added `AppleRewriter` (Foundation Models), configured as follows:
+  - a one-field dynamic schema, because `@Generable` macros are unavailable with the Command Line Tools;
+  - temperature 0, the text labelled as data, and an engineering term list.
+  - Added `AIProvider` (auto/apple/codex, default auto = local first), with menu items for it and a status line saying whether text leaves the Mac.
+  - Measurements and failure cases are in `docs/intelligence-hub.md`. 165 host tests pass locally.
+- Live: "让我看看效果啊。" got "AI 出错：Detected content likely to be unsafe" from the on-device model. `SystemLanguageModel.Guardrails.permissiveContentTransformations` relaxes only plain-text output, not schemas (verified: schema output was refused under both guardrails). A refused sentence is now retried as plain text with permissive guardrails. `AIPrompt.cleanFreeText` drops a preface line and rejects code or essay-length answers; plain text alone wrote a QuickSort for "帮我写一个排序算法。".
+- Live: Tab did nothing in Sublime Text. The event log showed the chip ready, then dismissals by keys 124 (→) and 51 (delete), and no Tab: Sublime Text keeps Tab and never passes it to the input method. `→` now accepts as well (the chip says "Tab / → 替换").
+- The first `gh run download` attempts failed with connection resets from the artifact store. A resumable `curl -C -` loop on the artifact's redirect URL downloads it reliably.
+- Pending: live check (AI Assist checklist), especially whether Chromium apps honor `replacementRange`.
 
 ### Input memory (intelligence hub, step 1)
 

@@ -37,6 +37,4 @@ This is not just a Chinese input method. The intended product value is the combi
 
 ## Delivery Workflow
 
-- New features must start with OpenSpec artifacts, not immediate coding.
-- Use OpenSpec to define the change, design, and tasks before implementation begins.
 - Keep implementation, local docs, and Notion aligned after the work lands.

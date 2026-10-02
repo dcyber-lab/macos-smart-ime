@@ -234,6 +234,29 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 7. Turn off 保存输入原文, type a sentence, and confirm the journal does not gain it while the app's counts still grow
 8. Choose 清除学习记录…, confirm the alert, and check that `~/Library/Application Support/SmartIMEHost/` no longer has `input-memory.json`, `journal/`, `candidate-history.json`, or `translation-misses.json`
 
+## AI Assist Checklist (proof of concept)
+
+1. Open Notes (or TextEdit), open the input menu, and choose 在「Notes」中启用 AI 提示; the status line shows Codex and the model
+2. Type 这个功能下周上线，麻烦大家帮忙回归一下。: a chip "✨ 转成英文 · 生成中… ⇥" appears below the caret, then after about 7–9 s an English preview
+3. Press Tab (or →, needed in Sublime Text): the sentence is replaced by the English text and the chip says 已替换
+4. Type another sentence and press Tab before the preview appears: it is replaced as soon as the result arrives
+5. Type another sentence and keep typing: the chip disappears and nothing is replaced
+6. In an app that was not enabled, type the same sentence: no chip appears
+7. In Chrome (a GitHub comment box) and SeaTalk, enable AI 提示 and repeat 2–3; note whether the text is replaced or copied (⌘V)
+8. Turn 智能学习 off and repeat 2: the chip still appears in the enabled app
+9. With a preview showing, press ⇧→ or ⌥→: the chip disappears, the cursor moves or the selection grows, and nothing is replaced
+
+## AI Rewrite (⌃⌥R) Checklist
+
+1. In any text field, type 这个功能下周上线，麻烦大家帮忙回归一下 (no punctuation) and press ⌃⌥R: a popup lists 1 转成英文 … 5 转成中文 with "⏎ 转成英文"
+2. Press Return: it shows 生成中… and then the English text; press Return again to replace the line
+3. Select an English sentence, press ⌃⌥R then 2: the popup shows the polished sentence; Esc keeps the original
+4. In SeaTalk, type a message, press ⌃⌥R and Return twice before sending; the message is replaced (or copied, ⌘V, if the app refuses)
+5. In Ghostty, press ⌃⌥R with nothing selected: the popup says the app does not provide its text
+6. Type 这个接口有问题 followed by two spaces, then press ⌃⌥R and Return twice: the whole line, and nothing before it, is replaced
+7. With a result showing, click into another text field of the same app: the popup closes, and Return there does not replace anything
+8. In an empty field (or on a new blank line), press ⌃⌥R: the popup says there is nothing to rewrite; it never shows the clipboard
+
 ## Known Limits In This Milestone
 
 - This checklist validates both the Chinese `librime` path and the basic English completion path

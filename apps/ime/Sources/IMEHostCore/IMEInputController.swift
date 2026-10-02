@@ -41,6 +41,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         journal: InputJournal(directoryURL: IMEHostConfiguration.inputJournalDirectoryURL())
     )
     @MainActor private static var lastJournalPrune = Date.distantPast
+    /// AI assist (proof of concept): a ✨ rewrite offered after sentences in apps the user enabled.
+    @MainActor private static let aiChip = AIAssistChipController(
+        rewriter: { AIAssistSettings().rewriter() },
+        present: { display, caret in SuggestionChip.shared.show(display, caret: caret) },
+        log: { event, app in AIAssistEventLog.shared.append(event, app: app) }
+    )
     private static let returnKeys: Set<UInt16> = [36, 76]
 
     private let sessionStore = IMEHostSessionStore()
@@ -52,6 +58,13 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
     private var shiftToggle = ShiftToggleDetector()
     /// Where the selection-translation popup is anchored (first character of the selection).
     private var translationAnchor = NSRect.zero
+    /// Where the AI rewrite popup is anchored (start of the text being rewritten).
+    private var aiRewriteAnchor = NSRect.zero
+    private lazy var aiRewrite = MainActor.assumeIsolated {
+        AIRewriteController(rewriter: { AIAssistSettings().rewriter() }) { [weak self] state in
+            TranslationPopup.shared.show(state, caretRect: self?.aiRewriteAnchor ?? .zero)
+        }
+    }
     private lazy var selectionTranslation = MainActor.assumeIsolated {
         SelectionTranslationController(translator: AppleSelectionTranslator()) { [weak self] state in
             TranslationPopup.shared.show(state, caretRect: self?.translationAnchor ?? .zero)
@@ -114,6 +127,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
         shiftToggle.keyDown()
 
+        // While a ✨ chip shows: a bare Tab or → accepts, Esc dismisses, any other key dismisses and is typed.
+        let keyCode = event.keyCode, modifiers = event.modifierFlags
+        if MainActor.assumeIsolated({ Self.aiChip.handleKey(keyCode, modifiers: modifiers) }) == .consumed {
+            return true
+        }
+
         if Self.returnKeys.contains(event.keyCode), !sessionStore.hasActiveComposition {
             // Reads the field before the app gets the key: a chat app sends and clears it on Return.
             let app = clientBundleIdentifier, secureInput = IsSecureEventInputEnabled(), readTitle = windowTitleReader()
@@ -121,6 +140,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                 Self.intelligence.endLine(app: app, secureInput: secureInput,
                                           readField: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
+        }
+
+        if let handled = handleAIRewriteKey(event) {
+            return handled
         }
 
         if let handled = handleSelectionTranslationKey(event) {
@@ -223,6 +246,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
     public override func deactivateServer(_ sender: Any!) {
         // An unfinished sentence stays open: leaving to copy a link and coming back continues it.
+        MainActor.assumeIsolated { Self.aiChip.dismiss(reason: "dismissed on deactivation") }
         tearDownSession()
         super.deactivateServer(sender)
     }
@@ -256,7 +280,11 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         englishEngine?.reset()
         sessionStore.reset()
         withCandidatePanel { $0.hide() }
-        MainActor.assumeIsolated { selectionTranslation.dismiss() }
+        MainActor.assumeIsolated {
+            selectionTranslation.dismiss()
+            // Its range belongs to this field: Return in the next one must not replace there.
+            aiRewrite.dismiss()
+        }
     }
 
     // MARK: Selection translation
@@ -317,6 +345,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
                 Self.intelligence.commit(committedText, app: app, session: session, secureInput: secureInput,
                                          readField: { [weak self] in self?.textBeforeCursor() }, readWindowTitle: readTitle)
             }
+            offerAIRewrite(after: committedText, app: app, secureInput: secureInput)
             sessionStore.reset(committedText: committedText)
         }
         syncPresentation()
@@ -349,7 +378,132 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         IntelligenceMenu.items(settings: IntelligenceSettings(), currentApp: currentApp, isAccessibilityTrusted: WindowTitleReader.isTrusted,
                                action: #selector(intelligenceMenuCommand(_:)))
             .forEach(menu.addItem)
+        menu.addItem(.separator())
+        let ai = AIAssistSettings()
+        AIAssistMenu.items(settings: ai, currentApp: currentApp, active: ai.activeProvider(), action: #selector(aiMenuCommand(_:)))
+            .forEach(menu.addItem)
         return menu
+    }
+
+    @objc func aiMenuCommand(_ sender: Any?) {
+        let settings = AIAssistSettings()
+        switch AIAssistMenu.command(from: sender) {
+        case .toggleChips:
+            if let app = clientBundleIdentifier {
+                settings.toggleChips(in: app)
+            }
+        case .provider(let provider):
+            settings.provider = provider
+        case nil:
+            NSLog("SmartIME: unrecognized AI menu item: %@", String(describing: sender))
+        }
+    }
+
+    // MARK: AI assist
+
+    /// ⌃⌥R starts a rewrite; while its popup is open, keys go to it first.
+    private func handleAIRewriteKey(_ event: NSEvent) -> Bool? {
+        let keyCode = event.keyCode
+        let outcome = MainActor.assumeIsolated { aiRewrite.isActive ? aiRewrite.handleKey(keyCode) : nil }
+        switch outcome {
+        case .replace(let text, let range, let original)?:
+            let outcome = replaceText(in: range, with: text, expecting: original)
+            if outcome != .replaced {
+                MainActor.assumeIsolated { aiRewrite.report(outcome.message) }
+            }
+            return true
+        case .handled?, .dismissed(consumed: true)?, .copy?:
+            return true
+        case .dismissed(consumed: false)?, nil:
+            break
+        }
+        let settings = AIAssistSettings()
+        guard settings.hotkey.matches(keyCode: keyCode, modifierFlags: event.modifierFlags), !sessionStore.hasActiveComposition else {
+            return nil
+        }
+        startAIRewrite()
+        return true
+    }
+
+    /// The selection, or the line before the cursor; nothing is sent until an action is picked.
+    private func startAIRewrite() {
+        let app = clientBundleIdentifier
+        let blocked = IsSecureEventInputEnabled() || !IntelligenceSettings().allows(app: app) && !AIAssistSettings().chipApps.contains(app ?? "")
+        let client = self.client()
+        var text: String?
+        var range = NSRange(location: NSNotFound, length: 0)
+        var truncated = false
+        if !blocked, let client {
+            let selection = client.selectedRange()
+            if selection.location != NSNotFound, selection.length > 0 {
+                range = selection
+                text = client.attributedSubstring(from: selection)?.string
+            } else if let field = textBeforeCursor() {
+                // The app reports its text, so a blank line means there is nothing to rewrite.
+                let line = AIRewriteController.line(before: field)
+                text = line?.text ?? ""
+                range = line?.range ?? range
+                truncated = line?.truncated ?? false
+            }
+            var anchor = NSRect.zero
+            if range.location != NSNotFound {
+                _ = client.attributes(forCharacterIndex: range.location, lineHeightRectangle: &anchor)
+            }
+            aiRewriteAnchor = anchor.height > 0 ? anchor : caretRect()
+        }
+        let start = (text: text, range: range, truncated: truncated)
+        MainActor.assumeIsolated {
+            if !blocked && start.text == nil {
+                // A page without a text field (or an empty field) reports nothing; copy the selection
+                // instead, but never fall back to whatever was on the clipboard before.
+                GlobalSelectionAssist.shared.startReadOnly(clipboardFallback: false)
+            } else if blocked {
+                aiRewrite.start(text: nil, range: range)
+            } else {
+                aiRewrite.start(text: start.text, range: start.range, truncated: start.truncated)
+            }
+        }
+    }
+
+    /// Offers ✨ 转成英文 for a sentence that just ended, if this app has AI hints on and it qualifies.
+    /// Learning and the journal play no part. The field is read after the key, only when the commit
+    /// ends with sentence punctuation.
+    private func offerAIRewrite(after committedText: String, app: String?, secureInput: Bool) {
+        guard let app, !secureInput, let last = committedText.trimmingCharacters(in: .whitespaces).last,
+              SentenceAssembler.enders.contains(last), AIAssistSettings().chipApps.contains(app) else {
+            return
+        }
+        Task { @MainActor [weak self] in
+            guard let self, let field = self.textBeforeCursor(),
+                  let sentence = IntelligenceRecorder.sentence(endingAt: field).flatMap({ IntelligenceRecorder.consistent($0, with: committedText) }),
+                  !sentence.startsMidway, let range = field.range(ofTail: sentence.text),
+                  AIAssistChipController.qualifies(sentence.text), !self.sessionStore.hasActiveComposition, app == self.clientBundleIdentifier else {
+                return
+            }
+            let offer = AIAssistChipController.Offer(
+                app: app, sentence: sentence.text, range: range, caret: self.caretRect(),
+                apply: { [weak self] text, range in self?.replaceText(in: range, with: text, expecting: sentence.text) ?? .refused }
+            )
+            Self.aiChip.offer(offer)
+        }
+    }
+
+    /// Replaces the range in the client if it still holds `original` (the user may have clicked elsewhere
+    /// or edited), and checks that it took; otherwise copies the text so the user can paste it.
+    private func replaceText(in range: NSRange, with text: String, expecting original: String) -> AIReplacement {
+        let outcome: AIReplacement
+        if let client = client(), client.attributedSubstring(from: range)?.string == original {
+            client.insertText(text, replacementRange: range)
+            let written = client.attributedSubstring(from: NSRange(location: range.location, length: (text as NSString).length))?.string
+            outcome = written == text ? .replaced : .refused
+        } else {
+            outcome = .textChanged
+        }
+        if outcome != .replaced {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+        }
+        return outcome
     }
 
     @objc func intelligenceMenuCommand(_ sender: Any?) {
@@ -419,7 +573,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             let range = NSRange(location: start, length: cursor.location - start)
             if let text = client.attributedSubstring(from: range)?.string, !text.isEmpty {
                 MainActor.assumeIsolated { Self.fieldReadLimits[app] = size }
-                return FieldText(text, startsMidway: start > 0)
+                return FieldText(text, startsMidway: start > 0, cursor: cursor.location)
             }
         }
         // Nothing at any size (a terminal, say): try only the small read from now on.

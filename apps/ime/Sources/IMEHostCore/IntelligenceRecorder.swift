@@ -7,10 +7,28 @@ import UserData
 struct FieldText: Equatable, Sendable {
     let text: String
     let startsMidway: Bool
+    /// The cursor's location (UTF-16) in the client when it was read.
+    let cursor: Int?
 
-    init(_ text: String, startsMidway: Bool = false) {
+    init(_ text: String, startsMidway: Bool = false, cursor: Int? = nil) {
         self.text = text
         self.startsMidway = startsMidway
+        self.cursor = cursor
+    }
+
+    /// Where `tail` sits in the client (UTF-16) when the text, without trailing whitespace, ends with it;
+    /// nil when it does not (a sentence cut to a length limit) or the cursor is unknown.
+    func range(ofTail tail: String) -> NSRange? {
+        guard let cursor, !tail.isEmpty else {
+            return nil
+        }
+        let body = text[..<(text.lastIndex { !$0.isWhitespace }.map(text.index(after:)) ?? text.startIndex)]
+        guard body.hasSuffix(tail) else {
+            return nil
+        }
+        let end = cursor - text[body.endIndex...].utf16.count
+        let length = tail.utf16.count
+        return NSRange(location: end - length, length: length)
     }
 }
 
