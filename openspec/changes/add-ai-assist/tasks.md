@@ -29,3 +29,11 @@
 - [ ] 4.1 `AIAssistSettings` and the AI 助手 menu section with provider status
 - [ ] 4.2 Docs: hub exception for confirmed text, technical design, validation checklist, log
 - [ ] 4.3 CI; live check in SeaTalk, Chrome (GitHub), Notes
+
+## 5. Ollama Provider
+
+- [x] 5.1 `OllamaRewriter`: `POST /api/chat` on `AIOllamaURL` (default `http://localhost:11434`), model `AIOllamaModel` (default `qwen2.5:3b`), temperature 0, `keep_alive` 30 m, 15 s timeout; output cleaned like the on-device free-text answer
+- [x] 5.2 Availability: `GET /api/tags` lists the model (0.4 s timeout, cached 30 s)
+- [x] 5.3 `Provider.ollama`; `auto` order ollama → Apple → Codex; menu entry and status text
+- [x] 5.4 Prompts shared with the on-device model (terms, English style examples), tested with a stub HTTP server
+- [x] 5.5 Docs and log: why (Qwen2.5-3B measured 0.1–0.3 s per sentence, better zh→en than the on-device model, no guardrail refusals), how to install (`ollama pull`, or a GGUF from Hugging Face when the registry is slow)

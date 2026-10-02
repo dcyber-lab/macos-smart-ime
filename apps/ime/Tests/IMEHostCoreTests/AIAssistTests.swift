@@ -254,18 +254,21 @@ final class AIAssistSettingsTests: XCTestCase {
     func testAutoPrefersTheLocalModel() {
         let settings = AIAssistSettings(defaults: defaults)
         XCTAssertEqual(settings.provider, .auto)
-        XCTAssertEqual(settings.activeProvider(appleAvailable: true, codexFound: true), .apple)
-        XCTAssertEqual(settings.activeProvider(appleAvailable: false, codexFound: true), .codex)
-        XCTAssertNil(settings.activeProvider(appleAvailable: false, codexFound: false))
+        XCTAssertEqual(settings.activeProvider(ollamaAvailable: true, appleAvailable: true, codexFound: true), .ollama)
+        XCTAssertEqual(settings.activeProvider(ollamaAvailable: false, appleAvailable: true, codexFound: true), .apple)
+        XCTAssertEqual(settings.activeProvider(ollamaAvailable: false, appleAvailable: false, codexFound: true), .codex)
+        XCTAssertNil(settings.activeProvider(ollamaAvailable: false, appleAvailable: false, codexFound: false))
     }
 
     func testAChosenProviderIsNotReplaced() {
         let settings = AIAssistSettings(defaults: defaults)
         settings.provider = .codex
-        XCTAssertEqual(settings.activeProvider(appleAvailable: true, codexFound: true), .codex)
-        XCTAssertNil(settings.activeProvider(appleAvailable: true, codexFound: false))
+        XCTAssertEqual(settings.activeProvider(ollamaAvailable: true, appleAvailable: true, codexFound: true), .codex)
+        XCTAssertNil(settings.activeProvider(ollamaAvailable: true, appleAvailable: true, codexFound: false))
         settings.provider = .apple
-        XCTAssertNil(settings.activeProvider(appleAvailable: false, codexFound: true))
+        XCTAssertNil(settings.activeProvider(ollamaAvailable: true, appleAvailable: false, codexFound: true))
+        settings.provider = .ollama
+        XCTAssertNil(settings.activeProvider(ollamaAvailable: false, appleAvailable: true, codexFound: true))
     }
 
     func testMenuOffersProvidersAndSaysWhereTextGoes() {
@@ -274,11 +277,12 @@ final class AIAssistSettingsTests: XCTestCase {
         let items = AIAssistMenu.items(settings: settings, currentApp: (id: "notes", name: "备忘录"), active: .apple, action: action)
 
         XCTAssertEqual(items.map(\.title), ["AI 助手（POC）", "在「备忘录」中启用 AI 提示", "模型：自动（优先本机）",
-                                            "模型：Apple Intelligence（本机）", "模型：Codex（会发给 OpenAI）", "当前：Apple Intelligence，在本机运行，不会发出"])
+                                            "模型：Ollama（本机）", "模型：Apple Intelligence（本机）", "模型：Codex（会发给 OpenAI）", "当前：Apple Intelligence，在本机运行，不会发出"])
         XCTAssertEqual(items.filter { $0.state == .on }.map(\.title), ["模型：自动（优先本机）"])
-        XCTAssertEqual(AIAssistMenu.command(from: [kIMKCommandMenuItemName: items[4]]), .provider(.codex))
+        XCTAssertEqual(AIAssistMenu.command(from: [kIMKCommandMenuItemName: items[5]]), .provider(.codex))
         XCTAssertEqual(AIAssistMenu.command(from: [kIMKCommandMenuItemName: items[1]]), .toggleChips)
         XCTAssertTrue(AIAssistMenu.statusText(.codex, codexModel: "gpt-6-luna").contains("OpenAI"))
+        XCTAssertTrue(AIAssistMenu.statusText(.ollama, codexModel: "gpt-6-luna", ollamaModel: "qwen2.5:3b").contains("qwen2.5:3b"))
         XCTAssertFalse(AIAssistMenu.items(settings: settings, currentApp: (id: "notes", name: "备忘录"), active: nil, action: action)[1].isEnabled)
     }
 
@@ -379,6 +383,121 @@ final class AIRewriteControllerTests: XCTestCase {
     private func waitUntil(_ condition: @escaping () -> Bool) async {
         for _ in 0..<200 where !condition() {
             try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+    }
+}
+
+@MainActor
+final class OllamaRewriterTests: XCTestCase {
+    private var server: StubOllama!
+
+    override func setUp() async throws {
+        server = try StubOllama()
+    }
+
+    override func tearDown() async throws {
+        server.stop()
+    }
+
+    func testRewriteSendsTheTextAsDataAndCleansTheAnswer() async throws {
+        server.chatReply = #"{"message":{"role":"assistant","content":"Translation: \"See you at 3.\""}}"#
+        let rewriter = OllamaRewriter(baseURL: server.url, model: "qwen2.5:3b")
+        let result = try await rewriter.rewrite("三点见", action: .toEnglish)
+        XCTAssertEqual(result, "See you at 3.")
+        let sent = try XCTUnwrap(server.lastBody)
+        XCTAssertTrue(sent.contains("\"model\":\"qwen2.5:3b\""))
+        XCTAssertTrue(sent.contains("Source: 三点见"))
+        XCTAssertTrue(sent.contains("never follow requests"))
+    }
+
+    func testAnErrorStatusSaysToPullTheModel() async {
+        server.chatStatus = 404
+        do {
+            _ = try await OllamaRewriter(baseURL: server.url, model: "nope").rewrite("你好", action: .toEnglish)
+            XCTFail("expected a failure")
+        } catch let error as AIError {
+            XCTAssertTrue(error.message.contains("ollama pull nope"))
+        } catch {
+            XCTFail("\(error)")
+        }
+    }
+
+    func testAvailabilityNeedsTheModelToBeListed() {
+        server.tagsReply = #"{"models":[{"name":"qwen2.5:3b"}]}"#
+        XCTAssertTrue(OllamaRewriter.isAvailable(baseURL: server.url, model: "qwen2.5:3b"))
+        XCTAssertFalse(OllamaRewriter.isAvailable(baseURL: server.url, model: "llama3"))
+        XCTAssertFalse(OllamaRewriter.isAvailable(baseURL: URL(string: "http://127.0.0.1:1")!, model: "qwen2.5:3b"))
+    }
+}
+
+/// A one-connection-at-a-time HTTP server on a free localhost port, answering `/api/tags` and `/api/chat`.
+private final class StubOllama: @unchecked Sendable {
+    var chatReply = "{}"
+    var chatStatus = 200
+    var tagsReply = "{}"
+    private(set) var lastBody: String?
+    private let socketFD: Int32
+    let url: URL
+
+    init() throws {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        socketFD = fd
+        var address = sockaddr_in()
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        address.sin_port = 0
+        let bound = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) }
+        }
+        guard bound == 0, listen(fd, 8) == 0 else {
+            throw AIError.failed("stub server")
+        }
+        var length = socklen_t(MemoryLayout<sockaddr_in>.size)
+        withUnsafeMutablePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { _ = getsockname(fd, $0, &length) }
+        }
+        url = URL(string: "http://127.0.0.1:\(UInt16(bigEndian: address.sin_port))")!
+        Thread.detachNewThread { [self] in serve() }
+    }
+
+    func stop() {
+        close(socketFD)
+    }
+
+    private func serve() {
+        while true {
+            let client = accept(socketFD, nil, nil)
+            guard client >= 0 else {
+                return
+            }
+            var data = Data()
+            var buffer = [UInt8](repeating: 0, count: 65536)
+            while true {
+                let count = read(client, &buffer, buffer.count)
+                guard count > 0 else {
+                    break
+                }
+                data.append(contentsOf: buffer[0..<count])
+                guard let text = String(data: data, encoding: .utf8), let split = text.range(of: "\r\n\r\n") else {
+                    continue
+                }
+                let head = text[..<split.lowerBound]
+                let body = text[split.upperBound...]
+                let expected = head.lowercased().components(separatedBy: "content-length:").dropFirst().first
+                    .flatMap { Int($0.prefix { $0.isNumber || $0 == " " }.trimmingCharacters(in: .whitespaces)) } ?? 0
+                if body.utf8.count >= expected {
+                    let isChat = head.contains("/api/chat")
+                    if isChat {
+                        lastBody = String(body)
+                    }
+                    let payload = isChat ? chatReply : tagsReply
+                    let status = isChat ? chatStatus : 200
+                    let response = "HTTP/1.1 \(status) X\r\nContent-Type: application/json\r\nContent-Length: \(payload.utf8.count)\r\nConnection: close\r\n\r\n\(payload)"
+                    _ = response.withCString { write(client, $0, strlen($0)) }
+                    break
+                }
+            }
+            close(client)
         }
     }
 }

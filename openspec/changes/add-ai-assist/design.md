@@ -77,3 +77,9 @@ The menu's provider item says that confirmed text goes to OpenAI.
 - **Latency**: 6–7 s per action. The running state shows elapsed seconds, and `Esc` always works.
 - **Replacement**: some apps (Chromium in particular) may not honor `replacementRange` outside a composition; the clipboard fallback covers them.
 - **Codex changes**: CLI flags or model names may change with updates; failures surface as messages, and `AICodexModel` can be changed with `defaults write`.
+
+### Ollama provider
+
+- Translation quality of the on-device model was not enough (literal output, refusals by guardrails). Qwen2.5-3B (Q4_K_M, 2 GB) through a local Ollama answered in 0.1–0.3 s after a 2.4 s first load on the dev Mac, with idiomatic English and no refusals; a text that asks for code or for the prompt was only translated.
+- `auto` order becomes Ollama → Apple Intelligence → Codex. Text goes to `localhost` only.
+- Known gaps of the 3B model: "接口" may become "interface", and it sometimes adds "Sure,". Output is cleaned like the on-device free-text answer; a larger model can be set with `AIOllamaModel`.

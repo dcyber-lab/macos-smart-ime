@@ -34,17 +34,18 @@ enum AIAssistMenu {
             choice.state = settings.provider == provider ? .on : .off
             items.append(choice)
         }
-        let status = item(statusText(active, codexModel: settings.codexModel), tag: 0, action: nil)
+        let status = item(statusText(active, codexModel: settings.codexModel, ollamaModel: settings.ollamaModel), tag: 0, action: nil)
         status.isEnabled = false
         items.append(status)
         return items
     }
 
-    static func statusText(_ active: AIAssistSettings.Provider?, codexModel: String) -> String {
+    static func statusText(_ active: AIAssistSettings.Provider?, codexModel: String, ollamaModel: String = OllamaRewriter.defaultModel) -> String {
         switch active {
+        case .ollama: "当前：Ollama（\(ollamaModel)），在本机运行，不会发出"
         case .apple: "当前：Apple Intelligence，在本机运行，不会发出"
         case .codex: "当前：Codex（\(codexModel)），启用的应用里句子会先发给 OpenAI"
-        case .auto, nil: "当前：没有可用的模型（打开 Apple Intelligence 或安装 Codex）"
+        case .auto, nil: "当前：没有可用的模型（启动 Ollama、打开 Apple Intelligence 或安装 Codex）"
         }
     }
 

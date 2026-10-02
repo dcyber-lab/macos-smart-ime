@@ -10,16 +10,20 @@ struct AIAssistSettings {
     static let codexPathKey = "AICodexPath"
     static let codexModelKey = "AICodexModel"
     static let codexEffortKey = "AICodexReasoningEffort"
+    static let ollamaURLKey = "AIOllamaURL"
+    static let ollamaModelKey = "AIOllamaModel"
 
-    /// Where rewrites run. `auto` prefers Apple Intelligence (on the Mac, fast, free) and falls back to Codex.
+    /// Where rewrites run. `auto` prefers a local Ollama model, then Apple Intelligence (both on the Mac, free), then Codex.
     enum Provider: String, CaseIterable {
         case auto
+        case ollama
         case apple
         case codex
 
         var title: String {
             switch self {
             case .auto: "模型：自动（优先本机）"
+            case .ollama: "模型：Ollama（本机）"
             case .apple: "模型：Apple Intelligence（本机）"
             case .codex: "模型：Codex（会发给 OpenAI）"
             }
@@ -56,21 +60,27 @@ struct AIAssistSettings {
     var codexModel: String { defaults.string(forKey: Self.codexModelKey) ?? "gpt-6-luna" }
     var codexReasoningEffort: String { defaults.string(forKey: Self.codexEffortKey) ?? "low" }
 
-    /// Which provider rewrites would use now, or nil when none can run. `appleAvailable` and
-    /// `codexFound` are injectable for tests (the CI runner has neither).
-    func activeProvider(appleAvailable: Bool? = nil, codexFound: Bool? = nil) -> Provider? {
+    var ollamaURL: URL { defaults.string(forKey: Self.ollamaURLKey).flatMap(URL.init(string:)) ?? URL(string: OllamaRewriter.defaultURL)! }
+    var ollamaModel: String { defaults.string(forKey: Self.ollamaModelKey) ?? OllamaRewriter.defaultModel }
+
+    /// Which provider rewrites would use now, or nil when none can run. `ollamaAvailable`,
+    /// `appleAvailable` and `codexFound` are injectable for tests (the CI runner has none of them).
+    func activeProvider(ollamaAvailable: Bool? = nil, appleAvailable: Bool? = nil, codexFound: Bool? = nil) -> Provider? {
+        let ollama = ollamaAvailable ?? OllamaRewriter.isAvailable(baseURL: ollamaURL, model: ollamaModel)
         let apple = appleAvailable ?? Self.isAppleAvailable
         let codex = codexFound ?? (codexRewriter() != nil)
         switch provider {
+        case .ollama: return ollama ? .ollama : nil
         case .apple: return apple ? .apple : nil
         case .codex: return codex ? .codex : nil
-        case .auto: return apple ? .apple : (codex ? .codex : nil)
+        case .auto: return ollama ? .ollama : (apple ? .apple : (codex ? .codex : nil))
         }
     }
 
     /// The rewriter for the active provider, or nil when none can run.
     func rewriter() -> AIRewriter? {
         switch activeProvider() {
+        case .ollama: OllamaRewriter(baseURL: ollamaURL, model: ollamaModel)
         case .apple: Self.appleRewriter()
         case .codex: codexRewriter()
         case .auto, nil: nil
