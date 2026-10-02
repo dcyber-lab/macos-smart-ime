@@ -61,18 +61,19 @@ public final class GlobalSelectionAssist {
         AIAssistEventLog.shared.append(event, app: "-")
     }
 
-    /// Also used by the input method when the focused page reports no text of its own.
-    func startReadOnly() {
+    /// Also used by the input method when the focused page reports no text of its own; it passes
+    /// `clipboardFallback: false`, since ⌃⌥R means the selection, not what was copied earlier.
+    func startReadOnly(clipboardFallback: Bool = true) {
         guard !IsSecureEventInputEnabled() else {
             return
         }
-        log("global hotkey: pressed")
+        log(clipboardFallback ? "global hotkey: pressed" : "global hotkey: started by the input method")
         Task { @MainActor in
-            await self.start()
+            await self.start(clipboardFallback: clipboardFallback)
         }
     }
 
-    private func start() async {
+    private func start(clipboardFallback: Bool) async {
         let mouse = NSEvent.mouseLocation
         anchor = CGRect(x: mouse.x, y: mouse.y - 6, width: 1, height: 6)
         previousApp = NSWorkspace.shared.frontmostApplication
@@ -81,10 +82,10 @@ public final class GlobalSelectionAssist {
             text = await SelectionCopier.copySelection()
         }
         let copied = text != nil
-        if text == nil {
+        if text == nil, clipboardFallback {
             text = NSPasteboard.general.string(forType: .string)
         }
-        log("global hotkey: \(text?.count ?? 0) characters, \(copied ? "copied selection" : "clipboard")")
+        log("global hotkey: \(text?.count ?? 0) characters, \(copied ? "copied selection" : clipboardFallback ? "clipboard" : "nothing copied")")
         controller.start(text: text, range: NSRange(location: NSNotFound, length: 0), readOnly: true)
     }
 

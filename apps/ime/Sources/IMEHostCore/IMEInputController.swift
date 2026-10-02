@@ -438,10 +438,12 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             if selection.location != NSNotFound, selection.length > 0 {
                 range = selection
                 text = client.attributedSubstring(from: selection)?.string
-            } else if let field = textBeforeCursor(), let line = AIRewriteController.line(before: field) {
-                text = line.text
-                range = line.range
-                truncated = line.truncated
+            } else if let field = textBeforeCursor() {
+                // The app reports its text, so a blank line means there is nothing to rewrite.
+                let line = AIRewriteController.line(before: field)
+                text = line?.text ?? ""
+                range = line?.range ?? range
+                truncated = line?.truncated ?? false
             }
             var anchor = NSRect.zero
             if range.location != NSNotFound {
@@ -452,8 +454,9 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         let start = (text: text, range: range, truncated: truncated)
         MainActor.assumeIsolated {
             if !blocked && start.text == nil {
-                // A page without a text field reports nothing; copy the selection instead.
-                GlobalSelectionAssist.shared.startReadOnly()
+                // A page without a text field (or an empty field) reports nothing; copy the selection
+                // instead, but never fall back to whatever was on the clipboard before.
+                GlobalSelectionAssist.shared.startReadOnly(clipboardFallback: false)
             } else if blocked {
                 aiRewrite.start(text: nil, range: range)
             } else {
