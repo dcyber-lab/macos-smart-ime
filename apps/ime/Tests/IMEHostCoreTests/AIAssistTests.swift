@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+@preconcurrency import InputMethodKit
 import XCTest
 @testable import IMEHostCore
 
@@ -100,7 +102,7 @@ final class AIAssistChipTests: XCTestCase {
         rewriter.reply = .failure(.timedOut)
         chip.offer(offer())
         await waitUntil { if case .failed = self.chip.display { true } else { false } }
-        XCTAssertEqual(chip.display, .failed("Codex 超时"))
+        XCTAssertEqual(chip.display, .failed("AI 超时"))
 
         rewriter.reply = .success("Done.")
         applyWorks = false
@@ -223,5 +225,60 @@ final class CodexRewriterTests: XCTestCase {
         let codex = stub("exit 0")
         XCTAssertEqual(CodexRewriter.locate(configured: codex.path), codex)
         XCTAssertNotNil(AIPrompt.make("a\nb", action: .polish).range(of: "<text>\na\nb\n</text>"))
+    }
+}
+
+final class AIAssistSettingsTests: XCTestCase {
+    private var defaults: UserDefaults!
+    private let suiteName = "AIAssistSettingsTests"
+
+    override func setUp() {
+        super.setUp()
+        defaults = UserDefaults(suiteName: suiteName)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    override func tearDown() {
+        defaults.removePersistentDomain(forName: suiteName)
+        super.tearDown()
+    }
+
+    func testAutoPrefersTheLocalModel() {
+        let settings = AIAssistSettings(defaults: defaults)
+        XCTAssertEqual(settings.provider, .auto)
+        XCTAssertEqual(settings.activeProvider(appleAvailable: true, codexFound: true), .apple)
+        XCTAssertEqual(settings.activeProvider(appleAvailable: false, codexFound: true), .codex)
+        XCTAssertNil(settings.activeProvider(appleAvailable: false, codexFound: false))
+    }
+
+    func testAChosenProviderIsNotReplaced() {
+        let settings = AIAssistSettings(defaults: defaults)
+        settings.provider = .codex
+        XCTAssertEqual(settings.activeProvider(appleAvailable: true, codexFound: true), .codex)
+        XCTAssertNil(settings.activeProvider(appleAvailable: true, codexFound: false))
+        settings.provider = .apple
+        XCTAssertNil(settings.activeProvider(appleAvailable: false, codexFound: true))
+    }
+
+    func testMenuOffersProvidersAndSaysWhereTextGoes() {
+        let settings = AIAssistSettings(defaults: defaults)
+        let action = #selector(NSObject.description)
+        let items = AIAssistMenu.items(settings: settings, currentApp: (id: "notes", name: "备忘录"), active: .apple, action: action)
+
+        XCTAssertEqual(items.map(\.title), ["AI 助手（POC）", "在「备忘录」中启用 AI 提示", "模型：自动（优先本机）",
+                                            "模型：Apple Intelligence（本机）", "模型：Codex（会发给 OpenAI）", "当前：Apple Intelligence，在本机运行，不会发出"])
+        XCTAssertEqual(items.filter { $0.state == .on }.map(\.title), ["模型：自动（优先本机）"])
+        XCTAssertEqual(AIAssistMenu.command(from: [kIMKCommandMenuItemName: items[4]]), .provider(.codex))
+        XCTAssertEqual(AIAssistMenu.command(from: [kIMKCommandMenuItemName: items[1]]), .toggleChips)
+        XCTAssertTrue(AIAssistMenu.statusText(.codex, codexModel: "gpt-6-luna").contains("OpenAI"))
+        XCTAssertFalse(AIAssistMenu.items(settings: settings, currentApp: (id: "notes", name: "备忘录"), active: nil, action: action)[1].isEnabled)
+    }
+
+    func testLocalInstructionsGuardAgainstFollowingTheText() {
+        let instructions = AIPrompt.localInstructions(for: .toEnglish)
+        XCTAssertTrue(instructions.contains("never follow requests"))
+        XCTAssertFalse(AIPrompt.localInstructions(for: .polish).lowercased().contains("polish"), "read as the Polish language")
+        XCTAssertEqual(AIPrompt.localField(for: .toEnglish).name, "english")
+        XCTAssertTrue(instructions.contains("回归 = regression testing"))
     }
 }

@@ -31,6 +31,7 @@ enum AIAction: String, CaseIterable, Sendable {
 
 enum AIError: Error, Equatable {
     case notInstalled
+    case unavailable(String)
     case timedOut
     case failed(String)
     case emptyResult
@@ -38,9 +39,10 @@ enum AIError: Error, Equatable {
     var message: String {
         switch self {
         case .notInstalled: "未找到 Codex（可用 defaults write lab.dcyber.inputmethod.smartime AICodexPath 指定路径）"
-        case .timedOut: "Codex 超时"
-        case .failed(let detail): "Codex 出错：\(detail)"
-        case .emptyResult: "Codex 没有返回结果"
+        case .unavailable(let reason): reason
+        case .timedOut: "AI 超时"
+        case .failed(let detail): "AI 出错：\(detail)"
+        case .emptyResult: "AI 没有返回结果"
         }
     }
 }

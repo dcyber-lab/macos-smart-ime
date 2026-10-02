@@ -10,6 +10,12 @@
 - Tests: 12 new cases (chip flow with a fake provider, `codex` stand-in script for arguments, stdin, errors, timeout, empty output). 160 host and 120 data tests pass locally.
 - First live try in Sublime Text: a chip appeared once and was dismissed; seven more sentences within 50 s got none because of the one-per-minute limit. The limit is now 5 s per app, so a dismissed chip does not block the next sentence. (Repeated journal lines were the same test sentence retyped: identical text and context hashes.)
 - Second try: the result appeared but was not applied. The chip's "⇥" reads as an arrow; Right Arrow (like any key other than Tab) dismisses the chip. The chip now says "Tab 替换 · Esc 关闭". SmartIMEHost's NSLog lines do not reach `log show`, so chip events (offered, ready after N s, key that dismissed it, replaced or copied, failures; never text) go to `ai-assist-events.log` (0600, last 500 lines).
+- Apple Intelligence became available after the user matched the Mac and Siri languages. Added `AppleRewriter` (Foundation Models), configured as follows:
+  - a one-field dynamic schema, because `@Generable` macros are unavailable with the Command Line Tools;
+  - temperature 0, the text labelled as data, and an engineering term list.
+  - Added `AIProvider` (auto/apple/codex, default auto = local first), with menu items for it and a status line saying whether text leaves the Mac.
+  - Measurements and failure cases are in `docs/intelligence-hub.md`. 165 host tests pass locally.
+- The first `gh run download` attempts failed with connection resets from the artifact store. A resumable `curl -C -` loop on the artifact's redirect URL downloads it reliably.
 - Pending: live check (AI Assist checklist), especially whether Chromium apps honor `replacementRange`.
 
 ### Input memory (intelligence hub, step 1)

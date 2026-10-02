@@ -365,18 +365,23 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             .forEach(menu.addItem)
         menu.addItem(.separator())
         let ai = AIAssistSettings()
-        AIAssistMenu.items(settings: ai, currentApp: currentApp, codexFound: ai.rewriter() != nil, action: #selector(aiMenuCommand(_:)))
+        AIAssistMenu.items(settings: ai, currentApp: currentApp, active: ai.activeProvider(), action: #selector(aiMenuCommand(_:)))
             .forEach(menu.addItem)
         return menu
     }
 
     @objc func aiMenuCommand(_ sender: Any?) {
-        guard AIAssistMenu.isToggle(sender), let app = clientBundleIdentifier else {
-            return
-        }
         let settings = AIAssistSettings()
-        settings.toggleChips(in: app)
-        NSLog("SmartIME: AI chips %@ for %@", settings.chipApps.contains(app) ? "on" : "off", app)
+        switch AIAssistMenu.command(from: sender) {
+        case .toggleChips:
+            if let app = clientBundleIdentifier {
+                settings.toggleChips(in: app)
+            }
+        case .provider(let provider):
+            settings.provider = provider
+        case nil:
+            NSLog("SmartIME: unrecognized AI menu item: %@", String(describing: sender))
+        }
     }
 
     // MARK: AI assist

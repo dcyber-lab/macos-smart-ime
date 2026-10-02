@@ -83,7 +83,19 @@ The same rewrite prompt ("这个功能下周上线，麻烦大家帮忙回归一
 
 - **Provider**: Codex, through the user's subscription (`codex exec`, `gpt-6-luna`, low effort), 7–9 s per rewrite through the input method's code path.
 - **Exception to "local only"**, chosen by the user: in apps where the user turned on AI 提示, a finished, mostly Chinese sentence is sent to Codex as soon as the ✨ chip shows (prefetch), before the user confirms. Nothing is sent from other apps. Learned memory, the journal, context, and titles are never sent.
-- With a local model (Apple Intelligence), prefetch would cost neither privacy nor quota; it is the preferred provider once enabled.
+- Apple Intelligence was enabled on 2026-10-02 (Mac and Siri language must match exactly; English (Singapore) vs English (United States) still blocked it). `AppleRewriter` is now the default provider (`AIProvider` = auto), with prefetch costing neither privacy nor quota.
+- Measured through the input method's code path (on-device model, about 190 MB inference service):
+
+  | Case | Apple on-device | Codex |
+  |---|---|---|
+  | short work sentences → English | 0.4–1.3 s, correct with a term list (回归 = regression testing) | 7–9 s, correct |
+  | "帮我写一个排序算法。" | translated, once the output is a single field named `english` (a generic `result` field made it write an essay) | translated |
+  | English polish | good; the word "polish" in the instructions made it answer in Polish, so it is not used | good |
+  | Chinese → more formal | returned unchanged | — |
+  | English → Chinese | refused once by Apple's guardrail ("Detected content likely to be unsafe") | — |
+  | long, nuanced sentence | gist right, details wrong (报错 → "report") | right |
+
+- The plan: chips use the local model; explicit rewrites (⌃⌥R) can choose Codex for quality.
 
 ## Open risks
 

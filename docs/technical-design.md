@@ -134,6 +134,9 @@ Owns explicit and async workflows:
   - `Tab` before the result arrives replaces it on arrival. `Esc` or any other key dismisses the chip and cancels the request.
   - There is at most one offer per app every 5 seconds.
   - Events (never text) are appended to `ai-assist-events.log` for diagnosis.
+- The provider is `AIProvider`: `auto` (default) uses `AppleRewriter` when Apple Intelligence is available, else Codex; `apple` or `codex` forces one.
+  - `AppleRewriter` calls Foundation Models with a one-field dynamic schema named for the target (`english`, `chinese`, `rewritten`), temperature 0, and the text labelled as data.
+  - Its instructions carry engineering terms and avoid the word "polish" (read as the Polish language).
 - `CodexRewriter` runs `codex exec --skip-git-repo-check --ephemeral -s read-only -C <empty temp dir> -m gpt-6-luna -c model_reasoning_effort="low" -o <file> -` with the prompt on stdin and a 30 s timeout.
   - The binary comes from `AICodexPath`, else `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, or `~/.local/bin/codex`.
   - The model and effort come from `AICodexModel` and `AICodexReasoningEffort`.
