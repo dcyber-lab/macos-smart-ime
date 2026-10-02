@@ -8,14 +8,11 @@ Start with:
 
 - `docs/project-brief.md`
 - `docs/technical-design.md`
-- `docs/openspec-workflow.md`
 - `docs/implementation-log.md`
 
 GitHub repository:
 
 - `https://github.com/dcyber-lab/macos-smart-ime`
-
-OpenSpec is installed in this repository. For any new feature, create or update an OpenSpec change before implementation.
 
 ## Install or update
 

@@ -64,4 +64,3 @@ Recommended types:
 - If implementation changes architecture or interfaces, update `docs/technical-design.md`.
 - If implementation changes project direction or scope, update Notion.
 - After each meaningful coding session, append a factual entry to `docs/implementation-log.md`.
-- For new features, make sure the related OpenSpec change is created before implementation and kept in sync as tasks progress.
