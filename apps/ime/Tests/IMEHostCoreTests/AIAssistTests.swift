@@ -407,7 +407,7 @@ final class AIRewriteControllerTests: XCTestCase {
 
     func testPopupContent() {
         let choosing = TranslationPopup.content(for: .choosing(text: "你好", defaultAction: .toEnglish, truncated: true))
-        XCTAssertEqual(choosing?.body, "1 转成英文   2 润色   3 更正式   4 更简洁   5 转成中文   6 整理   7 解释")
+        XCTAssertEqual(choosing?.body, "1 转成英文    2 润色    3 更正式    4 更简洁\n5 转成中文    6 整理    7 解释")
         XCTAssertTrue(choosing?.hint.contains("⏎ 转成英文") == true)
         XCTAssertTrue(choosing?.hint.contains("请先选中") == true)
         XCTAssertNil(TranslationPopup.content(for: .idle))

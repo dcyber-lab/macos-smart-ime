@@ -56,7 +56,10 @@ final class TranslationPopup {
         case .idle:
             return nil
         case .choosing(let text, let defaultAction, let truncated):
-            let actions = AIAction.allCases.enumerated().map { "\($0.offset + 1) \($0.element.title)" }.joined(separator: "   ")
+            // Two even rows; a long row wrapped at whatever width the popup happened to have.
+            let labels = AIAction.allCases.enumerated().map { "\($0.offset + 1) \($0.element.title)" }
+            let split = (labels.count + 1) / 2
+            let actions = [labels[..<split], labels[split...]].map { $0.joined(separator: "    ") }.joined(separator: "\n")
             let note = truncated ? " · 只读到这一行的末尾部分，长消息请先选中" : ""
             return ("✨ AI 改写", text, actions, "数字选择 · ⏎ \(defaultAction.title) · Esc 取消\(note)")
         case .running(let action, let text):
@@ -174,7 +177,9 @@ final class TranslationPopupView: NSView {
 
     private func fill(badge text: String, source: String, body: String, hint: String) {
         badge.text = text
-        sourceLabel.stringValue = source
+        // The source is a one-line preview: line breaks would draw over the rows below it.
+        sourceLabel.stringValue = source.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }.joined(separator: " ")
         bodyLabel.stringValue = body
         hintLabel.stringValue = hint
     }
