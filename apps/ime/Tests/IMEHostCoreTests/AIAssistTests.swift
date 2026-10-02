@@ -300,19 +300,17 @@ final class AIAssistSettingsTests: XCTestCase {
         XCTAssertNil(settings.activeProvider(ollamaAvailable: false, appleAvailable: true, codexFound: true))
     }
 
-    func testMenuOffersProvidersAndSaysWhereTextGoes() {
-        let settings = AIAssistSettings(defaults: defaults)
-        let action = #selector(NSObject.description)
-        let items = AIAssistMenu.items(settings: settings, currentApp: (id: "notes", name: "备忘录"), active: .apple, action: action)
+    func testStatusSaysWhereTextGoes() {
+        XCTAssertTrue(AIAssistSettings.statusText(.codex, codexModel: "gpt-6-luna").contains("OpenAI"))
+        XCTAssertTrue(AIAssistSettings.statusText(.ollama, codexModel: "gpt-6-luna", ollamaModel: "qwen2.5:3b").contains("qwen2.5:3b"))
+        XCTAssertTrue(AIAssistSettings.statusText(.apple, codexModel: "gpt-6-luna").contains("不会发出"))
+        XCTAssertTrue(AIAssistSettings.statusText(nil, codexModel: "gpt-6-luna").contains("没有可用的模型"))
+    }
 
-        XCTAssertEqual(items.map(\.title), ["AI 助手（POC）", "在「备忘录」中启用 AI 提示", "模型：自动（优先本机）",
-                                            "模型：Ollama（本机）", "模型：Apple Intelligence（本机）", "模型：Codex（会发给 OpenAI）", "当前：Apple Intelligence，在本机运行，不会发出"])
-        XCTAssertEqual(items.filter { $0.state == .on }.map(\.title), ["模型：自动（优先本机）"])
-        XCTAssertEqual(AIAssistMenu.command(from: [kIMKCommandMenuItemName: items[5]]), .provider(.codex))
-        XCTAssertEqual(AIAssistMenu.command(from: [kIMKCommandMenuItemName: items[1]]), .toggleChips)
-        XCTAssertTrue(AIAssistMenu.statusText(.codex, codexModel: "gpt-6-luna").contains("OpenAI"))
-        XCTAssertTrue(AIAssistMenu.statusText(.ollama, codexModel: "gpt-6-luna", ollamaModel: "qwen2.5:3b").contains("qwen2.5:3b"))
-        XCTAssertFalse(AIAssistMenu.items(settings: settings, currentApp: (id: "notes", name: "备忘录"), active: nil, action: action)[1].isEnabled)
+    func testHotkeysAreShownAsMenusWriteThem() {
+        XCTAssertEqual(AIAssistSettings.defaultHotkey.displayString, "⌃⌥R")
+        XCTAssertEqual(AIAssistSettings.defaultReadHotkey.displayString, "⌃⌥E")
+        XCTAssertEqual(TranslationHotkey(string: "cmd+shift+t")?.displayString, "⇧⌘T")
     }
 
     func testLocalInstructionsGuardAgainstFollowingTheText() {

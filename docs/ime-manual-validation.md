@@ -213,30 +213,38 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 4. Type `nihao` and press `Return` with raw pinyin, and press `Escape` on another composition: nothing breaks apart
 5. Switch to English mode, type `deplo`, press `Down` and `Space`: the deploy row breaks apart
 6. Type quickly (`wo` `Space` `men` `Space` …): every new panel appears at once and fully visible; fragments fly over it and fade
-7. Click the input menu in the menu bar: the choices are listed under the gray titles 选词动效 and 碎片配色 (no submenus), with a check mark on the current one; choosing an item plays a preview below the pointer and the next commit uses it. Try every motion and palette, 随机 (changes per commit), and 关闭 (no effect)
+7. Open the input menu › 设置… › 外观: choosing a motion or palette plays a preview below the pointer and the next commit uses it; 播放 replays it. Try every motion and palette, 随机 (changes per commit), and 关闭 (no effect; 碎片配色 and 播放 are grayed out)
 8. Turn on System Settings › Accessibility › Display › Reduce motion: commits play no effect; turn it off again
 9. Repeat step 1 in dark appearance
 
 ## Intelligence Hub Checklist
 
-1. Open the input menu: under 智能中心, 智能学习 is unchecked, 保存输入原文 is grayed out, and 不在「<current app>」中学习 names the app you are typing in
-2. Turn on 智能学习; 保存输入原文 becomes available and checked
+1. Open the input menu: 智能学习 is unchecked and 不在「<current app>」中学习 names the app you are typing in. In 设置… › 智能中心, 保存输入原文 is grayed out
+2. Turn on 智能学习 in the menu; the open settings window follows, and 保存输入原文 becomes available and checked
 3. Type 这个功能下周上线。 in one app and Please review it. in another
 4. Choose 查看学习记录…: a page opens in the browser with both apps' Chinese/English mix, 2 fingerprints, and both sentences; searching 上线 leaves only the first
 4a. The page starts with 学到了什么: type 麻烦大家帮忙回归一下 three times and 明天下午三点开会, reopen the page, and confirm the sentence appears under 重复说过的话 (3 次) and the meeting under 提到时间的句子
 4b. In Notes, type 发布计划, press Return, type 这个功能下周上线。; the page shows that sentence with 前文：发布计划, groups sentences into sessions, and lists Notes under 读取前文的开销 with a few ms
 4c. Type lo in Alfred or Raycast; it is not recorded
-4d. Choose 读取窗口标题: the system asks for Accessibility access and the Privacy & Security pane opens; switch on LinguaType (after an update, switch it off and on). The menu item drops 需授权辅助功能
+4d. In 设置… › 智能中心, turn on 读取窗口标题: the system asks for Accessibility access and the Privacy & Security pane opens; switch on LinguaType (after an update, switch it off and on). Back in the window, the 需要授权「辅助功能」 row is gone
 4e. Type a sentence in Chrome on two different tabs and in an editor; the page shows separate sessions with the window titles, and the 窗口标题 table shows sample titles and timings per app
 5. Type 验证码是 482913。 and a sentence in Terminal; the first appears as 验证码是 〔数字〕。 and the Terminal one not at all
 5a. In a chat app, type part of a message, switch away to copy a link, paste it, type 10mins 内完成, and press Return; the page shows the whole message with 〔链接〕 and 10mins
 6. Choose 不在「<app>」中学习 for the first app, type another sentence there, and confirm it is not recorded
 7. Turn off 保存输入原文, type a sentence, and confirm the journal does not gain it while the app's counts still grow
-8. Choose 清除学习记录…, confirm the alert, and check that `~/Library/Application Support/SmartIMEHost/` no longer has `input-memory.json`, `journal/`, `candidate-history.json`, or `translation-misses.json`
+8. In 设置… › 智能中心, choose 清除…, confirm the alert, and check that `~/Library/Application Support/SmartIMEHost/` no longer has `input-memory.json`, `journal/`, `candidate-history.json`, or `translation-misses.json`
+
+## Input Menu and Settings Window Checklist
+
+1. Open the input menu in TextEdit: below LinguaType there are only 智能学习, 不在「TextEdit」中学习, 在「TextEdit」中启用 AI 提示, 查看学习记录…, and 设置…; each one changes something (check with `defaults read lab.dcyber.inputmethod.smartime`)
+2. Choose 设置…: the window opens in front, titled after the pane; switching panes resizes it
+3. With Ollama stopped and 模型 set to Ollama, the status says no model can run and the menu's AI 提示 item is grayed out unless it is already on
+4. Press ⌘W (and, after reopening, Esc): the window closes and TextEdit has focus again, so typing continues there
+5. Choose 设置… again while the window is behind another app: the same window comes to the front
 
 ## AI Assist Checklist (proof of concept)
 
-1. Open Notes (or TextEdit), open the input menu, and choose 在「Notes」中启用 AI 提示; the status line shows Codex and the model
+1. Open Notes (or TextEdit), open the input menu, and choose 在「Notes」中启用 AI 提示; 设置… › AI 助手 lists Notes and its status line names the model in use
 2. Type 这个功能下周上线，麻烦大家帮忙回归一下。: a chip "✨ 转成英文 · 生成中… ⇥" appears below the caret, then after about 7–9 s an English preview
 3. Press Tab (or →, needed in Sublime Text): the sentence is replaced by the English text and the chip says 已替换
 4. Type another sentence and press Tab before the preview appears: it is replaced as soon as the result arrives

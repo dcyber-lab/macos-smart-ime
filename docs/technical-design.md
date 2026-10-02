@@ -84,12 +84,22 @@ Owns explicit and async workflows:
 - Keyboard handling stays in `IMEInputController.handle(_:client:)`; the panel only reports row clicks, which go through the same `selectCandidate(at:)` path as number keys.
 - Text reaches the client through `IMKTextInput.insertText`; `composedString` returns an empty string (never nil) so `updateComposition()` clears marked text on cancel.
 
+## Input Menu and Settings Window
+
+- The input menu (`IMEInputController.menu()`, built by `InputMenu`) holds only what is switched while typing: 智能学习, 不在「App」中学习, 在「App」中启用 AI 提示 (enabled while a model can run, or while it is on), 查看学习记录…, and 设置….
+  - It is flat: the system showed submenus but never delivered their items' actions.
+  - Every item goes to `inputMenuCommand(_:)`; `InputMenu.command(from:)` reads the tag, with the title as a fallback.
+- 设置… opens `SettingsWindow`, one window per process, with toolbar panes 外观, 智能中心 and AI 助手 (SwiftUI forms in `NSHostingController`s).
+  - It lives in the input method process because the Companion app does not exist yet. It only reads and writes the defaults domain and calls `SettingsModel.Actions` (learning on/off, the learning page, clearing), so nothing runs in the typing path.
+  - `SettingsModel` reads every setting on refresh and refreshes on `UserDefaults.didChangeNotification`, so the menu and the window always agree. The AI status is checked in the background.
+  - Closing the window (⌘W, Esc, or the close button) reactivates the app the user was typing in.
+
 ## Commit Effects
 
 - When committed text matches a visible panel row, that row breaks apart after `insertText` and the rest of the panel fades in 100 ms. Matching rule (`CandidatePanelModel.committedRowIndex`): exact text first (highlighted row preferred), else the longest row the commit starts with ("deploy ", "你好，"); no match plays nothing (raw pinyin with `Return`).
 - `CommitEffect` is pure and seeded: fragments (triangles for 玻璃炸裂/碎裂下坠, 3 pt squares for 粒子消散) with velocity, spin, delay, and lifetime, and `pose(of:at:)` per frame. `CommitEffectView` draws poses from a display link over two row snapshots (as drawn, and text only via `CandidateListView.drawsHighlightFill`) in click-through overlay windows one level above the panel (`CommitEffectOverlay`, pool of three).
 - Palettes 彩虹/霓虹/马卡龙 recolor shards (random for glass, a left-to-right gradient otherwise) and keep text white; 跟随强调色 keeps the snapshot.
-- Settings in the defaults domain, read on every commit: `CommitEffect` (`shatter`, `crumble`, `dust`, `random`, `off`; default `shatter`) and `CommitEffectPalette` (`rainbow`, `neon`, `pastel`, `accent`, `random`; default `rainbow`). Reduce Motion turns effects off. The input menu (`IMEInputController.menu()`, built by `CommitEffectMenu`) lists the choices flat under the section titles 选词动效 and 碎片配色; choosing an item saves it and plays a preview below the pointer. Submenus are not used: the system showed them but never delivered their actions.
+- Settings in the defaults domain, read on every commit: `CommitEffect` (`shatter`, `crumble`, `dust`, `random`, `off`; default `shatter`) and `CommitEffectPalette` (`rainbow`, `neon`, `pastel`, `accent`, `random`; default `rainbow`). Reduce Motion turns effects off. They are chosen in the settings window's 外观 pane; a change saves it and plays a preview below the pointer.
 - Cost on the main thread:
   - While the key is handled: about 2 ms (row snapshots and the start of the panel fade).
   - Next run-loop turn: building fragments and pre-rendering each shard into a small bitmap, up to 5 ms for a long row.
@@ -119,16 +129,16 @@ Owns explicit and async workflows:
   - `InputJournal` (`journal/YYYY-MM-DD.jsonl`), when 保存输入原文 is on: one JSON line per sentence with app and time, appended on a utility queue; pruned to `IntelligenceJournalRetentionDays` (default 30) once a day.
   - Both use `PrivateFiles`: 0700 directory, 0600 files, excluded from backups.
 - Cost measured in an optimized build: 0.4 µs per commit with learning off, 3.9 µs with learning and the journal on.
-- The input menu's 智能中心 section (`IntelligenceMenu`) has these items:
-  - 智能学习 and 保存输入原文 toggle the settings.
+- Controls: 智能学习 and 查看学习记录… are in both the input menu and the settings window's 智能中心 pane; 不在「App」中学习 is in the menu; 保存输入原文, 读取窗口标题 and 清除… are in the pane.
+  - Turning 智能学习 off ends the sentence being assembled without recording it.
   - 不在「App」中学习 toggles the current app's exclusion; for a default exclusion it toggles an override.
   - 查看学习记录… writes `learning-summary.html` (`LearningPage`, 0600, self-contained, HTML-escaped, with a journal search box) and opens it.
   - The page opens with 学到了什么 (`LearningInsights`), computed in the background with rules only: overview, each app's writing language, frequent words (`NLTokenizer`), possible new words (single characters that keep appearing together), repeated sentences, and sentences naming a time of day (`NSDataDetector` plus a "N点" rule). A month of typing takes at most 0.2 s.
-  - 清除学习记录… confirms with an `NSAlert`, then clears `InputMemory`, `InputJournal`, `CandidateHistory`, and `TranslationMisses`.
+  - 清除… confirms with an `NSAlert`, then clears `InputMemory`, `InputJournal`, `CandidateHistory`, and `TranslationMisses`.
 
 ## AI Assist (proof of concept)
 
-- When a commit ends with sentence punctuation in an app listed in `AIAssistChipApps`, the input controller reads the field after the key (learning and the journal play no part). It takes the sentence that ends the field (`IntelligenceRecorder.sentence(endingAt:)`, matched to the commit) and its exact range (`FieldText.range(ofTail:)`); `AIAssistChipController.qualifies` checks it: 5+ characters, mostly Han characters against English words.
+- When a commit ends with sentence punctuation in an app listed in `AIAssistChipApps` (toggled from the input menu), the input controller reads the field after the key (learning and the journal play no part). It takes the sentence that ends the field (`IntelligenceRecorder.sentence(endingAt:)`, matched to the commit) and its exact range (`FieldText.range(ofTail:)`); `AIAssistChipController.qualifies` checks it: 5+ characters, mostly Han characters against English words.
 - For a qualifying sentence the controller shows the ✨ chip (`SuggestionChip`) and starts the provider at once (prefetch).
   - A bare `Tab` or `→` (some apps keep `Tab`) replaces the range via `insertText(_:replacementRange:)` if it still holds the sentence, and reads it back. Otherwise the text goes to the clipboard and the chip says why (`AIReplacement`).
   - `Tab` before the result arrives replaces it on arrival. `Esc` or any other key, including `Tab` or `→` with a modifier, dismisses the chip and cancels the request.
@@ -141,6 +151,7 @@ Owns explicit and async workflows:
   - Where the app reports no text (a web page), it hands over to the read-only flow, which uses only a selection copied with ⌘C.
 - ⌃⌥E (`AIReadHotkey`, a Carbon hotkey, no permission needed) opens the same popup read-only (`GlobalSelectionAssist`): the selection copied with ⌘C when Accessibility access is granted, else the clipboard. `Return` copies the result.
 - The provider is `AIProvider`: `auto` (default) uses `OllamaRewriter` when a local Ollama serves `AIOllamaModel`, else `AppleRewriter` when Apple Intelligence is available, else Codex; `ollama`, `apple` or `codex` forces one.
+  - It is chosen in the settings window's AI 助手 pane, which shows what runs now and whether text leaves the Mac (`AIAssistSettings.statusText`), the apps with AI hints, and both hotkeys.
   - `AppleRewriter` calls Foundation Models with a one-field dynamic schema named for the target (`english`, `chinese`, `rewritten`), temperature 0, and the text labelled as data.
   - Its instructions carry engineering terms and avoid the word "polish" (read as the Polish language).
   - A guardrail refusal is retried as plain text with `permissiveContentTransformations` (it relaxes plain text only); `AIPrompt.cleanFreeText` keeps that answer only without code and within 6× the source length, and drops a preface line only when the answer has more lines than the source.
