@@ -135,7 +135,7 @@ final class CandidatePanel {
         sample.appearance = NSApp.effectiveAppearance
         sample.rows = CandidatePanelModel.rows(for: CompositionState(
             mode: .english, compositionText: "preview",
-            candidates: [Candidate(text: "灵译输入法", source: .rime)], selectedCandidateIndex: 0
+            candidates: [Candidate(text: "LinguaType", source: .rime)], selectedCandidateIndex: 0
         ))
         sample.frame = CGRect(origin: .zero, size: sample.fittingSize)
         guard let snapshot = sample.snapshotRow(at: 0) else {

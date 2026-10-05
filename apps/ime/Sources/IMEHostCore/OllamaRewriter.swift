@@ -33,10 +33,10 @@ struct OllamaRewriter: AIRewriter {
         } catch let error as URLError where error.code == .timedOut {
             throw AIError.timedOut
         } catch {
-            throw AIError.unavailable("连不上 Ollama（\(baseURL.absoluteString)）")
+            throw AIError.unavailable("Cannot connect to Ollama (\(baseURL.absoluteString))")
         }
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw AIError.failed("Ollama 返回错误（先 ollama pull \(model)）")
+            throw AIError.failed("Ollama returned an error (run ollama pull \(model) first)")
         }
         guard let content = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])
             .flatMap({ $0["message"] as? [String: Any] })?["content"] as? String else {

@@ -70,10 +70,10 @@ public final class ScreenshotService {
             } catch ScreenshotCaptureError.permissionDenied {
                 self.askForPermission()
             } catch ScreenshotCaptureError.requiresNewerSystem {
-                ScreenshotToast.show("截图需要 macOS 14 或更新的系统")
+                ScreenshotToast.show("Screenshots require macOS 14 or later")
             } catch {
                 self.log("screenshot: capture failed \(error)")
-                ScreenshotToast.show("截图失败：\(error)")
+                ScreenshotToast.show("Screenshot failed: \(error)")
             }
         }
     }
@@ -88,7 +88,7 @@ public final class ScreenshotService {
         } else {
             ScreenshotCapture.openPermissionSettings()
         }
-        ScreenshotToast.show("截图需要「屏幕录制」权限：系统设置 › 隐私与安全性 › 屏幕与系统录音，打开「灵译输入法」，然后按提示退出并重新打开", duration: 6)
+        ScreenshotToast.show("Screenshots need the Screen Recording permission: System Settings › Privacy & Security › Screen & System Audio Recording, turn on LinguaType, then quit and reopen it when prompted", duration: 6)
     }
 
     private func finish(_ action: ScreenshotOverlay.Action, _ output: ScreenshotOverlay.Output?) {
@@ -102,7 +102,7 @@ public final class ScreenshotService {
         switch action {
         case .copy:
             Self.copy(image: output.image, scale: output.scale)
-            ScreenshotToast.show("已复制截图")
+            ScreenshotToast.show("Screenshot copied")
         case .save:
             Self.save(image: output.image, scale: output.scale)
         case .pin:
@@ -116,21 +116,21 @@ public final class ScreenshotService {
 
     /// Copies the text in `image`; says how many characters, or that none were found.
     func recognizeAndCopy(_ image: CGImage) {
-        ScreenshotToast.show("正在识别文字…", duration: 30)
+        ScreenshotToast.show("Recognizing text…", duration: 30)
         let started = Date()
         Task { @MainActor in
             do {
                 let text = try await ScreenshotOCR.recognize(image)
                 self.log("screenshot: recognized \(text.count) characters in \(Int(Date().timeIntervalSince(started) * 1000)) ms")
                 guard !text.isEmpty else {
-                    ScreenshotToast.show("没有识别到文字")
+                    ScreenshotToast.show("No text recognized")
                     return
                 }
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(text, forType: .string)
-                ScreenshotToast.show("已复制识别的文字（\(text.count) 字）")
+                ScreenshotToast.show("Recognized text copied (\(text.count) characters)")
             } catch {
-                ScreenshotToast.show("识别失败：\(error.localizedDescription)")
+                ScreenshotToast.show("Recognition failed: \(error.localizedDescription)")
             }
         }
     }
@@ -158,13 +158,13 @@ public final class ScreenshotService {
                 FileManager.default.fileExists(atPath: folder.appendingPathComponent(name).path)
             }
             guard let data = ScreenshotRenderer.pngData(image, scale: scale) else {
-                ScreenshotToast.show("保存失败：无法生成图片")
+                ScreenshotToast.show("Save failed: could not create the image")
                 return
             }
             try data.write(to: folder.appendingPathComponent(name), options: .atomic)
-            ScreenshotToast.show("已保存到「\(FileManager.default.displayName(atPath: folder.path))」：\(name)", duration: 2.5)
+            ScreenshotToast.show("Saved to \"\(FileManager.default.displayName(atPath: folder.path))\": \(name)", duration: 2.5)
         } catch {
-            ScreenshotToast.show("保存失败：\(error.localizedDescription)", duration: 4)
+            ScreenshotToast.show("Save failed: \(error.localizedDescription)", duration: 4)
         }
     }
 

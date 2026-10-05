@@ -27,9 +27,9 @@ struct ClipboardItem: Codable, Equatable, Identifiable {
             let line = (text ?? "").split(whereSeparator: \.isNewline)
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .first { !$0.isEmpty }
-            return line ?? "（空白）"
+            return line ?? "(blank)"
         case .image:
-            return "图片：\(pixelWidth)×\(pixelHeight)（\(Self.sizeText(byteCount))）"
+            return "Image: \(pixelWidth)×\(pixelHeight) (\(Self.sizeText(byteCount)))"
         }
     }
 
@@ -119,7 +119,7 @@ final class ClipboardHistoryStore {
             words.allSatisfy { word in
                 switch item.kind {
                 case .text: return item.text?.localizedCaseInsensitiveContains(word) == true
-                case .image: return "图片 image".localizedCaseInsensitiveContains(word)
+                case .image: return "image".localizedCaseInsensitiveContains(word)
                 }
             }
         }

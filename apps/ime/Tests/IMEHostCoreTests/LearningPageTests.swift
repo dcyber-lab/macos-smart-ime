@@ -19,7 +19,7 @@ final class LearningPageTests: XCTestCase {
     func testJournalOffSaysSo() {
         let html = page(journal: false, entries: [])
 
-        XCTAssertTrue(html.contains("未保存输入原文"))
+        XCTAssertTrue(html.contains("Typed text is not saved"))
         XCTAssertFalse(html.contains("id=\"q\""))
     }
 
@@ -29,7 +29,7 @@ final class LearningPageTests: XCTestCase {
         let html = page(journal: true, entries: [], summary: memory.summary())
 
         XCTAssertTrue(html.contains("<td>Slack</td><td>8</td>"))
-        XCTAssertTrue(html.contains("1 条"))
+        XCTAssertTrue(html.contains("1 ("))
         XCTAssertFalse(html.contains("http://") || html.contains("https://"), "no external resources")
     }
 
@@ -114,10 +114,10 @@ final class LearningInsightsTests: XCTestCase {
             appName: { $0 }, generatedAt: day
         ))
 
-        XCTAssertTrue(html.contains("学到了什么"))
-        XCTAssertTrue(html.contains("重复说过的话"))
-        XCTAssertTrue(html.contains("存成短语"))
-        XCTAssertTrue(html.contains("提到时间的句子"))
+        XCTAssertTrue(html.contains("What it learned"))
+        XCTAssertTrue(html.contains("Repeated sentences"))
+        XCTAssertTrue(html.contains("Save as phrase"))
+        XCTAssertTrue(html.contains("Sentences that mention a time"))
     }
 
     func testComputingAMonthOfTypingIsQuick() {
@@ -179,7 +179,7 @@ final class LearningSessionTests: XCTestCase {
         ))
 
         XCTAssertTrue(html.contains("Google Chrome · PR #14 · macos-smart-ime"))
-        XCTAssertTrue(html.contains("辅助功能未授权"))
+        XCTAssertTrue(html.contains("Accessibility is not granted"))
         XCTAssertTrue(html.contains("<td>PR #14 · macos-smart-ime</td>"))
     }
 
@@ -200,8 +200,8 @@ final class LearningSessionTests: XCTestCase {
             contextStats: ["notes": stats], appName: { $0 == "notes" ? "备忘录" : $0 }, generatedAt: t0
         ))
 
-        XCTAssertTrue(html.contains("共 2 条，1 段"))
-        XCTAssertTrue(html.contains("前文：发布计划"))
-        XCTAssertTrue(html.contains("<td>备忘录</td><td>2</td><td>1</td><td>2.0 ms</td><td>3.0 ms</td><td>正常</td>"))
+        XCTAssertTrue(html.contains("2 entries in 1 sessions"))
+        XCTAssertTrue(html.contains("Context: 发布计划"))
+        XCTAssertTrue(html.contains("<td>备忘录</td><td>2</td><td>1</td><td>2.0 ms</td><td>3.0 ms</td><td>OK</td>"))
     }
 }

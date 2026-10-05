@@ -168,11 +168,11 @@ Requires macOS 26 and the English and Simplified Chinese translation languages (
 Requires macOS 26 and the English and Simplified Chinese translation languages (System Settings › General › Language & Region › Translation Languages). Use TextEdit or Notes with SmartIMEHost active.
 
 1. Type or paste an English sentence and select it
-2. Press `⌃⌥T` and confirm a popup below the selection shows an "英 → 中" badge before the selected text, then the Chinese translation with "⏎ 替换 · Esc 取消", and that the selected text does not touch the popup's right edge
+2. Press `⌃⌥T` and confirm a popup below the selection shows an "EN → ZH" badge before the selected text, then the Chinese translation with "⏎ 替换 · Esc 取消", and that the selected text does not touch the popup's right edge
 3. Press `Return` and confirm the selection is replaced by the translation
-4. Select a Chinese sentence (for example 请在周五前审阅部署计划), press `⌃⌥T`, and confirm the popup shows "中 → 英" and an English translation
+4. Select a Chinese sentence (for example 请在周五前审阅部署计划), press `⌃⌥T`, and confirm the popup shows "ZH → EN" and an English translation
 5. Select English again, press `⌃⌥T`, then `Escape`, and confirm the text is unchanged
-6. Press `⌃⌥T` with nothing selected and confirm the popup says "请先选中要翻译的英文"
+6. Press `⌃⌥T` with nothing selected and confirm the popup says "Select the English text to translate first"
 7. While composing pinyin, press `⌃⌥T` and confirm nothing happens
 8. Run `defaults write lab.dcyber.inputmethod.smartime SelectionTranslationHotkey "cmd+shift+y"`, confirm `⌘⇧Y` translates and `⌃⌥T` no longer does; then `defaults delete lab.dcyber.inputmethod.smartime SelectionTranslationHotkey`
 9. Run `defaults write lab.dcyber.inputmethod.smartime SelectionTranslationEnabled -bool false`, confirm the hotkey does nothing; then `defaults delete lab.dcyber.inputmethod.smartime SelectionTranslationEnabled`
@@ -195,9 +195,9 @@ Use a normal editable text field such as TextEdit.
 2. Confirm a rounded vertical panel appears just below the caret with the pinyin (`shu ju ku`) in gray text at the top above a hairline, numbered rows, 数据库 highlighted with a solid accent-color fill and white text, a separator line above `database`, and a capsule 译 tag on `database`
 3. Confirm a dimmed up chevron and a normal down chevron appear next to the pinyin; press `=` and confirm both chevrons are normal on page 2, and that they do not move while paging
 4. Confirm the panel is exactly as tall as its rows, with no empty space below; type `huiyi` and confirm the panel resizes
-5. Press `Down` twice and confirm the highlight moves to the third row; with `database` highlighted, confirm its 译 tag stays readable (white on the accent fill)
+5. Press `Down` twice and confirm the highlight moves to the third row; with `database` highlighted, confirm its TR tag stays readable (white on the accent fill)
 6. Click the `database` row and confirm `database` is committed and the panel disappears
-7. Type `hello` and confirm `hello` is first with an 英 tag and a separator below it
+7. Type `hello` and confirm `hello` is first with an EN tag and a separator below it
 8. Press `Shift` to switch to English mode, type `he`, and confirm the rows have no tags or separators
 9. Switch the system to dark appearance and repeat step 1; confirm the panel background and text follow dark colors
 10. Move the caret near the bottom and the right edge of the screen and confirm the panel flips above the caret and stays fully on screen
@@ -213,45 +213,45 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 4. Type `nihao` and press `Return` with raw pinyin, and press `Escape` on another composition: nothing breaks apart
 5. Switch to English mode, type `deplo`, press `Down` and `Space`: the deploy row breaks apart
 6. Type quickly (`wo` `Space` `men` `Space` …): every new panel appears at once and fully visible; fragments fly over it and fade
-7. Open the input menu › 设置… › 外观: choosing a motion or palette plays a preview below the pointer and the next commit uses it; 播放 replays it. Try every motion and palette, 随机 (changes per commit), and 关闭 (no effect; 碎片配色 and 播放 are grayed out)
+7. Open the input menu › Settings… › Appearance: choosing a motion or palette plays a preview below the pointer and the next commit uses it; Play replays it. Try every motion and palette, Random (changes per commit), and Off (no effect; Fragment colors and Play are grayed out)
 8. Turn on System Settings › Accessibility › Display › Reduce motion: commits play no effect; turn it off again
 9. Repeat step 1 in dark appearance
 
 ## Intelligence Hub Checklist
 
-1. Open the input menu: 智能学习 is unchecked and 不在「<current app>」中学习 names the app you are typing in. In 设置… › 智能中心, 保存输入原文 is grayed out
-2. Turn on 智能学习 in the menu; the open settings window follows, and 保存输入原文 becomes available and checked
+1. Open the input menu: Intelligence Learning is unchecked and Don't Learn in <current app> names the app you are typing in. In Settings… › Intelligence, Save typed text is grayed out
+2. Turn on Intelligence Learning in the menu; the open settings window follows, and Save typed text becomes available and checked
 3. Type 这个功能下周上线。 in one app and Please review it. in another
-4. Choose 查看学习记录…: a page opens in the browser with both apps' Chinese/English mix, 2 fingerprints, and both sentences; searching 上线 leaves only the first
-4a. The page starts with 学到了什么: type 麻烦大家帮忙回归一下 three times and 明天下午三点开会, reopen the page, and confirm the sentence appears under 重复说过的话 (3 次) and the meeting under 提到时间的句子
-4b. In Notes, type 发布计划, press Return, type 这个功能下周上线。; the page shows that sentence with 前文：发布计划, groups sentences into sessions, and lists Notes under 读取前文的开销 with a few ms
+4. Choose View Learning Data…: a page opens in the browser with both apps' Chinese/English mix, 2 fingerprints, and both sentences; searching 上线 leaves only the first
+4a. The page starts with What it learned: type 麻烦大家帮忙回归一下 three times and 明天下午三点开会, reopen the page, and confirm the sentence appears under Repeated sentences (3 次) and the meeting under 提到时间的句子
+4b. In Notes, type 发布计划, press Return, type 这个功能下周上线。; the page shows that sentence with Context: 发布计划, groups sentences into sessions, and lists Notes under 读取前文的开销 with a few ms
 4c. Type lo in Alfred or Raycast; it is not recorded
-4d. In 设置… › 智能中心, turn on 读取窗口标题: the system asks for Accessibility access and the Privacy & Security pane opens; switch on LinguaType (after an update, switch it off and on). Back in the window, the 需要授权「辅助功能」 row is gone
+4d. In Settings… › Intelligence, turn on Read window titles: the system asks for Accessibility access and the Privacy & Security pane opens; switch on LinguaType (after an update, switch it off and on). Back in the window, the Accessibility permission is required row is gone
 4e. Type a sentence in Chrome on two different tabs and in an editor; the page shows separate sessions with the window titles, and the 窗口标题 table shows sample titles and timings per app
 5. Type 验证码是 482913。 and a sentence in Terminal; the first appears as 验证码是 〔数字〕。 and the Terminal one not at all
 5a. In a chat app, type part of a message, switch away to copy a link, paste it, type 10mins 内完成, and press Return; the page shows the whole message with 〔链接〕 and 10mins
-6. Choose 不在「<app>」中学习 for the first app, type another sentence there, and confirm it is not recorded
-7. Turn off 保存输入原文, type a sentence, and confirm the journal does not gain it while the app's counts still grow
-8. In 设置… › 智能中心, choose 清除…, confirm the alert, and check that `~/Library/Application Support/SmartIMEHost/` no longer has `input-memory.json`, `journal/`, `candidate-history.json`, or `translation-misses.json`
+6. Choose Don't Learn in <app> for the first app, type another sentence there, and confirm it is not recorded
+7. Turn off Save typed text, type a sentence, and confirm the journal does not gain it while the app's counts still grow
+8. In Settings… › Intelligence, choose Clear…, confirm the alert, and check that `~/Library/Application Support/SmartIMEHost/` no longer has `input-memory.json`, `journal/`, `candidate-history.json`, or `translation-misses.json`
 
 ## Input Menu and Settings Window Checklist
 
-1. Open the input menu in TextEdit: below LinguaType there are only 智能学习, 不在「TextEdit」中学习, 在「TextEdit」中启用 AI 提示, 查看学习记录…, and 设置…; each one changes something (check with `defaults read lab.dcyber.inputmethod.smartime`)
-2. Choose 设置…: the window opens in front, titled after the pane; switching panes resizes it
+1. Open the input menu in TextEdit: below LinguaType there are only Intelligence Learning, Don't Learn in TextEdit, Enable AI Hints in TextEdit, View Learning Data…, and Settings…; each one changes something (check with `defaults read lab.dcyber.inputmethod.smartime`)
+2. Choose Settings…: the window opens in front, titled after the pane; switching panes resizes it
 3. With Ollama stopped and 模型 set to Ollama, the status says no model can run and the menu's AI 提示 item is grayed out unless it is already on
 4. Press ⌘W (and, after reopening, Esc): the window closes and TextEdit has focus again, so typing continues there
-5. Choose 设置… again while the window is behind another app: the same window comes to the front
+5. Choose Settings… again while the window is behind another app: the same window comes to the front
 
 ## AI Assist Checklist (proof of concept)
 
-1. Open Notes (or TextEdit), open the input menu, and choose 在「Notes」中启用 AI 提示; 设置… › AI 助手 lists Notes and its status line names the model in use
+1. Open Notes (or TextEdit), open the input menu, and choose Enable AI Hints in Notes; Settings… › AI Assistant lists Notes and its status line names the model in use
 2. Type 这个功能下周上线，麻烦大家帮忙回归一下。: a chip "✨ 转成英文 · 生成中… ⇥" appears below the caret, then after about 7–9 s an English preview
 3. Press Tab (or →, needed in Sublime Text): the sentence is replaced by the English text and the chip says 已替换
 4. Type another sentence and press Tab before the preview appears: it is replaced as soon as the result arrives
 5. Type another sentence and keep typing: the chip disappears and nothing is replaced
 6. In an app that was not enabled, type the same sentence: no chip appears
 7. In Chrome (a GitHub comment box) and SeaTalk, enable AI 提示 and repeat 2–3; note whether the text is replaced or copied (⌘V)
-8. Turn 智能学习 off and repeat 2: the chip still appears in the enabled app
+8. Turn Intelligence Learning off and repeat 2: the chip still appears in the enabled app
 9. With a preview showing, press ⇧→ or ⌥→: the chip disappears, the cursor moves or the selection grows, and nothing is replaced
 
 ## AI Rewrite (⌃⌥R) Checklist
@@ -267,17 +267,17 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 
 ## Screenshot Checklist
 
-1. Press ⌃⌥A: macOS asks for Screen Recording access. Allow 灵译输入法 in System Settings › Privacy & Security › Screen & System Audio Recording, choose Quit & Reopen, then press ⌃⌥A again. 设置… › 截图 shows 已授权
+1. Press ⌃⌥A: macOS asks for Screen Recording access. Allow LinguaType in System Settings › Privacy & Security › Screen & System Audio Recording, choose Quit & Reopen, then press ⌃⌥A again. Settings… › Screenshot shows Granted
 2. Move the pointer over windows: each one is highlighted and the magnifier shows position and color. Click: that window is selected and the toolbar appears below it
 3. Right click, then drag out a rectangle: the size label shows its pixels; drag inside to move it and drag a grip to resize it
 4. Choose 矩形, 箭头, 画笔, 马赛克 and 文字 in turn and mark the selection; change size and color; ⌘Z removes the last mark
-5. Press Return: the toast says 已复制截图. Paste into Notes or a chat: the image has the marks and its on-screen size
-6. Capture again and press ⌘S: the file appears in the save folder (desktop by default) as 截图 <date time>.png
+5. Press Return: the toast says 已复制Screenshot. Paste into Notes or a chat: the image has the marks and its on-screen size
+6. Capture again and press ⌘S: the file appears in the save folder (desktop by default) as Screenshot <date time>.png
 7. Capture again and click 贴图: the capture floats where it was. Drag it, scroll to zoom, right click › 识别文字并复制, then double-click to close it
 8. Press ⌃⌥O, drag over a paragraph with Chinese and English: the overlay closes and the toast says 已复制识别的文字（N 字）. Paste: the lines read in order
 9. With two displays, press ⌃⌥A and select on the second display; with a full-screen app in front, press ⌃⌥A: the overlay covers it
 10. Press Esc during each step: the overlay closes and the app you were in has the keyboard again
-11. Turn 截图快捷键 off in 设置… › 截图: ⌃⌥A and ⌃⌥O reach the app in front again
+11. Turn Screenshot shortcut off in Settings… › Screenshot: ⌃⌥A and ⌃⌥O reach the app in front again
 
 ## Clipboard History Checklist
 
@@ -289,7 +289,7 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 6. ⌘P pins an entry (pin icon, stays on top); ⌘⌫ deletes the selected one
 7. Copy a password from a password manager: it does not appear in the list
 8. Click outside the panel or press Esc: it closes and the app you were in has the keyboard again
-9. 设置… › 剪贴板: 保留 changes the period, 清空… keeps pinned entries, turning 剪贴板历史 off stops recording and ⌃⌥V reaches the app in front again; 快捷键 can rebind it
+9. Settings… › Clipboard: Keep for changes the period, Clear… keeps pinned entries, turning Clipboard history off stops recording and ⌃⌥V reaches the app in front again; Shortcuts can rebind it
 
 ## Known Limits In This Milestone
 

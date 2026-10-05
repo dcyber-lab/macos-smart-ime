@@ -61,7 +61,7 @@ final class AIRewriteController {
         state != .idle
     }
 
-    /// Chinese text defaults to 转成英文, anything else to 润色.
+    /// Chinese text defaults to To English, anything else to Polish.
     nonisolated static func defaultAction(for text: String, readOnly: Bool = false) -> AIAction {
         let (han, english) = InputMemory.languageCounts(text)
         if han > 0 && Double(han) / Double(han + english) >= 0.5 {
@@ -95,16 +95,16 @@ final class AIRewriteController {
         self.range = range
         original = text ?? ""
         guard let text else {
-            state = .message(readOnly ? "没有读到文字：先选中并按 ⌘C，再按 ⌃⌥E" : "这个应用不提供文字给输入法，先选中文字再按 ⌃⌥R")
+            state = .message(readOnly ? "No text read: select it and press ⌘C, then press ⌃⌥E" : "This app does not expose text to the input method: select the text, then press ⌃⌥R")
             return
         }
         let source = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !source.isEmpty else {
-            state = .message("没有可改写的文字：先选中，或把光标放在要改写的这一行末尾")
+            state = .message("No text to rewrite: select some, or put the cursor at the end of the line to rewrite")
             return
         }
         guard rewriter() != nil else {
-            state = .message("没有可用的模型：启动 Ollama、打开 Apple Intelligence 或安装 Codex")
+            state = .message("No model available: start Ollama, turn on Apple Intelligence, or install Codex")
             return
         }
         state = .choosing(text: source, defaultAction: Self.defaultAction(for: source, readOnly: readOnly), truncated: truncated)
@@ -160,7 +160,7 @@ final class AIRewriteController {
 
     private func run(_ action: AIAction, on text: String) {
         guard let rewriter = rewriter() else {
-            state = .message("没有可用的模型：启动 Ollama、打开 Apple Intelligence 或安装 Codex")
+            state = .message("No model available: start Ollama, turn on Apple Intelligence, or install Codex")
             return
         }
         requestID += 1

@@ -98,13 +98,13 @@ public final class ClipboardService {
             board.setString(item.text ?? "", forType: .string)
         case .image:
             guard let url = store.imageURL(for: item), let data = try? Data(contentsOf: url) else {
-                ScreenshotToast.show("这张图片已经不在了")
+                ScreenshotToast.show("This image is no longer available")
                 return
             }
             board.setData(data, forType: .png)
         }
         guard WindowTitleReader.isTrusted else {
-            ScreenshotToast.show("已复制，按 ⌘V 粘贴")
+            ScreenshotToast.show("Copied, press ⌘V to paste")
             return
         }
         // Let the app in front become active again (the panel activated the input method) and the hotkey's

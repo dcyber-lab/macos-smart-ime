@@ -27,7 +27,7 @@ final class TranslationDirectionTests: XCTestCase {
     }
 
     func testLabels() {
-        XCTAssertEqual(TranslationDirection.englishToChinese.label, "英 → 中")
-        XCTAssertEqual(TranslationDirection.chineseToEnglish.label, "中 → 英")
+        XCTAssertEqual(TranslationDirection.englishToChinese.label, "EN → ZH")
+        XCTAssertEqual(TranslationDirection.chineseToEnglish.label, "ZH → EN")
     }
 }

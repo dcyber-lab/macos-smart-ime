@@ -79,10 +79,10 @@ final class SelectionTranslationControllerTests: XCTestCase {
 
     func testMessagesForMissingSelection() {
         controller.start(selectedText: nil, range: NSRange(location: NSNotFound, length: 0))
-        XCTAssertEqual(controller.state, .message("当前应用没有提供选中的文字"))
+        XCTAssertEqual(controller.state, .message("The current app did not provide the selected text"))
 
         controller.start(selectedText: "  ", range: range)
-        XCTAssertEqual(controller.state, .message("请先选中要翻译的英文"))
+        XCTAssertEqual(controller.state, .message("Select the English text to translate first"))
     }
 
     func testMessageWhenModelIsMissing() async {
@@ -93,7 +93,7 @@ final class SelectionTranslationControllerTests: XCTestCase {
         guard case .message(let text) = controller.state else {
             return XCTFail("expected a message")
         }
-        XCTAssertTrue(text.contains("翻译语言") && text.contains("英语和简体中文"), text)
+        XCTAssertTrue(text.contains("Translation Languages") && text.contains("English and Simplified Chinese"), text)
     }
 
     private func waitUntil(_ condition: @MainActor () -> Bool) async {

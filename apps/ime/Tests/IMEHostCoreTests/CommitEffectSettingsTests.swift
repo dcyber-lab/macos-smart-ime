@@ -72,8 +72,8 @@ final class CommitEffectSettingsTests: XCTestCase {
             settings.palette = choice
             XCTAssertEqual(CommitEffectSettings(defaults: defaults).palette, choice)
         }
-        XCTAssertEqual(CommitEffectMotionChoice.allChoices.map(\.title), ["玻璃炸裂", "碎裂下坠", "粒子消散", "随机", "关闭"])
-        XCTAssertEqual(CommitEffectPaletteChoice.allChoices.map(\.title), ["彩虹", "霓虹", "马卡龙", "跟随强调色", "随机"])
+        XCTAssertEqual(CommitEffectMotionChoice.allChoices.map(\.title), ["Shatter", "Crumble", "Dust", "Random", "Off"])
+        XCTAssertEqual(CommitEffectPaletteChoice.allChoices.map(\.title), ["Rainbow", "Neon", "Pastel", "Accent color", "Random"])
     }
 
     private func resolve(_ settings: CommitEffectSettings, reduceMotion: Bool = false) -> (style: CommitEffectStyle, palette: CommitEffectPalette)? {

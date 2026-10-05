@@ -13,11 +13,11 @@ enum TranslationDirection: Equatable, Sendable {
     }
 
     var label: String {
-        self == .englishToChinese ? "英 → 中" : "中 → 英"
+        self == .englishToChinese ? "EN → ZH" : "ZH → EN"
     }
 
     var languageNames: String {
-        self == .englishToChinese ? "英语和简体中文" : "简体中文和英语"
+        self == .englishToChinese ? "English and Simplified Chinese" : "Simplified Chinese and English"
     }
 
     /// Han characters are weighed against English words (not letters): "这个feature要deploy到production"

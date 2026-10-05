@@ -484,7 +484,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
     }
 
-    /// Offers ✨ 转成英文 for a sentence that just ended, if this app has AI hints on and it qualifies.
+    /// Offers ✨ To English for a sentence that just ended, if this app has AI hints on and it qualifies.
     /// Learning and the journal play no part. The field is read after the key, only when the commit
     /// ends with sentence punctuation.
     private func offerAIRewrite(after committedText: String, app: String?, secureInput: Bool) {
@@ -601,10 +601,10 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "清除学习记录？"
-        alert.informativeText = "将删除智能中心的统计和输入原文、候选习惯、翻译学习记录，无法恢复。拼音的用户词库不受影响。"
-        alert.addButton(withTitle: "清除")
-        alert.addButton(withTitle: "取消")
+        alert.messageText = "Clear learning data?"
+        alert.informativeText = "This deletes the Intelligence Hub statistics, typed text, candidate habits, and translation learning records. It cannot be undone. Your Pinyin user dictionary is not affected."
+        alert.addButton(withTitle: "Clear")
+        alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else {
             return
         }

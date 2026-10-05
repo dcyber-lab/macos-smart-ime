@@ -18,7 +18,7 @@ struct IntelligenceSettings {
         self.defaults = defaults
     }
 
-    /// Off until the user turns on 智能学习.
+    /// Off until the user turns on Intelligence Learning.
     var isLearningEnabled: Bool {
         get { defaults.object(forKey: Self.learningKey) as? Bool ?? false }
         nonmutating set { defaults.set(newValue, forKey: Self.learningKey) }

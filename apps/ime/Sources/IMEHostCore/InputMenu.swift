@@ -2,7 +2,7 @@ import AppKit
 @preconcurrency import InputMethodKit
 import UserData
 
-/// LinguaType's part of the input menu: the switches used while typing, and 设置… for the rest
+/// LinguaType's part of the input menu: the switches used while typing, and Settings… for the rest
 /// (`SettingsWindow`). It is flat: the system's input menu shows submenus but never delivers their
 /// items' actions.
 enum InputMenu {
@@ -14,16 +14,16 @@ enum InputMenu {
         case settings
     }
 
-    static let learningTitle = "智能学习"
-    static let viewLearningTitle = "查看学习记录…"
-    static let settingsTitle = "设置…"
+    static let learningTitle = "Intelligence Learning"
+    static let viewLearningTitle = "View Learning Data…"
+    static let settingsTitle = "Settings…"
 
     static func excludeTitle(_ appName: String) -> String {
-        "不在「\(appName)」中学习"
+        "Don't Learn in \(appName)"
     }
 
     static func aiHintsTitle(_ appName: String) -> String {
-        "在「\(appName)」中启用 AI 提示"
+        "Enable AI Hints in \(appName)"
     }
 
     /// `currentApp` is the client being typed in, if known. `aiAvailable` says whether a model can
@@ -56,8 +56,8 @@ enum InputMenu {
         case learningTitle: return .learning
         case viewLearningTitle: return .viewLearning
         case settingsTitle: return .settings
-        case let title where title.hasPrefix("不在「") && title.hasSuffix("」中学习"): return .excludeApp
-        case let title where title.hasSuffix("」中启用 AI 提示"): return .aiHints
+        case let title where title.hasPrefix("Don't Learn in "): return .excludeApp
+        case let title where title.hasPrefix("Enable AI Hints in "): return .aiHints
         default: return nil
         }
     }

@@ -59,7 +59,7 @@ final class AIAssistChipTests: XCTestCase {
 
         XCTAssertEqual(applied.map(\.0), ["This feature ships next week."])
         XCTAssertEqual(applied.first?.1, NSRange(location: 3, length: 9))
-        XCTAssertEqual(chip.display, .done("已替换"))
+        XCTAssertEqual(chip.display, .done("Replaced"))
         XCTAssertEqual(rewriter.calls, ["这个功能下周上线。"])
     }
 
@@ -88,7 +88,7 @@ final class AIAssistChipTests: XCTestCase {
         await waitUntil { if case .ready = self.chip.display { true } else { false } }
         XCTAssertEqual(chip.handleKey(AIAssistChipController.rightArrowKey, modifiers: [.function, .numericPad]), .consumed)
         XCTAssertEqual(applied.count, 1)
-        XCTAssertEqual(chip.handleKey(AIAssistChipController.rightArrowKey), .passThrough, "after 已替换, → moves the cursor again")
+        XCTAssertEqual(chip.handleKey(AIAssistChipController.rightArrowKey), .passThrough, "after Replaced, → moves the cursor again")
     }
 
     func testTabWhileGeneratingReplacesWhenReady() async {
@@ -131,14 +131,14 @@ final class AIAssistChipTests: XCTestCase {
         rewriter.reply = .failure(.timedOut)
         chip.offer(offer())
         await waitUntil { if case .failed = self.chip.display { true } else { false } }
-        XCTAssertEqual(chip.display, .failed("AI 超时"))
+        XCTAssertEqual(chip.display, .failed("AI timed out"))
 
         rewriter.reply = .success("Done.")
         applyWorks = false
         chip.offer(offer(app: "chromium"))
         await waitUntil { if case .ready = self.chip.display { true } else { false } }
         _ = chip.handleKey(AIAssistChipController.tabKey)
-        XCTAssertEqual(chip.display, .done("这个应用不支持替换，已复制，⌘V 粘贴"))
+        XCTAssertEqual(chip.display, .done("This app does not support replacing. Copied, press ⌘V to paste"))
     }
 
     func testEventsAreLoggedWithoutText() async {
@@ -303,8 +303,8 @@ final class AIAssistSettingsTests: XCTestCase {
     func testStatusSaysWhereTextGoes() {
         XCTAssertTrue(AIAssistSettings.statusText(.codex, codexModel: "gpt-6-luna").contains("OpenAI"))
         XCTAssertTrue(AIAssistSettings.statusText(.ollama, codexModel: "gpt-6-luna", ollamaModel: "qwen2.5:3b").contains("qwen2.5:3b"))
-        XCTAssertTrue(AIAssistSettings.statusText(.apple, codexModel: "gpt-6-luna").contains("不会发出"))
-        XCTAssertTrue(AIAssistSettings.statusText(nil, codexModel: "gpt-6-luna").contains("没有可用的模型"))
+        XCTAssertTrue(AIAssistSettings.statusText(.apple, codexModel: "gpt-6-luna").contains("nothing is sent out"))
+        XCTAssertTrue(AIAssistSettings.statusText(nil, codexModel: "gpt-6-luna").contains("no model available"))
     }
 
     func testHotkeysAreShownAsMenusWriteThem() {
@@ -327,7 +327,7 @@ final class AIOrganizeTests: XCTestCase {
     func testOrganizeIsTheSixthActionOnKey6() {
         XCTAssertEqual(AIAction.allCases[5], .organize)
         XCTAssertEqual(AIRewriteController.actionKeys[22], .organize)
-        XCTAssertEqual(AIAction.organize.title, "整理")
+        XCTAssertEqual(AIAction.organize.title, "Organize")
     }
 
     func testOrganizeInstructionsCarryTheLayoutExampleAndGuards() {
@@ -344,7 +344,7 @@ final class AIOrganizeTests: XCTestCase {
         XCTAssertEqual(AIRewriteController.defaultAction(for: "We should circle back after the dust settles."), .polish)
         let controller = AIRewriteController(rewriter: { nil }, present: { _ in })
         XCTAssertEqual(controller.state, .idle)
-        XCTAssertEqual(TranslationPopup.content(for: .result(action: .explain, original: "idempotent", rewritten: "形容词：幂等的"))?.hint, "Esc 关闭")
+        XCTAssertEqual(TranslationPopup.content(for: .result(action: .explain, original: "idempotent", rewritten: "形容词：幂等的"))?.hint, "Esc Close")
         XCTAssertTrue(AIPrompt.localInstructions(for: .explain, answerLabel: "Result").contains("例句："))
     }
 
@@ -366,14 +366,14 @@ final class AIOrganizeTests: XCTestCase {
         }
         XCTAssertEqual(controller.handleKey(36), .copy("译文"))
         XCTAssertEqual(last, .idle)
-        XCTAssertEqual(TranslationPopup.content(for: .result(action: .toChinese, original: sentence, rewritten: "译文"), readOnly: true)?.hint, "⏎ 复制 · Esc 或点击关闭")
+        XCTAssertEqual(TranslationPopup.content(for: .result(action: .toChinese, original: sentence, rewritten: "译文"), readOnly: true)?.hint, "⏎ Copy · Esc or click to close")
     }
 
     func testAMessageGoesAwayByItself() async throws {
         var last = AIRewriteController.State.idle
         let controller = AIRewriteController(rewriter: { nil }, messageLifetime: .milliseconds(50)) { last = $0 }
         controller.start(text: "你好", range: NSRange(location: 0, length: 2))
-        XCTAssertEqual(last, .message("没有可用的模型：启动 Ollama、打开 Apple Intelligence 或安装 Codex"))
+        XCTAssertEqual(last, .message("No model available: start Ollama, turn on Apple Intelligence, or install Codex"))
         try await Task.sleep(for: .milliseconds(200))
         XCTAssertEqual(last, .idle)
     }
@@ -449,14 +449,14 @@ final class AIRewriteControllerTests: XCTestCase {
 
     func testAResultThatWasNotReplacedSaysWhy() {
         controller.report(AIReplacement.textChanged.message)
-        XCTAssertEqual(controller.state, .message("原文已改动，没有替换，已复制，⌘V 粘贴"))
+        XCTAssertEqual(controller.state, .message("The text changed, so it was not replaced. Copied, press ⌘V to paste"))
     }
 
     func testNumberKeysPickActionsAndEnglishDefaultsToPolish() async {
         controller.start(text: "this change need more test", range: range)
         XCTAssertEqual(controller.state, .choosing(text: "this change need more test", defaultAction: .polish, truncated: false))
 
-        XCTAssertEqual(controller.handleKey(21), .handled) // 4 更简洁
+        XCTAssertEqual(controller.handleKey(21), .handled) // 4 More concise
         XCTAssertEqual(controller.state, .running(action: .concise, text: "this change need more test"))
     }
 
@@ -477,26 +477,26 @@ final class AIRewriteControllerTests: XCTestCase {
 
     func testMessagesForMissingTextModelAndErrors() async {
         controller.start(text: nil, range: range)
-        XCTAssertEqual(controller.state, .message("这个应用不提供文字给输入法，先选中文字再按 ⌃⌥R"))
+        XCTAssertEqual(controller.state, .message("This app does not expose text to the input method: select the text, then press ⌃⌥R"))
         controller.start(text: "  ", range: range)
         guard case .message = controller.state else { return XCTFail("empty text") }
 
         let none = AIRewriteController(rewriter: { nil }) { _ in }
         none.start(text: "你好世界", range: range)
-        XCTAssertEqual(none.state, .message("没有可用的模型：启动 Ollama、打开 Apple Intelligence 或安装 Codex"))
+        XCTAssertEqual(none.state, .message("No model available: start Ollama, turn on Apple Intelligence, or install Codex"))
 
-        rewriter.reply = .failure(.unavailable("本机模型拒绝处理这句"))
+        rewriter.reply = .failure(.unavailable("The on-device model declined this sentence"))
         controller.start(text: "你好世界", range: range)
         _ = controller.handleKey(36)
         await waitUntil { if case .message = self.controller.state { true } else { false } }
-        XCTAssertEqual(controller.state, .message("本机模型拒绝处理这句"))
+        XCTAssertEqual(controller.state, .message("The on-device model declined this sentence"))
     }
 
     func testPopupContent() {
         let choosing = TranslationPopup.content(for: .choosing(text: "你好", defaultAction: .toEnglish, truncated: true))
-        XCTAssertEqual(choosing?.body, "1 转成英文    2 润色    3 更正式    4 更简洁\n5 转成中文    6 整理    7 解释")
-        XCTAssertTrue(choosing?.hint.contains("⏎ 转成英文") == true)
-        XCTAssertTrue(choosing?.hint.contains("请先选中") == true)
+        XCTAssertEqual(choosing?.body, "1 To English    2 Polish    3 More formal    4 More concise\n5 To Chinese    6 Organize    7 Explain")
+        XCTAssertTrue(choosing?.hint.contains("⏎ To English") == true)
+        XCTAssertTrue(choosing?.hint.contains("select long messages first") == true)
         XCTAssertNil(TranslationPopup.content(for: .idle))
         XCTAssertEqual(AIAssistSettings(defaults: UserDefaults(suiteName: "AIRewriteHotkey")!).hotkey, AIAssistSettings.defaultHotkey)
     }

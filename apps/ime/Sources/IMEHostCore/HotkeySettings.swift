@@ -7,12 +7,12 @@ enum HotkeyAction: CaseIterable {
 
     var title: String {
         switch self {
-        case .translate: return "翻译选中文字"
-        case .rewrite: return "改写选中文字或当前行"
-        case .read: return "读取其他地方选中的文字"
-        case .screenshot: return "截图并标注"
-        case .screenshotOCR: return "截图识字"
-        case .clipboard: return "剪贴板历史"
+        case .translate: return "Translate selected text"
+        case .rewrite: return "Rewrite selected text or current line"
+        case .read: return "Read text selected elsewhere"
+        case .screenshot: return "Screenshot and annotate"
+        case .screenshotOCR: return "Screenshot OCR"
+        case .clipboard: return "Clipboard history"
         }
     }
 

@@ -29,7 +29,7 @@ final class SettingsModel: ObservableObject {
     let actions: Actions
     let defaults: UserDefaults
     /// Checked in the background: looking for Ollama can take up to 0.6 s.
-    @Published private(set) var aiStatus = "当前：正在检查…"
+    @Published private(set) var aiStatus = "Current: checking…"
 
     /// The window, and with it the model, lives as long as the process, so the observer is never removed.
     init(actions: Actions, defaults: UserDefaults = .standard) {
@@ -135,7 +135,7 @@ final class SettingsModel: ObservableObject {
 
     /// Returns what to tell the user when `hotkey` cannot be used.
     func setHotkey(_ hotkey: TranslationHotkey?, for action: HotkeyAction) -> String? {
-        action.set(hotkey, defaults: defaults).map { "已被「\($0.title)」使用" }
+        action.set(hotkey, defaults: defaults).map { "Already used by \"\($0.title)\"" }
     }
 
     // MARK: Clipboard
@@ -161,10 +161,10 @@ final class SettingsModel: ObservableObject {
 
     func clearClipboardHistory() {
         let alert = NSAlert()
-        alert.messageText = "清空剪贴板历史？"
-        alert.informativeText = "置顶的条目会保留。"
-        alert.addButton(withTitle: "清空")
-        alert.addButton(withTitle: "取消")
+        alert.messageText = "Clear clipboard history?"
+        alert.informativeText = "Pinned items are kept."
+        alert.addButton(withTitle: "Clear")
+        alert.addButton(withTitle: "Cancel")
         if alert.runModal() == .alertFirstButtonReturn {
             ClipboardService.shared.store.clear()
             objectWillChange.send()
@@ -191,7 +191,7 @@ final class SettingsModel: ObservableObject {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
-        panel.prompt = "选择"
+        panel.prompt = "Choose"
         panel.directoryURL = ScreenshotSettings(defaults: defaults).saveFolder
         if panel.runModal() == .OK, let url = panel.url {
             ScreenshotSettings.setSaveFolder(url, defaults: defaults)
@@ -211,12 +211,12 @@ private final class SettingsWindowController: NSWindowController, NSWindowDelega
         self.model = model
         let tabs = NSTabViewController()
         tabs.tabStyle = .toolbar
-        tabs.addTabViewItem(Self.pane("外观", symbol: "sparkles", AppearancePane(model: model)))
-        tabs.addTabViewItem(Self.pane("智能中心", symbol: "brain", LearningPane(model: model)))
-        tabs.addTabViewItem(Self.pane("AI 助手", symbol: "wand.and.stars", AIPane(model: model)))
-        tabs.addTabViewItem(Self.pane("截图", symbol: "camera.viewfinder", ScreenshotPane(model: model)))
-        tabs.addTabViewItem(Self.pane("剪贴板", symbol: "doc.on.clipboard", ClipboardPane(model: model)))
-        tabs.addTabViewItem(Self.pane("快捷键", symbol: "keyboard", HotkeyPane(model: model)))
+        tabs.addTabViewItem(Self.pane("Appearance", symbol: "sparkles", AppearancePane(model: model)))
+        tabs.addTabViewItem(Self.pane("Intelligence", symbol: "brain", LearningPane(model: model)))
+        tabs.addTabViewItem(Self.pane("AI Assistant", symbol: "wand.and.stars", AIPane(model: model)))
+        tabs.addTabViewItem(Self.pane("Screenshot", symbol: "camera.viewfinder", ScreenshotPane(model: model)))
+        tabs.addTabViewItem(Self.pane("Clipboard", symbol: "doc.on.clipboard", ClipboardPane(model: model)))
+        tabs.addTabViewItem(Self.pane("Shortcuts", symbol: "keyboard", HotkeyPane(model: model)))
         let window = SettingsPanelWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable]
         window.toolbarStyle = .preference
@@ -286,19 +286,19 @@ private struct AppearancePane: View {
     var body: some View {
         Form {
             Section {
-                Picker("选词动效", selection: $model.motion) {
+                Picker("Selection effect", selection: $model.motion) {
                     ForEach(CommitEffectMotionChoice.allChoices, id: \.self) { Text($0.title).tag($0) }
                 }
-                Picker("碎片配色", selection: $model.palette) {
+                Picker("Fragment colors", selection: $model.palette) {
                     ForEach(CommitEffectPaletteChoice.allChoices, id: \.self) { Text($0.title).tag($0) }
                 }
                 .disabled(model.motion == .off)
-                LabeledContent("预览") {
-                    Button("播放") { model.previewEffect() }
+                LabeledContent("Preview") {
+                    Button("Play") { model.previewEffect() }
                         .disabled(model.motion == .off)
                 }
             } footer: {
-                Text(model.reduceMotion ? "系统已打开「减弱动态效果」，选词时不会播放动效。" : "选中候选词后，那一行会碎开消失。")
+                Text(model.reduceMotion ? "Reduce Motion is on in System Settings, so the effect will not play." : "After you pick a candidate, the row breaks apart and disappears.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -314,30 +314,30 @@ private struct LearningPane: View {
         Form {
             Section {
                 Toggle(isOn: $model.isLearningEnabled) {
-                    SettingLabel("智能学习", "按应用统计中英文用法和常打的句子，只存在这台 Mac 上")
+                    SettingLabel("Intelligence learning", "Tracks Chinese/English usage and frequent sentences per app. Stored only on this Mac")
                 }
                 Toggle(isOn: $model.isJournalEnabled) {
-                    SettingLabel("保存输入原文", "保存打过的句子（链接、邮箱、长数字会被遮盖），保留 \(model.retentionDays) 天")
+                    SettingLabel("Save typed text", "Keeps sentences you typed (links, emails, and long numbers are masked) for \(model.retentionDays) days")
                 }
                 .disabled(!model.isLearningEnabled)
                 Toggle(isOn: $model.isWindowTitlesEnabled) {
-                    SettingLabel("读取窗口标题", "记下每句话写在哪个窗口里")
+                    SettingLabel("Read window titles", "Records which window each sentence was typed in")
                 }
                 .disabled(!model.isLearningEnabled)
                 if model.isWindowTitlesEnabled && !model.isAccessibilityTrusted {
-                    LabeledContent("需要授权「辅助功能」才能读取窗口标题") {
-                        Button("打开系统设置…") { WindowTitleReader.requestTrust() }
+                    LabeledContent("Accessibility permission is required to read window titles") {
+                        Button("Open System Settings…") { WindowTitleReader.requestTrust() }
                     }
                 }
             } footer: {
-                Text("在某个应用里打开输入法菜单，可以单独停止在那个应用里学习。")
+                Text("Open the input method menu in an app to stop learning in that app only.")
                     .foregroundStyle(.secondary)
             }
             Section {
-                LabeledContent("学习记录") {
+                LabeledContent("Learning data") {
                     HStack {
-                        Button("查看…") { model.actions.openLearningPage() }
-                        Button("清除…") { model.actions.clearLearning() }
+                        Button("View…") { model.actions.openLearningPage() }
+                        Button("Clear…") { model.actions.clearLearning() }
                     }
                 }
             }
@@ -353,16 +353,16 @@ private struct AIPane: View {
     var body: some View {
         Form {
             Section {
-                Picker("模型", selection: $model.provider) {
+                Picker("Model", selection: $model.provider) {
                     ForEach(AIAssistSettings.Provider.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 Text(model.aiStatus)
                     .foregroundStyle(.secondary)
             }
             Section {
-                LabeledContent("已启用 AI 提示", value: model.aiHintApps.isEmpty ? "没有" : model.aiHintApps.joined(separator: "、"))
+                LabeledContent("AI hints enabled in", value: model.aiHintApps.isEmpty ? "None" : model.aiHintApps.joined(separator: ", "))
             } footer: {
-                Text("在某个应用里打开输入法菜单，勾选“在「…」中启用 AI 提示”：在那里打完一句中文后会出现 ✨ 改写建议，按 Tab 或 → 替换。")
+                Text("Open the input method menu in an app and check \"Enable AI Hints in …\": after you finish a Chinese sentence there, a ✨ rewrite suggestion appears. Press Tab or → to replace.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -378,24 +378,24 @@ private struct ScreenshotPane: View {
         Form {
             Section {
                 Toggle(isOn: $model.isScreenshotEnabled) {
-                    SettingLabel("截图快捷键", "在任何应用里都能用，与当前输入法无关；按键在「快捷键」里设置")
+                    SettingLabel("Screenshot shortcut", "Works in any app, regardless of the current input method. Set the keys in Shortcuts")
                 }
             } footer: {
-                Text("拖动框选区域，或点击选择整个窗口。框选后可以标注、复制（⏎）、保存（⌘S）、贴图到屏幕、识别文字；右键重选，Esc 取消。文字识别在本机完成。")
+                Text("Drag to select an area, or click to pick a whole window. Then annotate, copy (⏎), save (⌘S), pin to the screen, or recognize text; right-click to reselect, Esc to cancel. Text recognition runs on this Mac.")
                     .foregroundStyle(.secondary)
             }
             Section {
-                LabeledContent("保存到") {
+                LabeledContent("Save to") {
                     HStack {
                         Text(model.screenshotFolder)
-                        Button("更改…") { model.chooseScreenshotFolder() }
+                        Button("Change…") { model.chooseScreenshotFolder() }
                     }
                 }
                 if model.hasScreenRecordingAccess {
-                    LabeledContent("屏幕录制权限", value: "已授权")
+                    LabeledContent("Screen Recording permission", value: "Granted")
                 } else {
-                    LabeledContent("需要授权「屏幕录制」才能截图") {
-                        Button("打开系统设置…") { ScreenshotCapture.openPermissionSettings() }
+                    LabeledContent("Screen Recording permission is required for screenshots") {
+                        Button("Open System Settings…") { ScreenshotCapture.openPermissionSettings() }
                     }
                 }
             }
@@ -412,27 +412,27 @@ private struct ClipboardPane: View {
         Form {
             Section {
                 Toggle(isOn: $model.isClipboardEnabled) {
-                    SettingLabel("剪贴板历史", "记下复制过的文字和图片，按快捷键搜索、预览、粘贴；只存在这台 Mac 上，快捷键在「快捷键」里设置")
+                    SettingLabel("Clipboard history", "Remembers copied text and images; search, preview, and paste with the shortcut. Stored only on this Mac. Set the shortcut in Shortcuts")
                 }
                 Toggle(isOn: $model.clipboardKeepsImages) {
-                    SettingLabel("记录图片", "截图和复制的图片也进入历史")
+                    SettingLabel("Record images", "Screenshots and copied images are added to the history too")
                 }
                 .disabled(!model.isClipboardEnabled)
-                Picker("保留", selection: $model.clipboardRetentionDays) {
-                    ForEach(ClipboardSettings.retentionChoices, id: \.self) { Text($0 == 1 ? "1 天" : "\($0) 天").tag($0) }
+                Picker("Keep for", selection: $model.clipboardRetentionDays) {
+                    ForEach(ClipboardSettings.retentionChoices, id: \.self) { Text($0 == 1 ? "1 day" : "\($0) days").tag($0) }
                 }
                 .disabled(!model.isClipboardEnabled)
             } footer: {
-                Text("密码管理器里复制的内容、标记为机密的复制不会被记录。选中后按 ⏎ 粘贴到当前应用，需要「辅助功能」授权；没有授权时只复制，自己按 ⌘V。")
+                Text("Content copied from password managers or marked confidential is not recorded. Press ⏎ to paste the selected item into the current app, which needs Accessibility permission; without it the item is only copied and you press ⌘V yourself.")
                     .foregroundStyle(.secondary)
             }
             Section {
-                LabeledContent("已记录 \(model.clipboardCount) 条") {
-                    Button("清空…") { model.clearClipboardHistory() }
+                LabeledContent("\(model.clipboardCount) items recorded") {
+                    Button("Clear…") { model.clearClipboardHistory() }
                 }
                 if !model.isAccessibilityTrusted {
-                    LabeledContent("需要授权「辅助功能」才能直接粘贴") {
-                        Button("打开系统设置…") { WindowTitleReader.requestTrust() }
+                    LabeledContent("Accessibility permission is required to paste directly") {
+                        Button("Open System Settings…") { WindowTitleReader.requestTrust() }
                     }
                 }
             }
@@ -452,7 +452,7 @@ private struct HotkeyPane: View {
                     HotkeyRow(model: model, action: action)
                 }
             } footer: {
-                Text("点按键位后按下新的组合，需要包含 ⌃、⌥、⌘ 之一和一个字母；Esc 取消。这些快捷键在任何应用里都能用，改后立即生效。")
+                Text("Click a key, then press the new combination. It needs one of ⌃, ⌥, ⌘ plus a letter; Esc cancels. These shortcuts work in any app and take effect immediately.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -474,10 +474,10 @@ private struct HotkeyRow: View {
                         .font(.callout)
                         .foregroundStyle(.red)
                 }
-                Button(recorder.isRecording ? "按下新的快捷键…" : model.hotkey(for: action).displayString) {
+                Button(recorder.isRecording ? "Press new shortcut…" : model.hotkey(for: action).displayString) {
                     recorder.toggle { model.setHotkey($0, for: action) }
                 }
-                Button("恢复默认") {
+                Button("Restore Default") {
                     recorder.message = model.setHotkey(nil, for: action)
                 }
                 .disabled(model.hotkey(for: action) == action.defaultHotkey)
@@ -516,7 +516,7 @@ private final class HotkeyRecorder: ObservableObject {
             return
         }
         guard let hotkey = TranslationHotkey(keyCode: event.keyCode, modifierFlags: event.modifierFlags) else {
-            message = "需要 ⌃、⌥、⌘ 之一加字母键"
+            message = "Needs one of ⌃, ⌥, ⌘ plus a letter key"
             return
         }
         message = apply(hotkey)

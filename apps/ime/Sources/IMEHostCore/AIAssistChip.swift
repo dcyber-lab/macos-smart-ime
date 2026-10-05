@@ -1,7 +1,7 @@
 import AppKit
 import UserData
 
-/// The ✨ suggestion after a sentence (proof of concept: 转成英文 only). When a sentence qualifies in
+/// The ✨ suggestion after a sentence (proof of concept: Translate to English only). When a sentence qualifies in
 /// an app the user enabled, it is sent to the AI right away, so the result is usually ready by the
 /// time the user looks at the chip. `Tab` or `→` replaces the sentence (or does so as soon as the
 /// result arrives); `Esc` dismisses; any other key dismisses and is typed normally. `→` is there
@@ -215,9 +215,9 @@ enum AIReplacement: Equatable {
 
     var message: String {
         switch self {
-        case .replaced: "已替换"
-        case .refused: "这个应用不支持替换，已复制，⌘V 粘贴"
-        case .textChanged: "原文已改动，没有替换，已复制，⌘V 粘贴"
+        case .replaced: "Replaced"
+        case .refused: "This app does not support replacing. Copied, press ⌘V to paste"
+        case .textChanged: "The text changed, so it was not replaced. Copied, press ⌘V to paste"
         }
     }
 
@@ -269,8 +269,8 @@ final class SuggestionChip {
         }
         let text: String
         switch display {
-        case .generating(let accepted): text = accepted ? "✨ 转成英文 · 生成中，好了自动替换…" : "✨ 转成英文 · 生成中…   Tab / → 好了就替换"
-        case .ready(let preview): text = "✨ \(preview)   Tab / → 替换 · Esc 关闭"
+        case .generating(let accepted): text = accepted ? "✨ To English · Generating, will replace when ready…" : "✨ To English · Generating…   Tab / → replace when ready"
+        case .ready(let preview): text = "✨ \(preview)   Tab / → Replace · Esc Close"
         case .done(let message): text = "✨ \(message)"
         case .failed(let message): text = "✨ \(message)"
         }

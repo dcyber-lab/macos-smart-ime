@@ -1,7 +1,7 @@
 import Foundation
 import UserData
 
-/// The page 查看学习记录 opens: settings, exclusions, per-app language mix, fingerprint counts, and,
+/// The page View Learning Data opens: settings, exclusions, per-app language mix, fingerprint counts, and,
 /// when the journal is on, recent sentences with a search box. Self-contained: no network, no
 /// external scripts, every value HTML-escaped.
 enum LearningPage {
@@ -26,7 +26,7 @@ enum LearningPage {
     static func html(_ input: Input) -> String {
         let time = DateFormatter()
         time.dateFormat = "yyyy-MM-dd HH:mm"
-        func on(_ value: Bool) -> String { value ? "开" : "关" }
+        func on(_ value: Bool) -> String { value ? "On" : "Off" }
 
         let apps = input.summary.apps.map { app in
             """
@@ -38,9 +38,9 @@ enum LearningPage {
 
         let journal: String
         if !input.isJournalEnabled && input.entries.isEmpty {
-            journal = "<p class=\"muted\">未保存输入原文（菜单 › 保存输入原文）。</p>"
+            journal = "<p class=\"muted\">Typed text is not saved (menu › Save Typed Text).</p>"
         } else if input.entries.isEmpty {
-            journal = "<p class=\"muted\">还没有记录。</p>"
+            journal = "<p class=\"muted\">No records yet.</p>"
         } else {
             let clock = DateFormatter()
             clock.dateFormat = "HH:mm"
@@ -48,18 +48,18 @@ enum LearningPage {
             let blocks = groups.map { session -> String in
                 let first = session[0], last = session[session.count - 1]
                 let lines = session.map { entry -> String in
-                    let context = entry.context.map { "<div class=\"ctx\">前文：\(escape($0.count > 80 ? "…" + $0.suffix(80) : $0))</div>" } ?? ""
+                    let context = entry.context.map { "<div class=\"ctx\">Context: \(escape($0.count > 80 ? "…" + $0.suffix(80) : $0))</div>" } ?? ""
                     let searchable = (entry.text + " " + (entry.context ?? "")).lowercased()
                     return "<div class=\"line\" data-text=\"\(escape(searchable))\"><span class=\"muted nowrap\">\(clock.string(from: entry.time))</span> \(escape(entry.text))\(context)</div>"
                 }.joined()
                 let window = first.window.map { " · " + escape($0) } ?? ""
                 return """
-                <section class="session" data-app="\(escape((input.appName(first.app) + " " + (first.window ?? "")).lowercased()))"><div class="session-head">\(escape(input.appName(first.app)))\(window) · \(time.string(from: first.time))\(first.time == last.time ? "" : "–" + clock.string(from: last.time)) · \(session.count) 句</div>\(lines)</section>
+                <section class="session" data-app="\(escape((input.appName(first.app) + " " + (first.window ?? "")).lowercased()))"><div class="session-head">\(escape(input.appName(first.app)))\(window) · \(time.string(from: first.time))\(first.time == last.time ? "" : "–" + clock.string(from: last.time)) · \(session.count) sentences</div>\(lines)</section>
                 """
             }.joined(separator: "\n")
-            let summary = "共 \(input.entries.count) 条，\(groups.count) 段"
+            let summary = "\(input.entries.count) entries in \(groups.count) sessions"
             journal = """
-            <input id="q" type="search" placeholder="搜索输入原文、前文或应用…" autofocus>
+            <input id="q" type="search" placeholder="Search typed text, context, or apps…" autofocus>
             <p class="muted" id="count">\(summary)</p>
             <div id="journal">
             \(blocks)
@@ -79,7 +79,7 @@ enum LearningPage {
                 }
                 session.hidden = visible === 0;
               }
-              count.textContent = term ? `匹配 ${shown} / \(input.entries.count) 条` : '\(summary)';
+              count.textContent = term ? `${shown} of \(input.entries.count) match` : '\(summary)';
             });
             </script>
             """
@@ -89,7 +89,7 @@ enum LearningPage {
             stats.sorted { $0.value.reads > $1.value.reads }.map { app, stats in
                 "<tr><td>\(escape(input.appName(app)))</td><td>\(stats.reads)</td><td>\(stats.found)</td>"
                     + "<td>\(String(format: "%.1f", stats.averageMilliseconds)) ms</td><td>\(String(format: "%.1f", stats.slowestSeconds * 1000)) ms</td>"
-                    + "<td>\(stats.isStopped ? "已停止（有一次超过 \(Int(IntelligenceRecorder.slowRead * 1000)) ms）" : "正常")</td>\(extra(app))</tr>"
+                    + "<td>\(stats.isStopped ? "Stopped (one read took over \(Int(IntelligenceRecorder.slowRead * 1000)) ms)" : "OK")</td>\(extra(app))</tr>"
             }.joined()
         }
         let contextRows = costRows(input.contextStats)
@@ -101,22 +101,22 @@ enum LearningPage {
         let windowRows = costRows(input.windowStats) { app in
             "<td>\((windowSamples[app] ?? []).map(escape).joined(separator: "<br>"))</td>"
         }
-        let windowStatus = !input.isWindowTitlesEnabled ? "关（菜单 › 读取窗口标题）"
-            : input.isAccessibilityTrusted ? "开，辅助功能已授权" : "开，但辅助功能未授权：系统设置 › 隐私与安全性 › 辅助功能 里打开 LinguaType（每次更新后可能需要重新打开）"
+        let windowStatus = !input.isWindowTitlesEnabled ? "Off (menu › Read Window Titles)"
+            : input.isAccessibilityTrusted ? "On, Accessibility granted" : "On, but Accessibility is not granted: turn on LinguaType in System Settings › Privacy & Security › Accessibility (you may need to turn it on again after each update)"
         let windowSection = "<p>\(windowStatus)</p>" + (windowRows.isEmpty
-            ? "<p class=\"muted\">本次运行还没有读取过。</p>"
-            : "<table><tr><th>应用</th><th>读取</th><th>读到</th><th>平均</th><th>最长</th><th>状态</th><th>标题示例</th></tr>\(windowRows)</table>")
+            ? "<p class=\"muted\">Nothing read yet in this run.</p>"
+            : "<table><tr><th>App</th><th>Reads</th><th>Found</th><th>Average</th><th>Slowest</th><th>Status</th><th>Sample title</th></tr>\(windowRows)</table>")
         let contextSection = contextRows.isEmpty
-            ? "<p class=\"muted\">本次运行还没有读取过。句子结束（标点或回车）后，会读一次光标前的文字。</p>"
-            : "<table><tr><th>应用</th><th>读取</th><th>读到</th><th>平均</th><th>最长</th><th>状态</th></tr>\(contextRows)</table>"
+            ? "<p class=\"muted\">Nothing read yet in this run. After a sentence ends (punctuation or Return), the text before the cursor is read once.</p>"
+            : "<table><tr><th>App</th><th>Reads</th><th>Found</th><th>Average</th><th>Slowest</th><th>Status</th></tr>\(contextRows)</table>"
 
         let learned = insightsSection(input.insights, journalOn: input.isJournalEnabled || !input.entries.isEmpty, appName: input.appName, time: time)
-        let fingerprints = input.summary.fingerprintCount == 0 ? "0 条" : "\(input.summary.fingerprintCount) 条（\(input.summary.oldestFingerprint.map(time.string(from:)) ?? "") — \(input.summary.newestFingerprint.map(time.string(from:)) ?? "")）"
+        let fingerprints = input.summary.fingerprintCount == 0 ? "0" : "\(input.summary.fingerprintCount) (\(input.summary.oldestFingerprint.map(time.string(from:)) ?? "") — \(input.summary.newestFingerprint.map(time.string(from:)) ?? ""))"
 
         return """
         <!doctype html>
-        <html lang="zh-Hans"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>学习记录</title>
+        <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Learning Data</title>
         <style>
         :root { --bg: #fff; --fg: #1d1d1f; --muted: #6e6e73; --line: #e5e5ea; --accent: #007aff; }
         @media (prefers-color-scheme: dark) { :root { --bg: #1c1c1e; --fg: #f5f5f7; --muted: #98989d; --line: #38383a; --accent: #0a84ff; } }
@@ -131,35 +131,35 @@ enum LearningPage {
         .line { padding: 2px 0; } .ctx { color: var(--muted); font-size: 12px; margin-left: 48px; }
         input[type=search] { width: 100%; padding: 8px 10px; font-size: 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); box-sizing: border-box; }
         </style></head><body>
-        <h1>学习记录</h1>
-        <p class="muted">生成于 \(time.string(from: input.generatedAt))。所有内容只保存在这台 Mac 上，在本机按规则统计得出。</p>
+        <h1>Learning Data</h1>
+        <p class="muted">Generated \(time.string(from: input.generatedAt)). Everything is stored only on this Mac and computed locally with plain rules.</p>
         \(learned)
-        <h2>设置</h2>
+        <h2>Settings</h2>
         <table>
-        <tr><td>智能学习</td><td>\(on(input.isLearningEnabled))</td></tr>
-        <tr><td>保存输入原文</td><td>\(on(input.isJournalEnabled))，保留 \(input.retentionDays) 天，未加密</td></tr>
-        <tr><td>不学习的应用</td><td>\(escape(input.excludedApps.joined(separator: "、")))</td></tr>
+        <tr><td>Intelligence learning</td><td>\(on(input.isLearningEnabled))</td></tr>
+        <tr><td>Save typed text</td><td>\(on(input.isJournalEnabled)); kept for \(input.retentionDays) days, not encrypted</td></tr>
+        <tr><td>Apps excluded from learning</td><td>\(escape(input.excludedApps.joined(separator: ", ")))</td></tr>
         </table>
-        <h2>各应用的中英文比例</h2>
-        \(input.summary.apps.isEmpty ? "<p class=\"muted\">还没有记录。</p>" : "<table><tr><th>应用</th><th>汉字</th><th>英文词</th><th>中文占比</th><th>最近使用</th></tr>\n\(apps)\n</table>")
-        <h2>句子指纹</h2>
-        <p>\(fingerprints)。只存加盐哈希和次数，用于发现重复输入的句子，不含原文。</p>
-        <h2>输入原文（最近 \(input.retentionDays) 天）</h2>
-        <p class="muted">同一应用里相隔不超过 10 分钟的句子归为一段。「前文」是句子结束时光标前的文字（应用支持时才有）。</p>
+        <h2>Chinese/English mix per app</h2>
+        \(input.summary.apps.isEmpty ? "<p class=\"muted\">No records yet.</p>" : "<table><tr><th>App</th><th>Han characters</th><th>English words</th><th>Chinese share</th><th>Last used</th></tr>\n\(apps)\n</table>")
+        <h2>Sentence fingerprints</h2>
+        <p>\(fingerprints) fingerprints. Only salted hashes and counts are stored, used to spot repeated sentences; they contain no original text.</p>
+        <h2>Typed text (last \(input.retentionDays) days)</h2>
+        <p class="muted">Sentences in the same app less than 10 minutes apart are grouped into one session. "Context" is the text before the cursor when the sentence ended (only when the app provides it).</p>
         \(journal)
-        <h2>读取前文的开销</h2>
-        <p class="muted">读取前文要和对应应用通信一次，只在句子结束、按键处理完之后进行。本次输入法运行期间的统计：</p>
+        <h2>Cost of reading context</h2>
+        <p class="muted">Reading context means one round trip to the app, done only after a sentence ends and the key has been handled. Stats for this run of the input method:</p>
         \(contextSection)
-        <h2>窗口标题</h2>
-        <p class="muted">只读当前窗口的标题，不读窗口内容。用来区分同一应用里的不同会话、文档和网页；聊天应用的标题可能只有应用名。</p>
+        <h2>Window titles</h2>
+        <p class="muted">Only the title of the current window is read, never its contents. It tells apart conversations, documents, and pages in the same app; chat apps may only show the app name.</p>
         \(windowSection)
-        <h2>从不记录</h2>
-        <p class="muted">密码框等安全输入、不学习的应用，以及含 6 位以上连续数字（验证码、卡号、手机号）、邮箱、网址或类似密钥字符串的句子。</p>
+        <h2>Never recorded</h2>
+        <p class="muted">Password fields and other secure input, apps excluded from learning, and sentences containing 6 or more consecutive digits (codes, card or phone numbers), emails, URLs, or key-like strings.</p>
         </body></html>
         """
     }
 
-    /// "学到了什么": the insights, each with the hub step that will act on it.
+    /// "What it learned": the insights, each with the hub step that will act on it.
     private static func insightsSection(_ insights: LearningInsights, journalOn: Bool, appName: (String) -> String, time: DateFormatter) -> String {
         func chips(_ counts: [LearningInsights.Count]) -> String {
             "<div class=\"chips\">" + counts.map { "<span class=\"chip\">\(escape($0.text))<b>\($0.count)</b></span>" }.joined() + "</div>"
@@ -170,48 +170,48 @@ enum LearningPage {
         var cards: [String] = []
 
         if insights.sentenceCount > 0 {
-            let apps = insights.topApps.map { "\(escape(appName($0.text))) \($0.count) 句" }.joined(separator: "、")
-            let hours = insights.busiestHours.map(\.text).joined(separator: "、")
-            cards.append(card("概览", "<p>\(insights.dayCount) 天里记了 \(insights.sentenceCount) 句。最常在 \(apps) 打字；最活跃的时段是 \(hours)。</p>", next: nil))
+            let apps = insights.topApps.map { "\(escape(appName($0.text))) \($0.count) sentences" }.joined(separator: ", ")
+            let hours = insights.busiestHours.map(\.text).joined(separator: ", ")
+            cards.append(card("Overview", "<p>\(insights.sentenceCount) sentences over \(insights.dayCount) days. You type most in \(apps); the most active hours are \(hours).</p>", next: nil))
         }
         if !insights.appLanguages.isEmpty {
-            let names: [LearningInsights.Language: String] = [.chinese: "中文为主", .english: "英文为主", .mixed: "中英混写"]
+            let names: [LearningInsights.Language: String] = [.chinese: "Mostly Chinese", .english: "Mostly English", .mixed: "Mixed"]
             let rows = insights.appLanguages.map {
                 "<tr><td>\(escape(appName($0.app)))</td><td>\(names[$0.language] ?? "")</td><td>\(Int(($0.chineseShare * 100).rounded()))%</td></tr>"
             }.joined()
-            cards.append(card("各应用的写作语言", "<table><tr><th>应用</th><th>判断</th><th>中文占比</th></tr>\(rows)</table>",
-                              next: "以后：在英文为主的应用里打完一句中文，会提示「✨ 转成英文」。"))
+            cards.append(card("Writing language per app", "<table><tr><th>App</th><th>Verdict</th><th>Chinese share</th></tr>\(rows)</table>",
+                              next: "Next: after you finish a Chinese sentence in a mostly-English app, it will suggest \"✨ To English\"."))
         }
         guard journalOn else {
-            cards.append(card("更多洞察", "<p class=\"muted\">常用词、重复的话和提到时间的句子需要输入原文。打开菜单里的「保存输入原文」后可见。</p>", next: nil))
-            return "<h2>学到了什么</h2>" + cards.joined(separator: "\n")
+            cards.append(card("More insights", "<p class=\"muted\">Frequent words, repeated sentences, and sentences that mention a time need the typed text. Turn on \"Save Typed Text\" in the menu to see them.</p>", next: nil))
+            return "<h2>What it learned</h2>" + cards.joined(separator: "\n")
         }
         if insights.sentenceCount == 0 {
-            cards.append(card("还在学习", "<p class=\"muted\">还没有记录。多打几句后再来看。</p>", next: nil))
-            return "<h2>学到了什么</h2>" + cards.joined(separator: "\n")
+            cards.append(card("Still learning", "<p class=\"muted\">No records yet. Type a few more sentences and check back.</p>", next: nil))
+            return "<h2>What it learned</h2>" + cards.joined(separator: "\n")
         }
         if !insights.chineseWords.isEmpty || !insights.englishWords.isEmpty {
-            cards.append(card("你的常用词", (insights.chineseWords.isEmpty ? "" : chips(insights.chineseWords))
+            cards.append(card("Your frequent words", (insights.chineseWords.isEmpty ? "" : chips(insights.chineseWords))
                 + (insights.englishWords.isEmpty ? "" : "<p></p>" + chips(insights.englishWords)),
-                next: "以后：这些词会更靠前出现在候选里。"))
+                next: "Next: these words will rank higher in the candidates."))
         }
         if !insights.newWords.isEmpty {
-            cards.append(card("可能的新词", "<p class=\"muted\">总是一个字一个字打出来、但经常连在一起的字。</p>" + chips(insights.newWords),
-                              next: "以后：几次之后自动变成整词，一次打出。"))
+            cards.append(card("Possible new words", "<p class=\"muted\">Characters you always type one at a time but often appear together.</p>" + chips(insights.newWords),
+                              next: "Next: after a few times they become one word, typed in one go."))
         }
         if !insights.repeatedSentences.isEmpty {
-            let rows = insights.repeatedSentences.map { "<tr><td>\(escape($0.text))</td><td class=\"nowrap\">\($0.count) 次</td></tr>" }.joined()
-            cards.append(card("重复说过的话", "<table>\(rows)</table>", next: "以后：第三次打同一句话时，会提示「✨ 存成短语」。"))
+            let rows = insights.repeatedSentences.map { "<tr><td>\(escape($0.text))</td><td class=\"nowrap\">\($0.count)×</td></tr>" }.joined()
+            cards.append(card("Repeated sentences", "<table>\(rows)</table>", next: "Next: the third time you type the same sentence, it will suggest \"✨ Save as phrase\"."))
         }
         if !insights.schedules.isEmpty {
             let date = DateFormatter()
-            date.dateFormat = "M月d日 HH:mm"
+            date.dateFormat = "MMM d HH:mm"
             let rows = insights.schedules.map {
                 "<tr><td>\(escape($0.text))</td><td class=\"nowrap\">\(escape($0.mention))\($0.when.map { " → " + date.string(from: $0) } ?? "")</td></tr>"
             }.joined()
-            cards.append(card("提到时间的句子", "<table>\(rows)</table>", next: "以后：打完这样的句子，会提示「✨ 加到日历」。"))
+            cards.append(card("Sentences that mention a time", "<table>\(rows)</table>", next: "Next: after you type such a sentence, it will suggest \"✨ Add to calendar\"."))
         }
-        return "<h2>学到了什么</h2>" + cards.joined(separator: "\n")
+        return "<h2>What it learned</h2>" + cards.joined(separator: "\n")
     }
 
     /// Groups entries (newest first) into sessions: consecutive entries in the same app and window no

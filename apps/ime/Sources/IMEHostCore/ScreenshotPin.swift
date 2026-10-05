@@ -84,7 +84,7 @@ final class PinnedScreenshotPanel: NSPanel {
 
     @objc func copyImage() {
         ScreenshotService.copy(image: image, scale: scale)
-        ScreenshotToast.show("已复制截图")
+        ScreenshotToast.show("Screenshot copied")
     }
 
     @objc func saveImage() {
@@ -149,10 +149,10 @@ private final class PinnedScreenshotView: NSView {
         }
         let menu = NSMenu()
         for (title, action, key) in [
-            ("复制", #selector(PinnedScreenshotPanel.copyImage), "c"),
-            ("保存", #selector(PinnedScreenshotPanel.saveImage), "s"),
-            ("识别文字并复制", #selector(PinnedScreenshotPanel.recognizeText), ""),
-            ("关闭", #selector(PinnedScreenshotPanel.closePin), "w"),
+            ("Copy", #selector(PinnedScreenshotPanel.copyImage), "c"),
+            ("Save", #selector(PinnedScreenshotPanel.saveImage), "s"),
+            ("Recognize Text and Copy", #selector(PinnedScreenshotPanel.recognizeText), ""),
+            ("Close", #selector(PinnedScreenshotPanel.closePin), "w"),
         ] {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
             item.target = panel
