@@ -82,12 +82,12 @@ final class SelectionTranslationController {
         requestID += 1
         selectedRange = range
         guard let selectedText else {
-            state = .message("当前应用没有提供选中的文字")
+            state = .message("The current app did not provide the selected text")
             return
         }
         let source = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !source.isEmpty else {
-            state = .message("请先选中要翻译的英文")
+            state = .message("Select the English text to translate first")
             return
         }
 
@@ -131,15 +131,15 @@ final class SelectionTranslationController {
     private static func message(for error: Error) -> String {
         switch error as? SelectionTranslationError {
         case .modelNotInstalled(let direction):
-            return "请先下载翻译语言：系统设置 › 通用 › 语言与地区 › 翻译语言，添加\(direction.languageNames)"
+            return "Download the translation languages first: System Settings › General › Language & Region › Translation Languages, add \(direction.languageNames)"
         case .languagePairUnsupported:
-            return "系统不支持这组语言的翻译"
+            return "The system does not support translating between these languages"
         case .requiresNewerSystem:
-            return "选中翻译需要 macOS 26"
+            return "Translating a selection requires macOS 26"
         case .failed(let reason):
-            return "翻译失败：\(reason)"
+            return "Translation failed: \(reason)"
         case nil:
-            return "翻译失败：\(error.localizedDescription)"
+            return "Translation failed: \(error.localizedDescription)"
         }
     }
 }

@@ -24,7 +24,7 @@ struct AppleRewriter: AIRewriter {
 
     func rewrite(_ text: String, action: AIAction) async throws -> String {
         guard Self.isAvailable else {
-            throw AIError.unavailable("Apple Intelligence 不可用")
+            throw AIError.unavailable("Apple Intelligence is unavailable")
         }
         let field = AIPrompt.localField(for: action)
         let schema = try GenerationSchema(root: DynamicGenerationSchema(
@@ -50,13 +50,13 @@ struct AppleRewriter: AIRewriter {
             do {
                 let reply = try await session.respond(to: prompt, options: options)
                 guard let result = AIPrompt.cleanFreeText(reply.content, source: text) else {
-                    throw AIError.unavailable("本机模型拒绝处理这句")
+                    throw AIError.unavailable("The on-device model declined this sentence")
                 }
                 return result
             } catch let error as AIError {
                 throw error
             } catch {
-                throw AIError.unavailable("本机模型拒绝处理这句")
+                throw AIError.unavailable("The on-device model declined this sentence")
             }
         } catch let error as AIError {
             throw error

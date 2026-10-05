@@ -24,7 +24,7 @@ final class CandidatePanelModelTests: XCTestCase {
             for: state([("数据库", .rime), ("数据", .rime), ("database", .englishTranslation)])
         )
 
-        XCTAssertEqual(rows.map(\.tag), [nil, nil, "译"])
+        XCTAssertEqual(rows.map(\.tag), [nil, nil, "TR"])
         XCTAssertEqual(rows.map(\.hasSeparatorBefore), [false, false, true])
     }
 
@@ -33,7 +33,7 @@ final class CandidatePanelModelTests: XCTestCase {
             for: state([("hello", .englishCompletion), ("合理", .rime), ("荷兰", .rime)])
         )
 
-        XCTAssertEqual(rows.map(\.tag), ["英", nil, nil])
+        XCTAssertEqual(rows.map(\.tag), ["EN", nil, nil])
         XCTAssertEqual(rows.map(\.hasSeparatorBefore), [false, true, false])
     }
 
@@ -42,7 +42,7 @@ final class CandidatePanelModelTests: XCTestCase {
             for: state([("我们", .rime), ("we", .englishTranslation), ("women", .englishCompletion)])
         )
 
-        XCTAssertEqual(rows.map(\.tag), [nil, "译", "英"])
+        XCTAssertEqual(rows.map(\.tag), [nil, "TR", "EN"])
         XCTAssertEqual(rows.map(\.hasSeparatorBefore), [false, true, false])
     }
 

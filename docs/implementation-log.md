@@ -478,6 +478,13 @@
 - Fixed a re-entrant candidate-panel synchronization bug: updating the visible `IMKCandidates` selection could call back into `candidateSelectionChanged(_:)` and recursively resync the panel, which could leave the input-source UI spinning or unresponsive during live typing.
 - Cleaned up the install script's `TISEnableInputSource` verification snippet so the post-install step no longer emits a misleading forced-cast warning.
 
+## 2026-10-05 — English UI
+
+- Switched all user-facing text to English: input menu, settings window, clipboard panel, screenshot overlay and toasts, translation/AI popups and chip, learning-data page, alerts, AI rewrite prompts, and the screenshot file name (`Screenshot …`).
+- Removed `zh-Hans.lproj/InfoPlist.strings`, so the input source is named LinguaType everywhere. `Info.plist` still declares `zh-Hans` as the input mode language.
+- Candidate row tags are now `EN`/`TR`; translation badges are `EN → ZH`/`ZH → EN`.
+- Left as-is on purpose: Chinese lexicons, test fixtures, Chinese output of the Explain action, and `LearningInsights` word lists.
+
 ### Expected Usage
 
 - Add a new dated section for each meaningful coding session.

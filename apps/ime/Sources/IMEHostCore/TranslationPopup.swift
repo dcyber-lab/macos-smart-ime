@@ -73,14 +73,14 @@ final class TranslationPopup {
             let labels = AIAction.allCases.enumerated().map { "\($0.offset + 1) \($0.element.title)" }
             let split = (labels.count + 1) / 2
             let actions = [labels[..<split], labels[split...]].map { $0.joined(separator: "    ") }.joined(separator: "\n")
-            let note = truncated ? " · 只读到这一行的末尾部分，长消息请先选中" : ""
-            return ("✨ AI 改写", text, actions, "数字选择 · ⏎ \(defaultAction.title) · Esc 取消\(note)")
+            let note = truncated ? " · Only the end of this line was read; select long messages first" : ""
+            return ("✨ AI Rewrite", text, actions, "Number to choose · ⏎ \(defaultAction.title) · Esc Cancel\(note)")
         case .running(let action, let text):
-            return ("✨ \(action.title)", text, "生成中…", "Esc 取消")
+            return ("✨ \(action.title)", text, "Generating…", "Esc Cancel")
         case .result(let action, let original, let rewritten):
-            return ("✨ \(action.title)", original, rewritten, readOnly ? "⏎ 复制 · Esc 或点击关闭" : action == .explain ? "Esc 关闭" : "⏎ 替换 · Esc 取消")
+            return ("✨ \(action.title)", original, rewritten, readOnly ? "⏎ Copy · Esc or click to close" : action == .explain ? "Esc Close" : "⏎ Replace · Esc Cancel")
         case .message(let text):
-            return ("✨ AI 改写", "", text, "Esc 关闭")
+            return ("✨ AI Rewrite", "", text, "Esc Close")
         }
     }
 
@@ -207,11 +207,11 @@ final class TranslationPopupView: NSView {
         case .idle:
             return false
         case .translating(let source, let direction):
-            fill(badge: direction.label, source: source, body: "翻译中…", hint: "Esc 取消")
+            fill(badge: direction.label, source: source, body: "Translating…", hint: "Esc Cancel")
         case .result(let source, let translation, let direction):
-            fill(badge: direction.label, source: source, body: translation, hint: "⏎ 替换 · Esc 取消")
+            fill(badge: direction.label, source: source, body: translation, hint: "⏎ Replace · Esc Cancel")
         case .message(let text):
-            fill(badge: "翻译", source: "", body: text, hint: "Esc 关闭")
+            fill(badge: "Translation", source: "", body: text, hint: "Esc Close")
         }
         layoutSubtreeIfNeeded()
         return true
@@ -232,7 +232,7 @@ final class TranslationPopupView: NSView {
     }
 }
 
-/// Small capsule label, drawn like the candidate panel's 英/译 tags.
+/// Small capsule label, drawn like the candidate panel's EN/TR tags.
 final class CapsuleBadgeView: NSView {
     private static let font = NSFont.systemFont(ofSize: 11, weight: .medium)
     private static let padding = NSSize(width: 7, height: 2)

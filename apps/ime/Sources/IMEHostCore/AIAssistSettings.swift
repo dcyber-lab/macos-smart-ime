@@ -25,10 +25,10 @@ struct AIAssistSettings {
 
         var title: String {
             switch self {
-            case .auto: "自动（优先本机）"
-            case .ollama: "Ollama（本机）"
-            case .apple: "Apple Intelligence（本机）"
-            case .codex: "Codex（会发给 OpenAI）"
+            case .auto: "Auto (prefer on-device)"
+            case .ollama: "Ollama (on-device)"
+            case .apple: "Apple Intelligence (on-device)"
+            case .codex: "Codex (sent to OpenAI)"
             }
         }
     }
@@ -36,10 +36,10 @@ struct AIAssistSettings {
     /// What rewrites use now and whether text leaves the Mac; `active` comes from `activeProvider()`.
     static func statusText(_ active: Provider?, codexModel: String, ollamaModel: String = OllamaRewriter.defaultModel) -> String {
         switch active {
-        case .ollama: "当前：Ollama（\(ollamaModel)），在本机运行，不会发出"
-        case .apple: "当前：Apple Intelligence，在本机运行，不会发出"
-        case .codex: "当前：Codex（\(codexModel)），启用的应用里句子会先发给 OpenAI"
-        case .auto, nil: "当前：没有可用的模型（启动 Ollama、打开 Apple Intelligence 或安装 Codex）"
+        case .ollama: "Current: Ollama (\(ollamaModel)), runs on this Mac, nothing is sent out"
+        case .apple: "Current: Apple Intelligence, runs on this Mac, nothing is sent out"
+        case .codex: "Current: Codex (\(codexModel)), sentences in apps with AI hints on are sent to OpenAI"
+        case .auto, nil: "Current: no model available (start Ollama, turn on Apple Intelligence, or install Codex)"
         }
     }
 

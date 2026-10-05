@@ -97,7 +97,7 @@ enum CandidatePanelModel {
     }
 
     private static func tag(for source: CandidateSource) -> String {
-        source == .englishTranslation ? "译" : "英"
+        source == .englishTranslation ? "TR" : "EN"
     }
 }
 

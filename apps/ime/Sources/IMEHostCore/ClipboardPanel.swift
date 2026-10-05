@@ -395,7 +395,7 @@ private final class ClipboardPanelContentView: NSView, NSTableViewDataSource, NS
     private let listScroll = NSScrollView()
     private let preview = ClipboardPreviewView()
     private let emptyLabel = NSTextField(labelWithString: "")
-    private let hintLabel = NSTextField(labelWithString: "↑↓ 选择 · ⏎ 粘贴 · ⌘1–9 直接粘贴 · ⌘P 置顶 · ⌘⌫ 删除 · Esc 关闭")
+    private let hintLabel = NSTextField(labelWithString: "↑↓ Select · ⏎ Paste · ⌘1–9 Paste directly · ⌘P Pin · ⌘⌫ Delete · Esc Close")
     private let topLine = NSBox()
     private let middleLine = NSBox()
     private let bottomLine = NSBox()
@@ -409,7 +409,7 @@ private final class ClipboardPanelContentView: NSView, NSTableViewDataSource, NS
         searchField.drawsBackground = false
         searchField.focusRingType = .none
         searchField.font = .systemFont(ofSize: 22)
-        searchField.placeholderString = "搜索剪贴板历史"
+        searchField.placeholderString = "Search clipboard history"
         searchField.cell?.usesSingleLineMode = true
         searchField.cell?.isScrollable = true
         searchField.delegate = self
@@ -469,7 +469,7 @@ private final class ClipboardPanelContentView: NSView, NSTableViewDataSource, NS
             middleLine.isHidden = isEmpty
             preview.isHidden = isEmpty
             emptyLabel.isHidden = !isEmpty
-            emptyLabel.stringValue = model.query.isEmpty ? "还没有复制过任何内容" : "没有匹配的内容"
+            emptyLabel.stringValue = model.query.isEmpty ? "Nothing copied yet" : "No matches"
             needsLayout = true
         }
         if !isEmpty, table.selectedRow != model.selection {
@@ -575,7 +575,7 @@ private final class ClipboardCellView: NSTableCellView {
         title.font = .systemFont(ofSize: 15)
         title.lineBreakMode = .byTruncatingTail
         shortcut.font = .systemFont(ofSize: 15)
-        pin.image = NSImage(systemSymbolName: "pin.fill", accessibilityDescription: "已置顶")
+        pin.image = NSImage(systemSymbolName: "pin.fill", accessibilityDescription: "Pinned")
         pin.symbolConfiguration = NSImage.SymbolConfiguration(textStyle: .caption1)
         for view in [icon, title, pin, shortcut] {
             addSubview(view)
@@ -633,7 +633,7 @@ private final class ClipboardPreviewView: NSView {
     private let textScroll = NSScrollView()
     private let textView = NSTextView(usingTextLayoutManager: false)
     private let imageView = NSImageView()
-    private let missingLabel = NSTextField(labelWithString: "图片已不在")
+    private let missingLabel = NSTextField(labelWithString: "Image no longer available")
     private let captionLabel = NSTextField(labelWithString: "")
     private static let padding: CGFloat = 14
     private static let spacing: CGFloat = 8
@@ -725,7 +725,7 @@ private final class ClipboardPreviewView: NSView {
             parts.append(name)
         }
         switch item.kind {
-        case .text: parts.append("\((item.text ?? "").count) 个字符")
+        case .text: parts.append("\((item.text ?? "").count) characters")
         case .image: parts.append("\(item.pixelWidth)×\(item.pixelHeight) · \(ClipboardItem.sizeText(item.byteCount))")
         }
         return parts.joined(separator: " · ")

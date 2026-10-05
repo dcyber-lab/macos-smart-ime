@@ -11,9 +11,9 @@ enum CommitEffectStyle: String, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .shatter: "玻璃炸裂"
-        case .crumble: "碎裂下坠"
-        case .dust: "粒子消散"
+        case .shatter: "Shatter"
+        case .crumble: "Crumble"
+        case .dust: "Dust"
         }
     }
 }
@@ -27,10 +27,10 @@ enum CommitEffectPalette: String, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .rainbow: "彩虹"
-        case .neon: "霓虹"
-        case .pastel: "马卡龙"
-        case .accent: "跟随强调色"
+        case .rainbow: "Rainbow"
+        case .neon: "Neon"
+        case .pastel: "Pastel"
+        case .accent: "Accent color"
         }
     }
 

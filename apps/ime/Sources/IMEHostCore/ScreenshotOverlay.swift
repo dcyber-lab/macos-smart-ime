@@ -660,7 +660,7 @@ final class ScreenshotOverlayView: NSView, NSTextViewDelegate {
             ctx.setLineDash(phase: 0, lengths: [])
         }
         if overlay.mode == .recognizeText, choosing {
-            drawHint("拖动框选要识别的文字，或点击选择窗口 · Esc 取消")
+            drawHint("Drag to select the text to recognize, or click to pick a window · Esc Cancel")
         }
         let showsMagnifier: Bool
         switch drag {
@@ -813,14 +813,14 @@ final class ScreenshotToolbar: NSView {
             mainRow.addArrangedSubview(button)
         }
         mainRow.addArrangedSubview(Self.separator())
-        let undo = Self.button(symbol: "arrow.uturn.backward", tip: "撤销 ⌘Z", target: self, action: #selector(undoClicked))
+        let undo = Self.button(symbol: "arrow.uturn.backward", tip: "Undo ⌘Z", target: self, action: #selector(undoClicked))
         undoButton = undo
         mainRow.addArrangedSubview(undo)
         mainRow.addArrangedSubview(Self.separator())
         let actions: [(String, String, ScreenshotOverlay.Action)] = [
-            ("text.viewfinder", "识别文字并复制", .recognizeText),
-            ("pin", "贴图到屏幕", .pin),
-            ("square.and.arrow.down", "保存 ⌘S", .save),
+            ("text.viewfinder", "Recognize text and copy", .recognizeText),
+            ("pin", "Pin to screen", .pin),
+            ("square.and.arrow.down", "Save ⌘S", .save),
         ]
         for (symbol, tip, action) in actions {
             let button = Self.button(symbol: symbol, tip: tip, target: self, action: #selector(actionClicked(_:)))
@@ -828,17 +828,17 @@ final class ScreenshotToolbar: NSView {
             mainRow.addArrangedSubview(button)
         }
         mainRow.addArrangedSubview(Self.separator())
-        let cancel = Self.button(symbol: "xmark", tip: "取消 Esc", target: self, action: #selector(actionClicked(_:)))
+        let cancel = Self.button(symbol: "xmark", tip: "Cancel Esc", target: self, action: #selector(actionClicked(_:)))
         cancel.tag = Self.tag(for: .cancel)
         cancel.contentTintColor = .systemRed
         mainRow.addArrangedSubview(cancel)
-        let done = Self.button(symbol: "checkmark", tip: "复制 ⏎ / ⌘C", target: self, action: #selector(actionClicked(_:)))
+        let done = Self.button(symbol: "checkmark", tip: "Copy ⏎ / ⌘C", target: self, action: #selector(actionClicked(_:)))
         done.tag = Self.tag(for: .copy)
         done.contentTintColor = .systemGreen
         mainRow.addArrangedSubview(done)
 
         for size in ScreenshotStrokeSize.allCases {
-            let button = Self.button(image: Self.dotImage(diameter: 3 + CGFloat(sizeIndex(size)) * 4), tip: "粗细", target: self, action: #selector(sizeClicked(_:)))
+            let button = Self.button(image: Self.dotImage(diameter: 3 + CGFloat(sizeIndex(size)) * 4), tip: "Size", target: self, action: #selector(sizeClicked(_:)))
             sizeButtons.append((size, button))
             styleRow.addArrangedSubview(button)
         }
@@ -846,7 +846,7 @@ final class ScreenshotToolbar: NSView {
         colorSeparator = separator
         styleRow.addArrangedSubview(separator)
         for color in ScreenshotColor.allCases {
-            let button = Self.button(image: nil, tip: "颜色", target: self, action: #selector(colorClicked(_:)))
+            let button = Self.button(image: nil, tip: "Color", target: self, action: #selector(colorClicked(_:)))
             colorButtons.append((color, button))
             styleRow.addArrangedSubview(button)
         }

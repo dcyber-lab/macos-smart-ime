@@ -22,7 +22,7 @@ final class InputMenuTests: XCTestCase {
     func testOnlyTheEverydaySwitchesAreInTheMenu() {
         let items = menu(app: (id: "com.tinyspeck.slackmacgap", name: "Slack"))
 
-        XCTAssertEqual(items.map(\.title), ["智能学习", "不在「Slack」中学习", "在「Slack」中启用 AI 提示", "查看学习记录…", "设置…"])
+        XCTAssertEqual(items.map(\.title), ["Intelligence Learning", "Don't Learn in Slack", "Enable AI Hints in Slack", "View Learning Data…", "Settings…"])
         XCTAssertTrue(items.allSatisfy { $0.submenu == nil && $0.action == action }, "submenu actions are not delivered by the input menu")
         XCTAssertTrue(items.allSatisfy(\.isEnabled))
         XCTAssertEqual(items.filter { $0.state == .on }.map(\.title), [], "learning and AI hints are off by default")
@@ -35,7 +35,7 @@ final class InputMenuTests: XCTestCase {
 
         let items = menu(app: (id: "com.tinyspeck.slackmacgap", name: "Slack"))
 
-        XCTAssertEqual(items.filter { $0.state == .on }.map(\.title), ["智能学习", "不在「Slack」中学习", "在「Slack」中启用 AI 提示"])
+        XCTAssertEqual(items.filter { $0.state == .on }.map(\.title), ["Intelligence Learning", "Don't Learn in Slack", "Enable AI Hints in Slack"])
     }
 
     func testDefaultExcludedAppIsCheckedButCanBeAllowed() {
@@ -55,7 +55,7 @@ final class InputMenuTests: XCTestCase {
     }
 
     func testNoAppItemsWithoutAClient() {
-        XCTAssertEqual(menu(app: nil).map(\.title), ["智能学习", "查看学习记录…", "设置…"])
+        XCTAssertEqual(menu(app: nil).map(\.title), ["Intelligence Learning", "View Learning Data…", "Settings…"])
     }
 
     func testCommandsComeBackFromTheCommandDictionary() {
@@ -70,10 +70,10 @@ final class InputMenuTests: XCTestCase {
             InputMenu.command(from: NSMenuItem(title: title, action: nil, keyEquivalent: ""))
         }
 
-        XCTAssertEqual(command("不在「微信」中学习"), .excludeApp)
-        XCTAssertEqual(command("在「微信」中启用 AI 提示"), .aiHints)
-        XCTAssertEqual(command("设置…"), .settings)
-        XCTAssertNil(command("玻璃炸裂"))
+        XCTAssertEqual(command("Don't Learn in WeChat"), .excludeApp)
+        XCTAssertEqual(command("Enable AI Hints in WeChat"), .aiHints)
+        XCTAssertEqual(command("Settings…"), .settings)
+        XCTAssertNil(command("Shatter"))
     }
 
     private func menu(app: (id: String, name: String)?, aiAvailable: Bool = true) -> [NSMenuItem] {

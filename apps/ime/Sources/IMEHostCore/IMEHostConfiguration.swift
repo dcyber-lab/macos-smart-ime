@@ -47,7 +47,7 @@ public enum IMEHostConfiguration {
         supportDirectory().appendingPathComponent("journal", isDirectory: true)
     }
 
-    /// The page 查看学习记录 writes and opens.
+    /// The page View Learning Data writes and opens.
     public static func learningPageURL() -> URL {
         supportDirectory().appendingPathComponent("learning-summary.html")
     }

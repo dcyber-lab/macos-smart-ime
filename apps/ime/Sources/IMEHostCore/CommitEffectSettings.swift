@@ -32,8 +32,8 @@ enum CommitEffectMotionChoice: Hashable, Sendable {
     var title: String {
         switch self {
         case .style(let style): style.title
-        case .random: "随机"
-        case .off: "关闭"
+        case .random: "Random"
+        case .off: "Off"
         }
     }
 }
@@ -66,7 +66,7 @@ enum CommitEffectPaletteChoice: Hashable, Sendable {
     var title: String {
         switch self {
         case .palette(let palette): palette.title
-        case .random: "随机"
+        case .random: "Random"
         }
     }
 }

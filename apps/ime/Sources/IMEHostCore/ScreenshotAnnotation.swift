@@ -5,12 +5,12 @@ enum ScreenshotTool: CaseIterable {
 
     var title: String {
         switch self {
-        case .rectangle: "矩形"
-        case .ellipse: "椭圆"
-        case .arrow: "箭头"
-        case .pen: "画笔"
-        case .text: "文字"
-        case .mosaic: "马赛克"
+        case .rectangle: "Rectangle"
+        case .ellipse: "Ellipse"
+        case .arrow: "Arrow"
+        case .pen: "Pen"
+        case .text: "Text"
+        case .mosaic: "Mosaic"
         }
     }
 

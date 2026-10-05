@@ -79,7 +79,7 @@ enum ScreenshotCapture {
             ))
         }
         guard !snapshots.isEmpty else {
-            throw ScreenshotCaptureError.failed("没有找到显示器")
+            throw ScreenshotCaptureError.failed("No display found")
         }
         return snapshots
     }

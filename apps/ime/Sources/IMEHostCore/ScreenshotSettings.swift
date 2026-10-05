@@ -41,12 +41,12 @@ struct ScreenshotSettings: Equatable {
         defaults.set(folder?.path, forKey: saveFolderKey)
     }
 
-    /// "截图 2026-10-05 15.03.12.png", with " (2)" and up when the name is taken.
+    /// "Screenshot 2026-10-05 15.03.12.png", with " (2)" and up when the name is taken.
     static func fileName(at date: Date, existing: (String) -> Bool) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        let base = "截图 \(formatter.string(from: date))"
+        let base = "Screenshot \(formatter.string(from: date))"
         var name = base + ".png"
         var counter = 2
         while existing(name) {
