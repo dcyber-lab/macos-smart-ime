@@ -1,20 +1,26 @@
 import AppKit
 import ImageIO
-import SwiftUI
 
 /// What the clipboard panel shows: a search field, the matches, and a preview of the chosen one.
 @MainActor
-final class ClipboardPanelModel: ObservableObject {
-    @Published var query = "" {
+final class ClipboardPanelModel {
+    var query = "" {
         didSet { reload() }
     }
-    @Published private(set) var results: [ClipboardItem] = []
-    @Published var selection = 0 {
-        didSet { prefetchNeighbors() }
+    private(set) var results: [ClipboardItem] = []
+    /// Bumped whenever `results` is replaced, so the list reloads only then.
+    private(set) var resultsVersion = 0
+    var selection = 0 {
+        didSet {
+            prefetchNeighbors()
+            onChange()
+        }
     }
 
     let store: ClipboardHistoryStore
     var onChoose: (ClipboardItem) -> Void = { _ in }
+    /// After the results or the selection change, and when a thumbnail finishes decoding.
+    var onChange: () -> Void = {}
 
     init(store: ClipboardHistoryStore) {
         self.store = store
@@ -32,7 +38,7 @@ final class ClipboardPanelModel: ObservableObject {
     }
 
     /// A screen-sized copy of the image, decoded once per entry: decoding the full file on every
-    /// selection change made ↑↓ stutter. Not decoded yet: nil now, and the view refreshes when it is.
+    /// selection change made ↑↓ stutter. Not decoded yet: nil now, and `onChange` runs when it is.
     func previewImage(for item: ClipboardItem) -> NSImage? {
         if let cached = previews.object(forKey: item.id as NSUUID) {
             return cached
@@ -66,7 +72,7 @@ final class ClipboardPanelModel: ObservableObject {
                 if let decoded {
                     let cg = decoded.cgImage
                     self.previews.setObject(NSImage(cgImage: cg, size: CGSize(width: cg.width, height: cg.height)), forKey: id as NSUUID)
-                    self.objectWillChange.send()
+                    self.onChange()
                 }
             }
         }
@@ -85,10 +91,11 @@ final class ClipboardPanelModel: ObservableObject {
         return DecodedImage(cgImage: cg)
     }
 
+    /// The only place `results` changes; setting `selection` afterwards tells the view.
     func reload() {
         results = store.search(query)
+        resultsVersion += 1
         selection = min(selection, max(0, results.count - 1))
-        prefetchNeighbors()
     }
 
     func reset() {
@@ -98,10 +105,12 @@ final class ClipboardPanelModel: ObservableObject {
     }
 
     func move(_ delta: Int) {
-        guard !results.isEmpty else {
+        let target = min(max(selection + delta, 0), results.count - 1)
+        // Holding ↓ on the last row repeats the key; nothing needs redrawing then.
+        guard !results.isEmpty, target != selection else {
             return
         }
-        selection = min(max(selection + delta, 0), results.count - 1)
+        selection = target
     }
 
     func choose(at index: Int) {
@@ -135,46 +144,13 @@ final class ClipboardPanel: NSPanel {
     static let size = CGSize(width: 760, height: 440)
 
     private let model: ClipboardPanelModel
+    private let content: ClipboardPanelContentView
     private var monitor: Any?
-    private var keyStats = KeyStats()
-
-    /// How ↑↓ behaved while the panel was open, written to the event log when it closes.
-    private struct KeyStats {
-        var count = 0
-        var ageSum = 0.0, ageMax = 0.0
-        var handleSum = 0.0, handleMax = 0.0
-        var gapSum = 0.0, gapMax = 0.0
-        var lastStamp: TimeInterval?
-
-        mutating func record(age: Double, handle: Double, stamp: TimeInterval) {
-            count += 1
-            ageSum += age
-            ageMax = max(ageMax, age)
-            handleSum += handle
-            handleMax = max(handleMax, handle)
-            if let lastStamp {
-                let gap = (stamp - lastStamp) * 1000
-                gapSum += gap
-                gapMax = max(gapMax, gap)
-            }
-            lastStamp = stamp
-        }
-
-        var summary: String? {
-            guard count > 1 else {
-                return nil
-            }
-            let n = Double(count)
-            let gaps = Double(count - 1)
-            return String(
-                format: "clipboard panel: %d arrows, event age avg %.1f max %.1f ms, handling avg %.1f max %.1f ms, gap between keys avg %.1f max %.1f ms",
-                count, ageSum / n, ageMax, handleSum / n, handleMax, gapSum / gaps, gapMax
-            )
-        }
-    }
+    private let keyStats = ArrowKeyStats()
 
     init(store: ClipboardHistoryStore, onChoose: @escaping (ClipboardItem) -> Void) {
         model = ClipboardPanelModel(store: store)
+        content = ClipboardPanelContentView(model: model)
         super.init(
             contentRect: CGRect(origin: .zero, size: Self.size),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -209,23 +185,23 @@ final class ClipboardPanel: NSPanel {
             background.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
             background.layer?.cornerRadius = 14
         }
-        let host = NSHostingView(rootView: ClipboardPanelView(model: model))
-        host.frame = background.bounds
-        host.autoresizingMask = [.width, .height]
-        background.addSubview(host)
+        content.frame = background.bounds
+        content.autoresizingMask = [.width, .height]
+        background.addSubview(content)
         contentView = background
     }
 
     override var canBecomeKey: Bool { true }
 
     func show() {
-        keyStats = KeyStats()
+        keyStats.start()
         model.reset()
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
         let visible = screen?.visibleFrame ?? CGRect(origin: .zero, size: Self.size)
         setFrameOrigin(CGPoint(x: visible.midX - Self.size.width / 2, y: visible.midY - Self.size.height / 2 + visible.height * 0.12))
         makeKeyAndOrderFront(nil)
+        content.focusSearch()
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else {
                 return event
@@ -236,10 +212,9 @@ final class ClipboardPanel: NSPanel {
     }
 
     override func close() {
-        if let summary = keyStats.summary {
+        if let summary = keyStats.stop() {
             AIAssistEventLog.shared.append(summary, app: "clipboard")
         }
-        keyStats = KeyStats()
         if let monitor {
             NSEvent.removeMonitor(monitor)
         }
@@ -260,12 +235,8 @@ final class ClipboardPanel: NSPanel {
             return false
         }
         let command = event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
-        let started = ProcessInfo.processInfo.systemUptime
-        defer {
-            if event.keyCode == 125 || event.keyCode == 126 {
-                let done = ProcessInfo.processInfo.systemUptime
-                keyStats.record(age: (started - event.timestamp) * 1000, handle: (done - started) * 1000, stamp: event.timestamp)
-            }
+        if event.keyCode == 125 || event.keyCode == 126 {
+            keyStats.arrow(event)
         }
         switch event.keyCode {
         case 53: close()
@@ -289,124 +260,437 @@ final class ClipboardPanel: NSPanel {
     }
 }
 
+/// How ↑↓ behaved while the panel was open, for the event log. Most of a key's cost comes after `handle`
+/// returns, when views lay out and Core Animation commits before the run loop sleeps, so the main thread is
+/// timed per run-loop turn and each turn within 250 ms of an arrow is charged to it.
+@MainActor
+private final class ArrowKeyStats {
+    private var ages: [Double] = []
+    private var gaps: [Double] = []
+    private var work: [Double] = []
+    private var latency: [Double] = []
+    private var longestTurn = 0.0
+    private var current: (stamp: TimeInterval, work: Double, lastCommit: TimeInterval?)?
+    private var lastStamp: TimeInterval?
+    private var turnStart = ProcessInfo.processInfo.systemUptime
+    private var observers: [CFRunLoopObserver] = []
+
+    func start() {
+        _ = stop()
+        gaps = []
+        work = []
+        latency = []
+        longestTurn = 0
+        lastStamp = nil
+        turnStart = ProcessInfo.processInfo.systemUptime
+        // First after the run loop wakes, last before it sleeps (after the Core Animation commit).
+        let woke = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.afterWaiting.rawValue, true, CFIndex.min) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.turnStart = ProcessInfo.processInfo.systemUptime }
+        }
+        let sleeps = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, CFIndex.max) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.turnEnded() }
+        }
+        observers = [woke, sleeps].compactMap { $0 }
+        for observer in observers {
+            CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
+        }
+    }
+
+    func arrow(_ event: NSEvent) {
+        finishKey()
+        ages.append((ProcessInfo.processInfo.systemUptime - event.timestamp) * 1000)
+        if let lastStamp {
+            gaps.append((event.timestamp - lastStamp) * 1000)
+        }
+        lastStamp = event.timestamp
+        current = (event.timestamp, 0, nil)
+    }
+
+    /// The summary line once per opening, or nil when fewer than two arrows were pressed.
+    func stop() -> String? {
+        finishKey()
+        for observer in observers {
+            CFRunLoopObserverInvalidate(observer)
+        }
+        observers = []
+        defer { ages = [] }
+        guard ages.count > 1 else {
+            return nil
+        }
+        return String(
+            format: "clipboard panel: %d arrows, gap avg %.0f ms, event age avg %.1f max %.1f ms, main-thread work per arrow %@, key to last commit %@, longest turn %.1f ms",
+            ages.count, gaps.reduce(0, +) / Double(max(gaps.count, 1)), ages.reduce(0, +) / Double(ages.count), ages.max() ?? 0,
+            Self.percentiles(work), Self.percentiles(latency), longestTurn
+        )
+    }
+
+    private func turnEnded() {
+        let now = ProcessInfo.processInfo.systemUptime
+        let busy = (now - turnStart) * 1000
+        turnStart = now
+        longestTurn = max(longestTurn, busy)
+        guard var key = current, now - key.stamp < 0.25 else {
+            return
+        }
+        key.work += busy
+        if busy > 0.5 {
+            key.lastCommit = now
+        }
+        current = key
+    }
+
+    private func finishKey() {
+        guard let key = current else {
+            return
+        }
+        current = nil
+        work.append(key.work)
+        if let lastCommit = key.lastCommit {
+            latency.append((lastCommit - key.stamp) * 1000)
+        }
+    }
+
+    private static func percentiles(_ values: [Double]) -> String {
+        let sorted = values.sorted()
+        guard let max = sorted.last else {
+            return "n/a"
+        }
+        return String(format: "p50 %.1f p90 %.1f max %.1f ms", sorted[sorted.count / 2], sorted[sorted.count * 9 / 10], max)
+    }
+}
+
 // MARK: - Views
 
-private struct ClipboardPanelView: View {
-    @ObservedObject var model: ClipboardPanelModel
-    @FocusState private var searchFocused: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            TextField("搜索剪贴板历史", text: $model.query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 22))
-                .focused($searchFocused)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 14)
-            Divider()
-            if model.results.isEmpty {
-                Spacer()
-                Text(model.query.isEmpty ? "还没有复制过任何内容" : "没有匹配的内容")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                Spacer()
-            } else {
-                HStack(spacing: 0) {
-                    list.frame(width: 360)
-                    Divider()
-                    ClipboardPreview(model: model)
-                }
-            }
-            Divider()
-            Text("↑↓ 选择 · ⏎ 粘贴 · ⌘1–9 直接粘贴 · ⌘P 置顶 · ⌘⌫ 删除 · Esc 关闭")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.vertical, 7)
-        }
-        .onAppear { searchFocused = true }
+/// The panel's content, in AppKit. The SwiftUI version laid the whole panel out again on every ↑↓: 5–12 ms a
+/// step on an M4 Pro with spikes past 30 ms, measured on a standalone copy, while the same list with no
+/// preview took about 1 ms. A step here selects a table row and changes what the preview shows.
+private final class ClipboardPanelContentView: NSView, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
+    private enum Metrics {
+        static let listWidth: CGFloat = 360
+        static let listPadding: CGFloat = 8
+        static let rowHeight: CGFloat = 36
+        static let rowSpacing: CGFloat = 2
+        static let searchHorizontalPadding: CGFloat = 18
+        static let searchVerticalPadding: CGFloat = 14
+        static let hintVerticalPadding: CGFloat = 7
     }
 
-    private var list: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 2) {
-                    ForEach(Array(model.results.enumerated()), id: \.element.id) { index, item in
-                        ClipboardRow(item: item, index: index, isSelected: index == model.selection, isPinned: model.store.isPinned(item))
-                            .equatable()
-                            .id(item.id)
-                            .onTapGesture { model.selection = index }
-                            .simultaneousGesture(TapGesture(count: 2).onEnded { model.choose(at: index) })
-                    }
-                }
-                .padding(8)
-            }
-            .onChange(of: model.selection) { _ in
-                if let item = model.selected {
-                    proxy.scrollTo(item.id)
-                }
-            }
+    private let model: ClipboardPanelModel
+    private let searchField = NSTextField()
+    private let table = NSTableView()
+    private let listScroll = NSScrollView()
+    private let preview = ClipboardPreviewView()
+    private let emptyLabel = NSTextField(labelWithString: "")
+    private let hintLabel = NSTextField(labelWithString: "↑↓ 选择 · ⏎ 粘贴 · ⌘1–9 直接粘贴 · ⌘P 置顶 · ⌘⌫ 删除 · Esc 关闭")
+    private let topLine = NSBox()
+    private let middleLine = NSBox()
+    private let bottomLine = NSBox()
+    private var shownVersion = -1
+
+    init(model: ClipboardPanelModel) {
+        self.model = model
+        super.init(frame: .zero)
+        searchField.isBordered = false
+        searchField.isBezeled = false
+        searchField.drawsBackground = false
+        searchField.focusRingType = .none
+        searchField.font = .systemFont(ofSize: 22)
+        searchField.placeholderString = "搜索剪贴板历史"
+        searchField.cell?.usesSingleLineMode = true
+        searchField.cell?.isScrollable = true
+        searchField.delegate = self
+
+        table.addTableColumn(NSTableColumn(identifier: NSUserInterfaceItemIdentifier("item")))
+        table.headerView = nil
+        table.style = .plain
+        table.backgroundColor = .clear
+        table.rowHeight = Metrics.rowHeight
+        table.intercellSpacing = NSSize(width: 0, height: Metrics.rowSpacing)
+        // The search field keeps the keyboard; a click still selects.
+        table.refusesFirstResponder = true
+        table.dataSource = self
+        table.delegate = self
+        table.target = self
+        table.doubleAction = #selector(chooseClickedRow)
+        listScroll.documentView = table
+        listScroll.drawsBackground = false
+        listScroll.hasVerticalScroller = true
+        listScroll.autohidesScrollers = true
+
+        emptyLabel.textColor = .secondaryLabelColor
+        hintLabel.font = .preferredFont(forTextStyle: .caption1)
+        hintLabel.textColor = .secondaryLabelColor
+        hintLabel.alignment = .center
+        for line in [topLine, middleLine, bottomLine] {
+            line.boxType = .separator
         }
+        for view in [searchField, topLine, listScroll, middleLine, preview, emptyLabel, bottomLine, hintLabel] {
+            addSubview(view)
+        }
+        model.onChange = { [weak self] in
+            self?.refresh()
+        }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not used")
+    }
+
+    override var isFlipped: Bool { true }
+
+    func focusSearch() {
+        window?.makeFirstResponder(searchField)
+    }
+
+    private func refresh() {
+        let isEmpty = model.results.isEmpty
+        if searchField.stringValue != model.query {
+            searchField.stringValue = model.query
+        }
+        if shownVersion != model.resultsVersion {
+            shownVersion = model.resultsVersion
+            table.reloadData()
+            listScroll.isHidden = isEmpty
+            middleLine.isHidden = isEmpty
+            preview.isHidden = isEmpty
+            emptyLabel.isHidden = !isEmpty
+            emptyLabel.stringValue = model.query.isEmpty ? "还没有复制过任何内容" : "没有匹配的内容"
+            needsLayout = true
+        }
+        if !isEmpty, table.selectedRow != model.selection {
+            table.selectRowIndexes(IndexSet(integer: model.selection), byExtendingSelection: false)
+            table.scrollRowToVisible(model.selection)
+        }
+        let item = model.selected
+        if preview.itemID != item?.id {
+            preview.show(item)
+        }
+        // Runs again when a thumbnail finishes decoding.
+        if let item, item.kind == .image {
+            let image = model.previewImage(for: item)
+            preview.showImage(image, missing: image == nil && model.store.imageURL(for: item).map { FileManager.default.fileExists(atPath: $0.path) } != true)
+        }
+    }
+
+    @objc private func chooseClickedRow() {
+        model.choose(at: table.clickedRow)
+    }
+
+    override func layout() {
+        super.layout()
+        let searchHeight = searchField.intrinsicContentSize.height
+        searchField.frame = CGRect(
+            x: Metrics.searchHorizontalPadding, y: Metrics.searchVerticalPadding,
+            width: bounds.width - Metrics.searchHorizontalPadding * 2, height: searchHeight
+        )
+        let top = searchHeight + Metrics.searchVerticalPadding * 2
+        topLine.frame = CGRect(x: 0, y: top, width: bounds.width, height: 1)
+        let hintHeight = hintLabel.intrinsicContentSize.height
+        let bottom = bounds.height - hintHeight - Metrics.hintVerticalPadding * 2
+        bottomLine.frame = CGRect(x: 0, y: bottom - 1, width: bounds.width, height: 1)
+        hintLabel.frame = CGRect(x: 0, y: bottom + Metrics.hintVerticalPadding, width: bounds.width, height: hintHeight)
+
+        let middle = CGRect(x: 0, y: top + 1, width: bounds.width, height: max(0, bottom - 1 - (top + 1)))
+        listScroll.frame = middle.divided(atDistance: Metrics.listWidth, from: .minXEdge).slice.insetBy(dx: Metrics.listPadding, dy: Metrics.listPadding)
+        table.tableColumns.first?.width = listScroll.contentSize.width
+        middleLine.frame = CGRect(x: Metrics.listWidth, y: middle.minY, width: 1, height: middle.height)
+        preview.frame = CGRect(x: Metrics.listWidth + 1, y: middle.minY, width: max(0, middle.width - Metrics.listWidth - 1), height: middle.height)
+        let empty = emptyLabel.intrinsicContentSize
+        emptyLabel.frame = CGRect(x: middle.midX - empty.width / 2, y: middle.midY - empty.height / 2, width: empty.width, height: empty.height)
+    }
+
+    // MARK: Table
+
+    func numberOfRows(in tableView: NSTableView) -> Int {
+        model.results.count
+    }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let cell = tableView.makeView(withIdentifier: ClipboardCellView.identifier, owner: nil) as? ClipboardCellView ?? ClipboardCellView()
+        let item = model.results[row]
+        cell.configure(item, index: row, isPinned: model.store.isPinned(item))
+        return cell
+    }
+
+    func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        ClipboardRowView()
+    }
+
+    func tableViewSelectionDidChange(_ notification: Notification) {
+        let row = table.selectedRow
+        if row >= 0, row != model.selection {
+            model.selection = row
+        }
+    }
+
+    // MARK: Search
+
+    func controlTextDidChange(_ notification: Notification) {
+        model.query = searchField.stringValue
     }
 }
 
-private struct ClipboardRow: View, Equatable {
-    let item: ClipboardItem
-    let index: Int
-    let isSelected: Bool
-    let isPinned: Bool
+/// An accent-filled rounded selection, also while the input method is not the active app (it never is).
+private final class ClipboardRowView: NSTableRowView {
+    override var isEmphasized: Bool {
+        get { true }
+        set {}
+    }
 
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(nsImage: AppIcons.icon(for: item.appBundleID))
-                .resizable()
-                .frame(width: 24, height: 24)
-            Text(item.title)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if isPinned {
-                Image(systemName: "pin.fill").font(.caption).foregroundStyle(.secondary)
-            }
-            if index < 9 {
-                Text("⌘\(index + 1)").foregroundStyle(.secondary)
-            }
-        }
-        .font(.system(size: 15))
-        .foregroundStyle(isSelected ? Color.white : Color.primary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 7).fill(isSelected ? Color.accentColor : .clear))
-        .contentShape(Rectangle())
+    override func drawSelection(in dirtyRect: NSRect) {
+        NSColor.controlAccentColor.setFill()
+        NSBezierPath(roundedRect: bounds, xRadius: 7, yRadius: 7).fill()
     }
 }
 
-private struct ClipboardPreview: View {
-    @ObservedObject var model: ClipboardPanelModel
+/// App icon, first line, pin, and ⌘1–9.
+private final class ClipboardCellView: NSTableCellView {
+    static let identifier = NSUserInterfaceItemIdentifier("ClipboardCell")
+    private static let spacing: CGFloat = 10
+    private static let iconSize: CGFloat = 24
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let item = model.selected {
-                switch item.kind {
-                case .text:
-                    ClipboardTextPreview(text: String((item.text ?? "").prefix(20_000)))
-                case .image:
-                    if let image = model.previewImage(for: item) {
-                        Image(nsImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        Text(model.store.imageURL(for: item).map { FileManager.default.fileExists(atPath: $0.path) } == true ? "" : "图片已不在")
-                            .foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-                Text(Self.caption(for: item))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+    private let icon = NSImageView()
+    private let title = NSTextField(labelWithString: "")
+    private let pin = NSImageView()
+    private let shortcut = NSTextField(labelWithString: "")
+
+    init() {
+        super.init(frame: .zero)
+        identifier = Self.identifier
+        title.font = .systemFont(ofSize: 15)
+        title.lineBreakMode = .byTruncatingTail
+        shortcut.font = .systemFont(ofSize: 15)
+        pin.image = NSImage(systemSymbolName: "pin.fill", accessibilityDescription: "已置顶")
+        pin.symbolConfiguration = NSImage.SymbolConfiguration(textStyle: .caption1)
+        for view in [icon, title, pin, shortcut] {
+            addSubview(view)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        applyColors()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not used")
+    }
+
+    func configure(_ item: ClipboardItem, index: Int, isPinned: Bool) {
+        icon.image = AppIcons.icon(for: item.appBundleID)
+        title.stringValue = item.title
+        pin.isHidden = !isPinned
+        shortcut.stringValue = "⌘\(index + 1)"
+        shortcut.isHidden = index >= 9
+        needsLayout = true
+    }
+
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet { applyColors() }
+    }
+
+    private func applyColors() {
+        let selected = backgroundStyle == .emphasized
+        title.textColor = selected ? .white : .labelColor
+        shortcut.textColor = selected ? .white : .secondaryLabelColor
+        pin.contentTintColor = selected ? .white : .secondaryLabelColor
+    }
+
+    override func layout() {
+        super.layout()
+        let inner = bounds.insetBy(dx: 10, dy: 0)
+        icon.frame = CGRect(x: inner.minX, y: inner.midY - Self.iconSize / 2, width: Self.iconSize, height: Self.iconSize)
+        var right = inner.maxX
+        for view in [shortcut, pin] as [NSView] where !view.isHidden {
+            let size = view.intrinsicContentSize
+            view.frame = CGRect(x: right - size.width, y: inner.midY - size.height / 2, width: size.width, height: size.height)
+            right -= size.width + Self.spacing
+        }
+        let left = icon.frame.maxX + Self.spacing
+        let height = title.intrinsicContentSize.height
+        title.frame = CGRect(x: left, y: inner.midY - height / 2, width: max(0, right - left), height: height)
+    }
+}
+
+/// Text in an `NSTextView` or the image, with the time, app and size underneath. One view for the panel's
+/// life: a step sets a string or an image and changes which one is visible. The text view is TextKit 1 with
+/// non-contiguous layout, so only the visible lines are laid out (SwiftUI's `Text` took 650 ms for 4,000
+/// characters); TextKit 2's viewport layout cost about a third of each step on top of that.
+private final class ClipboardPreviewView: NSView {
+    private(set) var itemID: UUID?
+    private let textScroll = NSScrollView()
+    private let textView = NSTextView(usingTextLayoutManager: false)
+    private let imageView = NSImageView()
+    private let missingLabel = NSTextField(labelWithString: "图片已不在")
+    private let captionLabel = NSTextField(labelWithString: "")
+    private static let padding: CGFloat = 14
+    private static let spacing: CGFloat = 8
+
+    init() {
+        super.init(frame: .zero)
+        textScroll.drawsBackground = false
+        textScroll.hasVerticalScroller = true
+        textScroll.autohidesScrollers = true
+        textView.isEditable = false
+        textView.isSelectable = false
+        textView.drawsBackground = false
+        textView.font = .systemFont(ofSize: 13)
+        textView.textContainerInset = .zero
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainer?.widthTracksTextView = true
+        textView.layoutManager?.allowsNonContiguousLayout = true
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.autoresizingMask = [.width]
+        textScroll.documentView = textView
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        missingLabel.textColor = .secondaryLabelColor
+        captionLabel.font = .preferredFont(forTextStyle: .caption1)
+        captionLabel.textColor = .secondaryLabelColor
+        captionLabel.lineBreakMode = .byTruncatingTail
+        for view in [textScroll, imageView, missingLabel, captionLabel] {
+            addSubview(view)
+        }
+        show(nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not used")
+    }
+
+    override var isFlipped: Bool { true }
+
+    func show(_ item: ClipboardItem?) {
+        itemID = item?.id
+        textScroll.isHidden = item?.kind != .text
+        imageView.isHidden = item?.kind != .image
+        imageView.image = nil
+        missingLabel.isHidden = true
+        captionLabel.stringValue = item.map(Self.caption) ?? ""
+        if let item, item.kind == .text {
+            textView.string = String((item.text ?? "").prefix(20_000))
+            textView.scroll(.zero)
+        }
+    }
+
+    /// No image and not `missing`: the thumbnail is still decoding, so the pane stays blank.
+    func showImage(_ image: NSImage?, missing: Bool) {
+        if imageView.image !== image {
+            imageView.image = image
+        }
+        missingLabel.isHidden = !missing
+    }
+
+    override func layout() {
+        super.layout()
+        let inner = bounds.insetBy(dx: Self.padding, dy: Self.padding)
+        let captionHeight = captionLabel.intrinsicContentSize.height
+        captionLabel.frame = CGRect(x: inner.minX, y: inner.maxY - captionHeight, width: inner.width, height: captionHeight)
+        let content = CGRect(x: inner.minX, y: inner.minY, width: inner.width, height: max(0, inner.height - captionHeight - Self.spacing))
+        textScroll.frame = content
+        imageView.frame = content
+        let missing = missingLabel.intrinsicContentSize
+        missingLabel.frame = CGRect(x: content.midX - missing.width / 2, y: content.midY - missing.height / 2, width: missing.width, height: missing.height)
     }
 
     /// Creating a formatter costs milliseconds, and the caption is rebuilt on every arrow key.
@@ -416,10 +700,15 @@ private struct ClipboardPreview: View {
         return formatter
     }()
 
+    /// App names come from the disk; looked up once each.
+    private static var appNames: [String: String] = [:]
+
     static func caption(for item: ClipboardItem) -> String {
         var parts = [relativeFormatter.localizedString(for: item.date, relativeTo: Date())]
         if let app = item.appBundleID {
-            parts.append(AppNames.displayName(for: app))
+            let name = appNames[app] ?? AppNames.displayName(for: app)
+            appNames[app] = name
+            parts.append(name)
         }
         switch item.kind {
         case .text: parts.append("\((item.text ?? "").count) 个字符")
@@ -464,34 +753,5 @@ private enum AppIcons {
         let image = NSImage(size: CGSize(width: 24, height: 24))
         image.addRepresentation(rep)
         return image
-    }
-}
-
-/// Text preview in an `NSTextView`: SwiftUI's `Text` took 650 ms to lay out 4,000 characters of Chinese and
-/// English lines on every ↑↓; TextKit lays out only what is visible.
-private struct ClipboardTextPreview: NSViewRepresentable {
-    let text: String
-
-    func makeNSView(context: Context) -> NSScrollView {
-        let scroll = NSTextView.scrollableTextView()
-        scroll.drawsBackground = false
-        scroll.hasHorizontalScroller = false
-        if let view = scroll.documentView as? NSTextView {
-            view.isEditable = false
-            view.isSelectable = false
-            view.drawsBackground = false
-            view.font = .systemFont(ofSize: 13)
-            view.textContainerInset = .zero
-            view.textContainer?.lineFragmentPadding = 0
-        }
-        return scroll
-    }
-
-    func updateNSView(_ scroll: NSScrollView, context: Context) {
-        guard let view = scroll.documentView as? NSTextView, view.string != text else {
-            return
-        }
-        view.string = text
-        view.scrollToBeginningOfDocument(nil)
     }
 }
