@@ -90,6 +90,11 @@ public final class ClipboardService {
         panel.show()
     }
 
+    /// A key the app in front passed to the input method; true when the open panel took it.
+    func handleKeyFromApp(_ key: ClipboardPanelKey) -> Bool {
+        panel?.route(key, fromApp: true) ?? false
+    }
+
     private func paste(_ item: ClipboardItem) {
         let board = NSPasteboard.general
         board.clearContents()
