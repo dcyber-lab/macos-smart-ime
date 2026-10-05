@@ -136,6 +136,42 @@ final class ClipboardPanel: NSPanel {
 
     private let model: ClipboardPanelModel
     private var monitor: Any?
+    private var keyStats = KeyStats()
+
+    /// How ↑↓ behaved while the panel was open, written to the event log when it closes.
+    private struct KeyStats {
+        var count = 0
+        var ageSum = 0.0, ageMax = 0.0
+        var handleSum = 0.0, handleMax = 0.0
+        var gapSum = 0.0, gapMax = 0.0
+        var lastStamp: TimeInterval?
+
+        mutating func record(age: Double, handle: Double, stamp: TimeInterval) {
+            count += 1
+            ageSum += age
+            ageMax = max(ageMax, age)
+            handleSum += handle
+            handleMax = max(handleMax, handle)
+            if let lastStamp {
+                let gap = (stamp - lastStamp) * 1000
+                gapSum += gap
+                gapMax = max(gapMax, gap)
+            }
+            lastStamp = stamp
+        }
+
+        var summary: String? {
+            guard count > 1 else {
+                return nil
+            }
+            let n = Double(count)
+            let gaps = Double(count - 1)
+            return String(
+                format: "clipboard panel: %d arrows, event age avg %.1f max %.1f ms, handling avg %.1f max %.1f ms, gap between keys avg %.1f max %.1f ms",
+                count, ageSum / n, ageMax, handleSum / n, handleMax, gapSum / gaps, gapMax
+            )
+        }
+    }
 
     init(store: ClipboardHistoryStore, onChoose: @escaping (ClipboardItem) -> Void) {
         model = ClipboardPanelModel(store: store)
@@ -157,11 +193,22 @@ final class ClipboardPanel: NSPanel {
             self?.close()
             onChoose(item)
         }
-        let background = NSVisualEffectView(frame: CGRect(origin: .zero, size: Self.size))
-        background.material = .popover
-        background.state = .active
-        background.blendingMode = .behindWindow
-        background.maskImage = CandidatePanel.roundedMask(radius: 14)
+        let background: NSView
+        // `defaults write lab.dcyber.inputmethod.smartime ClipboardPanelBlur -bool false` swaps the blur for a
+        // solid background, to tell a rendering cost from a key-handling one.
+        if UserDefaults.standard.object(forKey: "ClipboardPanelBlur") as? Bool ?? true {
+            let blur = NSVisualEffectView(frame: CGRect(origin: .zero, size: Self.size))
+            blur.material = .popover
+            blur.state = .active
+            blur.blendingMode = .behindWindow
+            blur.maskImage = CandidatePanel.roundedMask(radius: 14)
+            background = blur
+        } else {
+            background = NSView(frame: CGRect(origin: .zero, size: Self.size))
+            background.wantsLayer = true
+            background.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+            background.layer?.cornerRadius = 14
+        }
         let host = NSHostingView(rootView: ClipboardPanelView(model: model))
         host.frame = background.bounds
         host.autoresizingMask = [.width, .height]
@@ -172,6 +219,7 @@ final class ClipboardPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 
     func show() {
+        keyStats = KeyStats()
         model.reset()
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
@@ -188,6 +236,10 @@ final class ClipboardPanel: NSPanel {
     }
 
     override func close() {
+        if let summary = keyStats.summary {
+            AIAssistEventLog.shared.append(summary, app: "clipboard")
+        }
+        keyStats = KeyStats()
         if let monitor {
             NSEvent.removeMonitor(monitor)
         }
@@ -208,6 +260,13 @@ final class ClipboardPanel: NSPanel {
             return false
         }
         let command = event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
+        let started = ProcessInfo.processInfo.systemUptime
+        defer {
+            if event.keyCode == 125 || event.keyCode == 126 {
+                let done = ProcessInfo.processInfo.systemUptime
+                keyStats.record(age: (started - event.timestamp) * 1000, handle: (done - started) * 1000, stamp: event.timestamp)
+            }
+        }
         switch event.keyCode {
         case 53: close()
         case 126: model.move(-1)
