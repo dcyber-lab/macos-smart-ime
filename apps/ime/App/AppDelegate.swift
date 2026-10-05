@@ -13,5 +13,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         GlobalSelectionAssist.shared.install()
+        ScreenshotService.shared.install()
     }
 }
