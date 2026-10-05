@@ -261,7 +261,7 @@ final class ScreenshotSettingsTests: XCTestCase {
         (components.year, components.month, components.day, components.hour, components.minute, components.second) = (2026, 10, 5, 9, 3, 7)
         let date = Calendar.current.date(from: components)!
         XCTAssertEqual(ScreenshotSettings.fileName(at: date) { _ in false }, "Screenshot 2026-10-05 09.03.07.png")
-        let taken: Set = ["Screenshot 2026-10-05 09.03.07.png", "截图 2026-10-05 09.03.07 (2).png"]
+        let taken: Set = ["Screenshot 2026-10-05 09.03.07.png", "Screenshot 2026-10-05 09.03.07 (2).png"]
         XCTAssertEqual(ScreenshotSettings.fileName(at: date) { taken.contains($0) }, "Screenshot 2026-10-05 09.03.07 (3).png")
     }
 }

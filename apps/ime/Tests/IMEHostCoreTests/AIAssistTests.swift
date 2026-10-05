@@ -485,7 +485,7 @@ final class AIRewriteControllerTests: XCTestCase {
         none.start(text: "你好世界", range: range)
         XCTAssertEqual(none.state, .message("No model available: start Ollama, turn on Apple Intelligence, or install Codex"))
 
-        rewriter.reply = .failure(.unavailable("本机模型拒绝处理这句"))
+        rewriter.reply = .failure(.unavailable("The on-device model declined this sentence"))
         controller.start(text: "你好世界", range: range)
         _ = controller.handleKey(36)
         await waitUntil { if case .message = self.controller.state { true } else { false } }
