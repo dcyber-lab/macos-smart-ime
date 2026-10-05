@@ -107,8 +107,9 @@ public final class ClipboardService {
             ScreenshotToast.show("已复制，按 ⌘V 粘贴")
             return
         }
-        // Let the panel hand the keyboard back and the hotkey's modifiers come up first.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        // Let the app in front become active again (the panel activated the input method) and the hotkey's
+        // modifiers come up first.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             let source = CGEventSource(stateID: .hidSystemState)
             for down in [true, false] {
                 let event = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: down)
