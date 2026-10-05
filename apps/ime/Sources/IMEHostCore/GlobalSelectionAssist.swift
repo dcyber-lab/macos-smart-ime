@@ -12,6 +12,7 @@ public final class GlobalSelectionAssist {
     public static let shared = GlobalSelectionAssist()
 
     private var installed = false
+    private var registeredHotkey: TranslationHotkey?
     private var anchor = CGRect.zero
     private var previousApp: NSRunningApplication?
     private lazy var controller = AIRewriteController(rewriter: { AIAssistSettings().rewriter() }) { [weak self] state in
@@ -32,8 +33,10 @@ public final class GlobalSelectionAssist {
             return
         }
         installed = true
-        let status = GlobalHotkeys.shared.register(AIAssistSettings().readHotkey, id: .aiRead) {
-            GlobalSelectionAssist.shared.startReadOnly()
+        let status = registerHotkey()
+        // The service lives as long as the process, so the observer is never removed.
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { GlobalSelectionAssist.shared.refreshHotkey() }
         }
         TranslationPopup.shared.keyHandler = { [weak self] keyCode in
             self?.handlePopupKey(keyCode)
@@ -42,6 +45,23 @@ public final class GlobalSelectionAssist {
             self?.controller.dismiss()
         }
         log("global hotkey: registered (status \(status)), accessibility=\(WindowTitleReader.isTrusted)")
+    }
+
+    @discardableResult
+    private func registerHotkey() -> OSStatus {
+        let hotkey = AIAssistSettings().readHotkey
+        registeredHotkey = hotkey
+        return GlobalHotkeys.shared.register(hotkey, id: .aiRead) {
+            GlobalSelectionAssist.shared.startReadOnly()
+        }
+    }
+
+    /// Runs on every defaults change in the process; registers again only when the hotkey changed.
+    private func refreshHotkey() {
+        guard AIAssistSettings().readHotkey != registeredHotkey else {
+            return
+        }
+        log("global hotkey: changed to \(AIAssistSettings().readHotkey.displayString), status \(registerHotkey())")
     }
 
     private func log(_ event: String) {

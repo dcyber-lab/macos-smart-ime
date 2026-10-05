@@ -164,7 +164,7 @@ Owns explicit and async workflows:
 - Two system hotkeys, registered at launch by `ScreenshotService` (`AppDelegate` calls `install()`), work in every app and with any input source:
   - ⌃⌥A (`ScreenshotHotkey`): capture an area, then mark it up, copy, save, pin, or recognize its text.
   - ⌃⌥O (`ScreenshotOCRHotkey`): capture an area and copy its text at once.
-- `GlobalHotkeys` owns every Carbon hotkey (`RegisterEventHotKey`, no permission) and dispatches by `EventHotKeyID`; ⌃⌥E (`GlobalSelectionAssist`) uses it too. Screenshot hotkeys are re-registered when `ScreenshotEnabled` or a hotkey changes in this process.
+- `GlobalHotkeys` owns every Carbon hotkey (`RegisterEventHotKey`, no permission) and dispatches by `EventHotKeyID`; ⌃⌥E (`GlobalSelectionAssist`) uses it too. Screenshot hotkeys are re-registered when `ScreenshotEnabled` or a hotkey changes in this process, and so is ⌃⌥E. All five hotkeys (translate, rewrite, read, screenshot, OCR) are set in the settings window's 快捷键 pane through `HotkeyAction`; recording calls `GlobalHotkeys.suspend()` so registered combinations reach the window.
 - Capture (`ScreenshotCapture`) needs Screen Recording access (`CGPreflightScreenCaptureAccess`). It freezes every display with `SCScreenshotManager` at full resolution, and reads normal window bounds (`CGWindowListCopyWindowInfo`, layer 0) before any overlay shows.
 - `ScreenshotOverlay` shows one `.screenSaver`-level window per display: the frozen image in a layer, and `ScreenshotOverlayView` on top.
   - Choosing: the window under the pointer is highlighted, with a magnifier (pixel grid, position, color); a click takes the window, a drag takes a rectangle. Selections snap to whole pixels and stay on one display.

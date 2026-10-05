@@ -16,8 +16,9 @@ final class GlobalHotkeys {
     private static let signature = OSType(0x534D4149) // 'SMAI'
 
     private var refs: [ID: EventHotKeyRef] = [:]
-    private var actions: [ID: @MainActor () -> Void] = [:]
+    private var registrations: [ID: (hotkey: TranslationHotkey, action: @MainActor () -> Void)] = [:]
     private var handlerInstalled = false
+    private var suspended = false
 
     private init() {}
 
@@ -27,6 +28,45 @@ final class GlobalHotkeys {
     func register(_ hotkey: TranslationHotkey, id: ID, action: @escaping @MainActor () -> Void) -> OSStatus {
         installHandlerIfNeeded()
         unregister(id)
+        registrations[id] = (hotkey, action)
+        return suspended ? noErr : activate(id)
+    }
+
+    func unregister(_ id: ID) {
+        if let ref = refs.removeValue(forKey: id) {
+            UnregisterEventHotKey(ref)
+        }
+        registrations[id] = nil
+    }
+
+    /// Releases every combination while the settings window records a new one: a registered hotkey
+    /// is taken by the system before the window sees the key. `resume()` registers them again.
+    func suspend() {
+        guard !suspended else {
+            return
+        }
+        suspended = true
+        for ref in refs.values {
+            UnregisterEventHotKey(ref)
+        }
+        refs = [:]
+    }
+
+    func resume() {
+        guard suspended else {
+            return
+        }
+        suspended = false
+        for id in registrations.keys {
+            activate(id)
+        }
+    }
+
+    @discardableResult
+    private func activate(_ id: ID) -> OSStatus {
+        guard let hotkey = registrations[id]?.hotkey else {
+            return noErr
+        }
         var modifiers: UInt32 = 0
         for (flag, carbon) in [(NSEvent.ModifierFlags.control, controlKey), (.option, optionKey), (.shift, shiftKey), (.command, cmdKey)]
         where hotkey.modifiers.contains(flag) {
@@ -39,23 +79,15 @@ final class GlobalHotkeys {
         )
         if status == noErr, let ref {
             refs[id] = ref
-            actions[id] = action
         }
         return status
-    }
-
-    func unregister(_ id: ID) {
-        if let ref = refs.removeValue(forKey: id) {
-            UnregisterEventHotKey(ref)
-        }
-        actions[id] = nil
     }
 
     private func fire(_ rawID: UInt32) {
         guard let id = ID(rawValue: rawID) else {
             return
         }
-        actions[id]?()
+        registrations[id]?.action()
     }
 
     private func installHandlerIfNeeded() {
