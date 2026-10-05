@@ -89,7 +89,7 @@ Owns explicit and async workflows:
 - The input menu (`IMEInputController.menu()`, built by `InputMenu`) holds only what is switched while typing: 智能学习, 不在「App」中学习, 在「App」中启用 AI 提示 (enabled while a model can run, or while it is on), 查看学习记录…, and 设置….
   - It is flat: the system showed submenus but never delivered their items' actions.
   - Every item goes to `inputMenuCommand(_:)`; `InputMenu.command(from:)` reads the tag, with the title as a fallback.
-- 设置… opens `SettingsWindow`, one window per process, with toolbar panes 外观, 智能中心 and AI 助手 (SwiftUI forms in `NSHostingController`s).
+- 设置… opens `SettingsWindow`, one window per process, with toolbar panes 外观, 智能中心, AI 助手 and 截图 (SwiftUI forms in `NSHostingController`s).
   - It lives in the input method process because the Companion app does not exist yet. It only reads and writes the defaults domain and calls `SettingsModel.Actions` (learning on/off, the learning page, clearing), so nothing runs in the typing path.
   - `SettingsModel` reads every setting on refresh and refreshes on `UserDefaults.didChangeNotification`, so the menu and the window always agree. The AI status is checked in the background.
   - Closing the window (⌘W, Esc, or the close button) reactivates the app the user was typing in.
@@ -159,6 +159,25 @@ Owns explicit and async workflows:
   - The binary comes from `AICodexPath`, else `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, or `~/.local/bin/codex`.
   - The model and effort come from `AICodexModel` and `AICodexReasoningEffort`.
 
+## Screenshot and OCR
+
+- Two system hotkeys, registered at launch by `ScreenshotService` (`AppDelegate` calls `install()`), work in every app and with any input source:
+  - ⌃⌥A (`ScreenshotHotkey`): capture an area, then mark it up, copy, save, pin, or recognize its text.
+  - ⌃⌥O (`ScreenshotOCRHotkey`): capture an area and copy its text at once.
+- `GlobalHotkeys` owns every Carbon hotkey (`RegisterEventHotKey`, no permission) and dispatches by `EventHotKeyID`; ⌃⌥E (`GlobalSelectionAssist`) uses it too. Screenshot hotkeys are re-registered when `ScreenshotEnabled` or a hotkey changes in this process.
+- Capture (`ScreenshotCapture`) needs Screen Recording access (`CGPreflightScreenCaptureAccess`). It freezes every display with `SCScreenshotManager` at full resolution, and reads normal window bounds (`CGWindowListCopyWindowInfo`, layer 0) before any overlay shows.
+- `ScreenshotOverlay` shows one `.screenSaver`-level window per display: the frozen image in a layer, and `ScreenshotOverlayView` on top.
+  - Choosing: the window under the pointer is highlighted, with a magnifier (pixel grid, position, color); a click takes the window, a drag takes a rectangle. Selections snap to whole pixels and stay on one display.
+  - Selected: grips resize, a drag inside moves, right click starts over. `ScreenshotToolbar` holds 矩形, 椭圆, 箭头, 画笔, 文字, 马赛克, undo, 识别文字, 贴图, 保存, cancel and copy, plus sizes and colors for the chosen tool.
+  - Keys: `Return`, double-click or ⌘C copies; ⌘S saves; ⌘Z undoes; `Esc` closes.
+- Marks (`ScreenshotAnnotation`) are kept in view points, so they stay put when the selection moves. `ScreenshotRenderer` draws them for the overlay and for the output with the same code; mosaic shrinks the frozen pixels under it to one per block.
+- Output:
+  - Copy writes PNG and TIFF sized in points, so a Retina capture pastes at its on-screen size.
+  - Save writes `截图 yyyy-MM-dd HH.mm.ss.png` to `ScreenshotSaveFolder`, else the macOS screenshot folder (`com.apple.screencapture location`), else the desktop.
+  - Pin (`ScreenshotPin`) floats the image where it was taken: drag to move, scroll or pinch to zoom, double-click or `Esc` to close, right click for copy, save, recognize, close.
+- Text recognition (`ScreenshotOCR`) uses Vision `VNRecognizeTextRequest` (accurate, zh-Hans, zh-Hant, en-US) off the main actor on the selection without marks. Lines are ordered top to bottom and pieces on one row left to right; the text goes to the clipboard and `ScreenshotToast` says how many characters.
+- Nothing is kept unless saved. Events (never images or text) go to `ai-assist-events.log`.
+
 ## Selection Translation
 
 - While SmartIMEHost is active and nothing is being composed, the translation hotkey (default `⌃⌥T`) reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`) and translates it on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; weak-linked). `TranslationPopup` shows the result under a capsule direction badge (英 → 中 / 中 → 英), laid out with explicit constraints so every edge keeps its inset; `Return` replaces the captured range, `Escape` or any other key dismisses.
@@ -194,6 +213,7 @@ Owns explicit and async workflows:
 - Sensitive fields must not use context enhancement.
 - Password, secure text, and OTP-like fields are no-context zones.
 - Default processing is local.
+- Screenshots and recognized text stay on the Mac: captures live in memory until copied, saved, or pinned, and text recognition runs on-device.
 - Chinese text is stored only by librime's user dictionary and by translation learning (committed 2–6 character words that have no translation, local and bounded; `TranslationLearningEnabled` turns it off).
 - Any future AI processing must be explicit and must stay outside the IME real-time path.
 - Intelligence hub (`docs/intelligence-hub.md`):

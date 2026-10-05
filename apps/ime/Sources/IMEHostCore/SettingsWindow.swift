@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// The settings the input menu leaves out (`InputMenu`): commit effects, learning details, and the
-/// AI model. One window per process, with toolbar tabs; closing it hands focus back to the app the
+/// AI model, and screenshots. One window per process, with toolbar tabs; closing it hands focus back to the app the
 /// user was typing in.
 @MainActor
 enum SettingsWindow {
@@ -134,6 +134,41 @@ final class SettingsModel: ObservableObject {
         let settings = AIAssistSettings()
         return AIAssistSettings.statusText(settings.activeProvider(), codexModel: settings.codexModel, ollamaModel: settings.ollamaModel)
     }
+
+    // MARK: Screenshot
+
+    var isScreenshotEnabled: Bool {
+        get { ScreenshotSettings(defaults: defaults).isEnabled }
+        set { ScreenshotSettings.setEnabled(newValue, defaults: defaults) }
+    }
+
+    var screenshotHotkey: String {
+        ScreenshotSettings(defaults: defaults).hotkey.displayString
+    }
+
+    var screenshotOCRHotkey: String {
+        ScreenshotSettings(defaults: defaults).ocrHotkey.displayString
+    }
+
+    var screenshotFolder: String {
+        FileManager.default.displayName(atPath: ScreenshotSettings(defaults: defaults).saveFolder.path)
+    }
+
+    var hasScreenRecordingAccess: Bool {
+        ScreenshotCapture.hasPermission
+    }
+
+    func chooseScreenshotFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.prompt = "选择"
+        panel.directoryURL = ScreenshotSettings(defaults: defaults).saveFolder
+        if panel.runModal() == .OK, let url = panel.url {
+            ScreenshotSettings.setSaveFolder(url, defaults: defaults)
+        }
+    }
 }
 
 // MARK: - Window
@@ -151,6 +186,7 @@ private final class SettingsWindowController: NSWindowController, NSWindowDelega
         tabs.addTabViewItem(Self.pane("外观", symbol: "sparkles", AppearancePane(model: model)))
         tabs.addTabViewItem(Self.pane("智能中心", symbol: "brain", LearningPane(model: model)))
         tabs.addTabViewItem(Self.pane("AI 助手", symbol: "wand.and.stars", AIPane(model: model)))
+        tabs.addTabViewItem(Self.pane("截图", symbol: "camera.viewfinder", ScreenshotPane(model: model)))
         let window = SettingsPanelWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable]
         window.toolbarStyle = .preference
@@ -302,6 +338,42 @@ private struct AIPane: View {
             Section("快捷键") {
                 LabeledContent("改写选中文字或当前行", value: model.rewriteHotkey)
                 LabeledContent("读取其他地方选中的文字", value: model.readHotkey)
+            }
+        }
+        .formStyle(.grouped)
+        .scrollDisabled(true)
+    }
+}
+
+private struct ScreenshotPane: View {
+    @ObservedObject var model: SettingsModel
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(isOn: $model.isScreenshotEnabled) {
+                    SettingLabel("截图快捷键", "在任何应用里都能用，与当前输入法无关")
+                }
+                LabeledContent("截图并标注", value: model.screenshotHotkey)
+                LabeledContent("截图识字（识别后直接复制）", value: model.screenshotOCRHotkey)
+            } footer: {
+                Text("拖动框选区域，或点击选择整个窗口。框选后可以标注、复制（⏎）、保存（⌘S）、贴图到屏幕、识别文字；右键重选，Esc 取消。文字识别在本机完成。")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                LabeledContent("保存到") {
+                    HStack {
+                        Text(model.screenshotFolder)
+                        Button("更改…") { model.chooseScreenshotFolder() }
+                    }
+                }
+                if model.hasScreenRecordingAccess {
+                    LabeledContent("屏幕录制权限", value: "已授权")
+                } else {
+                    LabeledContent("需要授权「屏幕录制」才能截图") {
+                        Button("打开系统设置…") { ScreenshotCapture.openPermissionSettings() }
+                    }
+                }
             }
         }
         .formStyle(.grouped)

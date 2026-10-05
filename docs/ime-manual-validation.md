@@ -265,6 +265,20 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 7. With a result showing, click into another text field of the same app: the popup closes, and Return there does not replace anything
 8. In an empty field (or on a new blank line), press ⌃⌥R: the popup says there is nothing to rewrite; it never shows the clipboard
 
+## Screenshot Checklist
+
+1. Press ⌃⌥A: macOS asks for Screen Recording access. Allow 灵译输入法 in System Settings › Privacy & Security › Screen & System Audio Recording, choose Quit & Reopen, then press ⌃⌥A again. 设置… › 截图 shows 已授权
+2. Move the pointer over windows: each one is highlighted and the magnifier shows position and color. Click: that window is selected and the toolbar appears below it
+3. Right click, then drag out a rectangle: the size label shows its pixels; drag inside to move it and drag a grip to resize it
+4. Choose 矩形, 箭头, 画笔, 马赛克 and 文字 in turn and mark the selection; change size and color; ⌘Z removes the last mark
+5. Press Return: the toast says 已复制截图. Paste into Notes or a chat: the image has the marks and its on-screen size
+6. Capture again and press ⌘S: the file appears in the save folder (desktop by default) as 截图 <date time>.png
+7. Capture again and click 贴图: the capture floats where it was. Drag it, scroll to zoom, right click › 识别文字并复制, then double-click to close it
+8. Press ⌃⌥O, drag over a paragraph with Chinese and English: the overlay closes and the toast says 已复制识别的文字（N 字）. Paste: the lines read in order
+9. With two displays, press ⌃⌥A and select on the second display; with a full-screen app in front, press ⌃⌥A: the overlay covers it
+10. Press Esc during each step: the overlay closes and the app you were in has the keyboard again
+11. Turn 截图快捷键 off in 设置… › 截图: ⌃⌥A and ⌃⌥O reach the app in front again
+
 ## Known Limits In This Milestone
 
 - This checklist validates both the Chinese `librime` path and the basic English completion path

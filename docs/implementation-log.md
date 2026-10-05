@@ -1,5 +1,22 @@
 # Implementation Log
 
+## 2026-10-05
+
+### Screenshots with markup, pinning, and text recognition
+
+- The user asked for iShot-style screenshots with OCR in the input method. Scope chosen for the first version: area or window capture, copy, save, markup tools, pin to screen, and text recognition that copies straight to the clipboard. Scrolling capture, translation of recognized text, and AI questions about a capture are left for later.
+- ⌃⌥A captures and offers the toolbar; ⌃⌥O captures and copies the text at once. Both are system hotkeys in the input method process (no Companion app yet), like ⌃⌥E, and need Screen Recording access to capture.
+- `GlobalHotkeys` replaces the single Carbon handler in `GlobalSelectionAssist`, which ran ⌃⌥E for any hotkey; hotkeys are now dispatched by ID.
+- New in `IMEHostCore`: `ScreenshotService`, `ScreenshotCapture` (ScreenCaptureKit), `ScreenshotOverlay` (overlay, toolbar), `ScreenshotGeometry`, `ScreenshotAnnotation`/`ScreenshotRenderer`, `ScreenshotOCR` (Vision), `ScreenshotPin` (pinned captures, toast), `ScreenshotSettings`, and a 截图 pane in the settings window.
+- Found while checking: each overlay view and its container held each other, so every capture would have kept full-screen images alive. Closing the overlay now removes the views on the next run-loop turn; a weak-reference check confirmed both are freed.
+- Tests: 23 new cases (geometry, rendering and mosaic pixels, OCR line order, Vision on rendered Chinese and English text, settings). 209 host tests pass locally through the harness.
+- Checked offscreen against the real `IMEHostCore`:
+  - Rendered the overlay: window highlight with magnifier, selection with grips, size label, marks and the two-row toolbar, and the text recognition hint. The output image matched the selection.
+  - Drove it with synthetic events: a click picks a window, drag, move, resize, a mark clipped to the selection, text entry, undo, ⌘S, Return, Esc, and text recognition finishing on mouse up.
+- Installed the CI build of PR #18 (329 tests pass in CI). The input method registered ⌃⌥A and ⌃⌥O (status 0), and the user tried it and confirmed it works.
+- Not covered by the user's check, as far as recorded: multiple displays and full-screen apps (Screenshot checklist). Screen Recording access may need renewing after each update, since the build is signed ad hoc.
+- The installed bundle was root-owned again after a `sudo` install on 2026-10-02, so updates needed a password. The user re-ran `enable-dev-install.sh` from a terminal; the `!` prefix in the agent session has no terminal for `sudo`.
+
 ## 2026-10-02
 
 ### Shorter input menu, settings window
