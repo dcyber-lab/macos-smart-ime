@@ -46,6 +46,22 @@ struct TranslationHotkey: Equatable {
         self.init(keyCode: keyCode, modifiers: modifiers)
     }
 
+    /// A key pressed while recording a new hotkey; nil unless it is a letter with ⌃, ⌥, or ⌘ held.
+    init?(keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) {
+        let modifiers = modifierFlags.intersection(Self.relevantModifiers)
+        guard Self.letterKeyCodes.values.contains(keyCode), !modifiers.isDisjoint(with: [.control, .option, .command]) else {
+            return nil
+        }
+        self.init(keyCode: keyCode, modifiers: modifiers)
+    }
+
+    /// The `modifier+…+letter` form stored in defaults, e.g. "ctrl+option+r"; `init?(string:)` reads it back.
+    var storageString: String {
+        let names: [(NSEvent.ModifierFlags, String)] = [(.control, "ctrl"), (.option, "option"), (.shift, "shift"), (.command, "cmd")]
+        let letter = Self.letterKeyCodes.first { $0.value == keyCode }.map { String($0.key) } ?? ""
+        return (names.filter { modifiers.contains($0.0) }.map(\.1) + [letter]).joined(separator: "+")
+    }
+
     /// The hotkey as macOS menus write it, e.g. "⌃⌥R".
     var displayString: String {
         let symbols: [(NSEvent.ModifierFlags, String)] = [(.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘")]

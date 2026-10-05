@@ -2,6 +2,13 @@
 
 ## 2026-10-05
 
+### Hotkeys in the settings window
+
+- New 快捷键 pane lists all five hotkeys (翻译 ⌃⌥T, 改写 ⌃⌥R, 读取选中文字 ⌃⌥E, 截图 ⌃⌥A, 截图识字 ⌃⌥O); click one, press the new combination, Esc cancels, 恢复默认 resets. A combination needs ⌃, ⌥ or ⌘ plus a letter, and one already used by another action is refused.
+- `HotkeyAction` (`HotkeySettings.swift`) maps each action to the existing defaults key, so the features read the values as before; the AI and screenshot panes no longer show the keys.
+- `GlobalHotkeys` keeps its registrations and can `suspend()`/`resume()`: a registered combination never reaches the window, so recording releases them all. `GlobalSelectionAssist` now re-registers ⌃⌥E when its key changes (it only registered at launch).
+- Tests: `HotkeySettingsTests`. Not run here: `swift build` is broken on this Mac (no Xcode, command line tools mismatch); sources were only type-checked with `swiftc`, so CI and a live check are still needed.
+
 ### Screenshots with markup, pinning, and text recognition
 
 - The user asked for iShot-style screenshots with OCR in the input method. Scope chosen for the first version: area or window capture, copy, save, markup tools, pin to screen, and text recognition that copies straight to the clipboard. Scrolling capture, translation of recognized text, and AI questions about a capture are left for later.

@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// The settings the input menu leaves out (`InputMenu`): commit effects, learning details, and the
-/// AI model, and screenshots. One window per process, with toolbar tabs; closing it hands focus back to the app the
+/// The settings the input menu leaves out (`InputMenu`): commit effects, learning details, the
+/// AI model, screenshots, and hotkeys. One window per process, with toolbar tabs; closing it hands focus back to the app the
 /// user was typing in.
 @MainActor
 enum SettingsWindow {
@@ -115,14 +115,6 @@ final class SettingsModel: ObservableObject {
         AIAssistSettings(defaults: defaults).chipApps.map(AppNames.displayName(for:)).sorted()
     }
 
-    var rewriteHotkey: String {
-        AIAssistSettings(defaults: defaults).hotkey.displayString
-    }
-
-    var readHotkey: String {
-        AIAssistSettings(defaults: defaults).readHotkey.displayString
-    }
-
     func refreshAIStatus() {
         Task.detached(priority: .userInitiated) {
             let status = Self.currentAIStatus()
@@ -135,19 +127,22 @@ final class SettingsModel: ObservableObject {
         return AIAssistSettings.statusText(settings.activeProvider(), codexModel: settings.codexModel, ollamaModel: settings.ollamaModel)
     }
 
+    // MARK: Hotkeys
+
+    func hotkey(for action: HotkeyAction) -> TranslationHotkey {
+        action.hotkey(defaults: defaults)
+    }
+
+    /// Returns what to tell the user when `hotkey` cannot be used.
+    func setHotkey(_ hotkey: TranslationHotkey?, for action: HotkeyAction) -> String? {
+        action.set(hotkey, defaults: defaults).map { "已被「\($0.title)」使用" }
+    }
+
     // MARK: Screenshot
 
     var isScreenshotEnabled: Bool {
         get { ScreenshotSettings(defaults: defaults).isEnabled }
         set { ScreenshotSettings.setEnabled(newValue, defaults: defaults) }
-    }
-
-    var screenshotHotkey: String {
-        ScreenshotSettings(defaults: defaults).hotkey.displayString
-    }
-
-    var screenshotOCRHotkey: String {
-        ScreenshotSettings(defaults: defaults).ocrHotkey.displayString
     }
 
     var screenshotFolder: String {
@@ -187,6 +182,7 @@ private final class SettingsWindowController: NSWindowController, NSWindowDelega
         tabs.addTabViewItem(Self.pane("智能中心", symbol: "brain", LearningPane(model: model)))
         tabs.addTabViewItem(Self.pane("AI 助手", symbol: "wand.and.stars", AIPane(model: model)))
         tabs.addTabViewItem(Self.pane("截图", symbol: "camera.viewfinder", ScreenshotPane(model: model)))
+        tabs.addTabViewItem(Self.pane("快捷键", symbol: "keyboard", HotkeyPane(model: model)))
         let window = SettingsPanelWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable]
         window.toolbarStyle = .preference
@@ -335,10 +331,6 @@ private struct AIPane: View {
                 Text("在某个应用里打开输入法菜单，勾选“在「…」中启用 AI 提示”：在那里打完一句中文后会出现 ✨ 改写建议，按 Tab 或 → 替换。")
                     .foregroundStyle(.secondary)
             }
-            Section("快捷键") {
-                LabeledContent("改写选中文字或当前行", value: model.rewriteHotkey)
-                LabeledContent("读取其他地方选中的文字", value: model.readHotkey)
-            }
         }
         .formStyle(.grouped)
         .scrollDisabled(true)
@@ -352,10 +344,8 @@ private struct ScreenshotPane: View {
         Form {
             Section {
                 Toggle(isOn: $model.isScreenshotEnabled) {
-                    SettingLabel("截图快捷键", "在任何应用里都能用，与当前输入法无关")
+                    SettingLabel("截图快捷键", "在任何应用里都能用，与当前输入法无关；按键在「快捷键」里设置")
                 }
-                LabeledContent("截图并标注", value: model.screenshotHotkey)
-                LabeledContent("截图识字（识别后直接复制）", value: model.screenshotOCRHotkey)
             } footer: {
                 Text("拖动框选区域，或点击选择整个窗口。框选后可以标注、复制（⏎）、保存（⌘S）、贴图到屏幕、识别文字；右键重选，Esc 取消。文字识别在本机完成。")
                     .foregroundStyle(.secondary)
@@ -378,6 +368,100 @@ private struct ScreenshotPane: View {
         }
         .formStyle(.grouped)
         .scrollDisabled(true)
+    }
+}
+
+private struct HotkeyPane: View {
+    @ObservedObject var model: SettingsModel
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(HotkeyAction.allCases, id: \.self) { action in
+                    HotkeyRow(model: model, action: action)
+                }
+            } footer: {
+                Text("点按键位后按下新的组合，需要包含 ⌃、⌥、⌘ 之一和一个字母；Esc 取消。这些快捷键在任何应用里都能用，改后立即生效。")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .scrollDisabled(true)
+    }
+}
+
+private struct HotkeyRow: View {
+    @ObservedObject var model: SettingsModel
+    let action: HotkeyAction
+    @StateObject private var recorder = HotkeyRecorder()
+
+    var body: some View {
+        LabeledContent(action.title) {
+            HStack {
+                if let message = recorder.message {
+                    Text(message)
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                }
+                Button(recorder.isRecording ? "按下新的快捷键…" : model.hotkey(for: action).displayString) {
+                    recorder.toggle { model.setHotkey($0, for: action) }
+                }
+                Button("恢复默认") {
+                    recorder.message = model.setHotkey(nil, for: action)
+                }
+                .disabled(model.hotkey(for: action) == action.defaultHotkey)
+            }
+        }
+        .onDisappear { recorder.stop() }
+    }
+}
+
+/// Listens for the next key combination while a hotkey button is armed. The system hotkeys are released
+/// meanwhile, since a registered combination never reaches the window.
+@MainActor
+private final class HotkeyRecorder: ObservableObject {
+    @Published private(set) var isRecording = false
+    @Published var message: String?
+    private var monitor: Any?
+
+    /// `apply` stores the recorded hotkey and returns why it was refused, if it was.
+    func toggle(apply: @escaping @MainActor (TranslationHotkey) -> String?) {
+        if isRecording {
+            stop()
+            return
+        }
+        message = nil
+        isRecording = true
+        GlobalHotkeys.shared.suspend()
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            MainActor.assumeIsolated { self?.handle(event, apply: apply) }
+            return nil
+        }
+    }
+
+    private func handle(_ event: NSEvent, apply: (TranslationHotkey) -> String?) {
+        if event.keyCode == 53 {
+            stop()
+            return
+        }
+        guard let hotkey = TranslationHotkey(keyCode: event.keyCode, modifierFlags: event.modifierFlags) else {
+            message = "需要 ⌃、⌥、⌘ 之一加字母键"
+            return
+        }
+        message = apply(hotkey)
+        stop()
+    }
+
+    func stop() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitor = nil
+        guard isRecording else {
+            return
+        }
+        isRecording = false
+        GlobalHotkeys.shared.resume()
     }
 }
 
