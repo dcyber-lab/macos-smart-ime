@@ -9,7 +9,9 @@ final class ClipboardPanelModel: ObservableObject {
         didSet { reload() }
     }
     @Published private(set) var results: [ClipboardItem] = []
-    @Published var selection = 0
+    @Published var selection = 0 {
+        didSet { prefetchNeighbors() }
+    }
 
     let store: ClipboardHistoryStore
     var onChoose: (ClipboardItem) -> Void = { _ in }
@@ -23,15 +25,55 @@ final class ClipboardPanelModel: ObservableObject {
     }
 
     private let previews = NSCache<NSUUID, NSImage>()
+    private var loading: Set<UUID> = []
+
+    private struct DecodedImage: @unchecked Sendable {
+        let cgImage: CGImage
+    }
 
     /// A screen-sized copy of the image, decoded once per entry: decoding the full file on every
-    /// selection change made ↑↓ stutter.
+    /// selection change made ↑↓ stutter. Not decoded yet: nil now, and the view refreshes when it is.
     func previewImage(for item: ClipboardItem) -> NSImage? {
         if let cached = previews.object(forKey: item.id as NSUUID) {
             return cached
         }
-        guard let url = store.imageURL(for: item),
-              let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+        load(item)
+        return nil
+    }
+
+    /// Decodes the images next to the selection in the background, so stepping onto one is instant.
+    func prefetchNeighbors() {
+        for index in (selection - 3)...(selection + 3) where results.indices.contains(index) && results[index].kind == .image {
+            load(results[index])
+        }
+    }
+
+    private func load(_ item: ClipboardItem) {
+        guard item.kind == .image, previews.object(forKey: item.id as NSUUID) == nil, !loading.contains(item.id),
+              let url = store.imageURL(for: item)
+        else {
+            return
+        }
+        loading.insert(item.id)
+        let id = item.id
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let decoded = Self.decode(url)
+            await MainActor.run {
+                guard let self else {
+                    return
+                }
+                self.loading.remove(id)
+                if let decoded {
+                    let cg = decoded.cgImage
+                    self.previews.setObject(NSImage(cgImage: cg, size: CGSize(width: cg.width, height: cg.height)), forKey: id as NSUUID)
+                    self.objectWillChange.send()
+                }
+            }
+        }
+    }
+
+    nonisolated private static func decode(_ url: URL) -> DecodedImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                   kCGImageSourceCreateThumbnailFromImageAlways: true,
                   kCGImageSourceCreateThumbnailWithTransform: true,
@@ -40,14 +82,13 @@ final class ClipboardPanelModel: ObservableObject {
         else {
             return nil
         }
-        let image = NSImage(cgImage: cg, size: CGSize(width: cg.width, height: cg.height))
-        previews.setObject(image, forKey: item.id as NSUUID)
-        return image
+        return DecodedImage(cgImage: cg)
     }
 
     func reload() {
         results = store.search(query)
         selection = min(selection, max(0, results.count - 1))
+        prefetchNeighbors()
     }
 
     func reset() {
@@ -288,11 +329,7 @@ private struct ClipboardPreview: View {
             if let item = model.selected {
                 switch item.kind {
                 case .text:
-                    ScrollView {
-                        Text(String((item.text ?? "").prefix(4_000)))
-                            .font(.system(size: 13))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    ClipboardTextPreview(text: String((item.text ?? "").prefix(20_000)))
                 case .image:
                     if let image = model.previewImage(for: item) {
                         Image(nsImage: image)
@@ -300,7 +337,8 @@ private struct ClipboardPreview: View {
                             .scaledToFit()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        Text("图片已不在").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                        Text(model.store.imageURL(for: item).map { FileManager.default.fileExists(atPath: $0.path) } == true ? "" : "图片已不在")
+                            .foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
                 Text(Self.caption(for: item))
@@ -367,5 +405,34 @@ private enum AppIcons {
         let image = NSImage(size: CGSize(width: 24, height: 24))
         image.addRepresentation(rep)
         return image
+    }
+}
+
+/// Text preview in an `NSTextView`: SwiftUI's `Text` took 650 ms to lay out 4,000 characters of Chinese and
+/// English lines on every ↑↓; TextKit lays out only what is visible.
+private struct ClipboardTextPreview: NSViewRepresentable {
+    let text: String
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = NSTextView.scrollableTextView()
+        scroll.drawsBackground = false
+        scroll.hasHorizontalScroller = false
+        if let view = scroll.documentView as? NSTextView {
+            view.isEditable = false
+            view.isSelectable = false
+            view.drawsBackground = false
+            view.font = .systemFont(ofSize: 13)
+            view.textContainerInset = .zero
+            view.textContainer?.lineFragmentPadding = 0
+        }
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        guard let view = scroll.documentView as? NSTextView, view.string != text else {
+            return
+        }
+        view.string = text
+        view.scrollToBeginningOfDocument(nil)
     }
 }
