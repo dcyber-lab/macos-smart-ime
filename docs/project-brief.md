@@ -9,6 +9,7 @@ Build a macOS intelligent input system for knowledge workers with a focus on:
 - Chinese-English correction
 - Trusted clipboard workflows
 - One-key English transformation
+- Screenshots with markup, pinning, and on-device text recognition from a system hotkey (added 2026-10-05)
 - A local intelligence hub: learn from what the user commits, on this Mac only, and offer help (better candidates, Chinese-English rewriting, calendar reminders, quick phrases) that the user confirms with a key. See `docs/intelligence-hub.md`.
 
 ## Product Positioning
