@@ -11,7 +11,7 @@ import Carbon.HIToolbox
 public final class GlobalSelectionAssist {
     public static let shared = GlobalSelectionAssist()
 
-    private var hotKeyRef: EventHotKeyRef?
+    private var installed = false
     private var anchor = CGRect.zero
     private var previousApp: NSRunningApplication?
     private lazy var controller = AIRewriteController(rewriter: { AIAssistSettings().rewriter() }) { [weak self] state in
@@ -28,26 +28,13 @@ public final class GlobalSelectionAssist {
     private init() {}
 
     public func install() {
-        guard hotKeyRef == nil else {
+        guard !installed else {
             return
         }
-        var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        InstallEventHandler(GetApplicationEventTarget(), { _, _, _ in
-            Task { @MainActor in
-                GlobalSelectionAssist.shared.startReadOnly()
-            }
-            return noErr
-        }, 1, &spec, nil, nil)
-        let hotkey = AIAssistSettings().readHotkey
-        var modifiers: UInt32 = 0
-        for (flag, carbon) in [(NSEvent.ModifierFlags.control, controlKey), (.option, optionKey), (.shift, shiftKey), (.command, cmdKey)]
-        where hotkey.modifiers.contains(flag) {
-            modifiers |= UInt32(carbon)
+        installed = true
+        let status = GlobalHotkeys.shared.register(AIAssistSettings().readHotkey, id: .aiRead) {
+            GlobalSelectionAssist.shared.startReadOnly()
         }
-        let status = RegisterEventHotKey(
-            UInt32(hotkey.keyCode), modifiers, EventHotKeyID(signature: OSType(0x534D4149), id: 1),
-            GetApplicationEventTarget(), 0, &hotKeyRef
-        )
         TranslationPopup.shared.keyHandler = { [weak self] keyCode in
             self?.handlePopupKey(keyCode)
         }
