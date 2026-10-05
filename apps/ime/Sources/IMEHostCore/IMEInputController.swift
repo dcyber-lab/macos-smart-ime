@@ -125,12 +125,6 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         guard event.type == .keyDown else {
             return false
         }
-        // While the clipboard panel shows, ↑↓, Return and the rest also reach the app in front through here;
-        // the panel takes them, or that app moves its caret along with the panel's selection.
-        let panelKey = ClipboardPanelKey(event)
-        if MainActor.assumeIsolated({ ClipboardService.shared.handleKeyFromApp(panelKey) }) {
-            return true
-        }
         shiftToggle.keyDown()
 
         // While a ✨ chip shows: a bare Tab or → accepts, Esc dismisses, any other key dismisses and is typed.

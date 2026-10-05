@@ -137,23 +137,9 @@ final class ClipboardPanelModel {
     }
 }
 
-/// The parts of a key-down the panel acts on, from its window or from the app in front via the input method.
-struct ClipboardPanelKey: Sendable {
-    let keyCode: UInt16
-    let command: Bool
-    let characters: String?
-    let timestamp: TimeInterval
-
-    init(_ event: NSEvent) {
-        keyCode = event.keyCode
-        command = event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
-        characters = event.charactersIgnoringModifiers
-        timestamp = event.timestamp
-    }
-}
-
 /// Alfred-style history panel: keys go to the search field; ↑↓ move, ⏎ or ⌘1–9 choose, ⌘P pins, ⌘⌫
-/// deletes, Esc closes. It takes the keyboard without activating the app, so the app in front stays in front.
+/// deletes, Esc closes. The input method is activated while it shows: an accessory app's window does not take
+/// the keyboard otherwise, and the app in front kept moving its caret with every ↑↓. Closing hands it back.
 @MainActor
 final class ClipboardPanel: NSPanel {
     static let size = CGSize(width: 760, height: 440)
@@ -161,7 +147,8 @@ final class ClipboardPanel: NSPanel {
     private let model: ClipboardPanelModel
     private let content: ClipboardPanelContentView
     private var monitor: Any?
-    private var lastKey: ClipboardPanelKey?
+    private var previousApp: NSRunningApplication?
+    private var resigning = false
     private let keyStats = ArrowKeyStats()
 
     init(store: ClipboardHistoryStore, onChoose: @escaping (ClipboardItem) -> Void) {
@@ -216,13 +203,17 @@ final class ClipboardPanel: NSPanel {
         let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
         let visible = screen?.visibleFrame ?? CGRect(origin: .zero, size: Self.size)
         setFrameOrigin(CGPoint(x: visible.midX - Self.size.width / 2, y: visible.midY - Self.size.height / 2 + visible.height * 0.12))
+        if let frontmost = NSWorkspace.shared.frontmostApplication, frontmost != .current {
+            previousApp = frontmost
+        }
+        NSApp.activate(ignoringOtherApps: true)
         makeKeyAndOrderFront(nil)
         content.focusSearch()
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else {
                 return event
             }
-            let handled = MainActor.assumeIsolated { event.window === self && self.route(ClipboardPanelKey(event), fromApp: false) }
+            let handled = MainActor.assumeIsolated { self.handle(event) }
             return handled ? nil : event
         }
     }
@@ -236,45 +227,39 @@ final class ClipboardPanel: NSPanel {
         }
         monitor = nil
         super.close()
+        // After a click in another app, that app is the one to keep.
+        if !resigning {
+            previousApp?.activate(options: [])
+        }
+        previousApp = nil
     }
 
     /// A click in another app takes the keyboard away.
     override func resignKey() {
         super.resignKey()
         if isVisible {
+            resigning = true
             close()
+            resigning = false
         }
     }
 
-    /// Keys from the panel's own window and, through the input method, from the app in front: that app still
-    /// gets ↑↓ while the panel shows, moved its caret along with the selection, and redrew on every key. A key
-    /// that arrives both ways is handled once.
-    func route(_ key: ClipboardPanelKey, fromApp: Bool) -> Bool {
-        guard isVisible else {
+    private func handle(_ event: NSEvent) -> Bool {
+        guard event.window === self else {
             return false
         }
-        if let lastKey, lastKey.timestamp == key.timestamp, lastKey.keyCode == key.keyCode {
-            return true
+        let command = event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
+        if event.keyCode == 125 || event.keyCode == 126 {
+            keyStats.arrow(event)
         }
-        guard handle(key, fromApp: fromApp) else {
-            return false
-        }
-        lastKey = key
-        return true
-    }
-
-    private func handle(_ key: ClipboardPanelKey, fromApp: Bool) -> Bool {
-        if key.keyCode == 125 || key.keyCode == 126 {
-            keyStats.arrow(at: key.timestamp, fromApp: fromApp)
-        }
-        switch key.keyCode {
+        switch event.keyCode {
         case 53: close()
         case 126: model.move(-1)
         case 125: model.move(1)
         case 36, 76: model.choose(at: model.selection)
-        case 51 where key.command: model.removeSelected()
+        case 51 where command: model.removeSelected()
         default:
-            guard key.command, let characters = key.characters else {
+            guard command, let characters = event.charactersIgnoringModifiers else {
                 return false
             }
             if characters == "p" {
@@ -299,8 +284,6 @@ private final class ArrowKeyStats {
     private var work: [Double] = []
     private var latency: [Double] = []
     private var longestTurn = 0.0
-    /// Arrows that first reached the panel through the app in front rather than its own window.
-    private var fromAppCount = 0
     private var current: (stamp: TimeInterval, work: Double, lastCommit: TimeInterval?)?
     private var lastStamp: TimeInterval?
     private var turnStart = ProcessInfo.processInfo.systemUptime
@@ -312,7 +295,6 @@ private final class ArrowKeyStats {
         work = []
         latency = []
         longestTurn = 0
-        fromAppCount = 0
         lastStamp = nil
         turnStart = ProcessInfo.processInfo.systemUptime
         // First after the run loop wakes, last before it sleeps (after the Core Animation commit).
@@ -328,17 +310,14 @@ private final class ArrowKeyStats {
         }
     }
 
-    func arrow(at timestamp: TimeInterval, fromApp: Bool) {
+    func arrow(_ event: NSEvent) {
         finishKey()
-        ages.append((ProcessInfo.processInfo.systemUptime - timestamp) * 1000)
+        ages.append((ProcessInfo.processInfo.systemUptime - event.timestamp) * 1000)
         if let lastStamp {
-            gaps.append((timestamp - lastStamp) * 1000)
+            gaps.append((event.timestamp - lastStamp) * 1000)
         }
-        lastStamp = timestamp
-        current = (timestamp, 0, nil)
-        if fromApp {
-            fromAppCount += 1
-        }
+        lastStamp = event.timestamp
+        current = (event.timestamp, 0, nil)
     }
 
     /// The summary line once per opening, or nil when fewer than two arrows were pressed.
@@ -353,8 +332,8 @@ private final class ArrowKeyStats {
             return nil
         }
         return String(
-            format: "clipboard panel: %d arrows (%d first through the app in front), gap avg %.0f ms, event age avg %.1f max %.1f ms, main-thread work per arrow %@, key to last commit %@, longest turn %.1f ms",
-            ages.count, fromAppCount, gaps.reduce(0, +) / Double(max(gaps.count, 1)), ages.reduce(0, +) / Double(ages.count), ages.max() ?? 0,
+            format: "clipboard panel: %d arrows, gap avg %.0f ms, event age avg %.1f max %.1f ms, main-thread work per arrow %@, key to last commit %@, longest turn %.1f ms",
+            ages.count, gaps.reduce(0, +) / Double(max(gaps.count, 1)), ages.reduce(0, +) / Double(ages.count), ages.max() ?? 0,
             Self.percentiles(work), Self.percentiles(latency), longestTurn
         )
     }
