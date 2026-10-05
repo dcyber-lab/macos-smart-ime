@@ -13,7 +13,9 @@
 - Checked offscreen against the real `IMEHostCore`:
   - Rendered the overlay: window highlight with magnifier, selection with grips, size label, marks and the two-row toolbar, and the text recognition hint. The output image matched the selection.
   - Drove it with synthetic events: a click picks a window, drag, move, resize, a mark clipped to the selection, text entry, undo, ⌘S, Return, Esc, and text recognition finishing on mouse up.
-- Not checked: real capture (this session has no Screen Recording access), focus and cursor handling on screen, multiple displays, and pinned windows. These need the Screenshot checklist on an installed build. The grant may need renewing after each update, since the build is signed ad hoc.
+- Installed the CI build of PR #18 (329 tests pass in CI). The input method registered ⌃⌥A and ⌃⌥O (status 0), and the user tried it and confirmed it works.
+- Not covered by the user's check, as far as recorded: multiple displays and full-screen apps (Screenshot checklist). Screen Recording access may need renewing after each update, since the build is signed ad hoc.
+- The installed bundle was root-owned again after a `sudo` install on 2026-10-02, so updates needed a password. The user re-ran `enable-dev-install.sh` from a terminal; the `!` prefix in the agent session has no terminal for `sudo`.
 
 ## 2026-10-02
 
