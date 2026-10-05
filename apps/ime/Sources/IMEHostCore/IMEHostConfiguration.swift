@@ -52,6 +52,11 @@ public enum IMEHostConfiguration {
         supportDirectory().appendingPathComponent("learning-summary.html")
     }
 
+    /// The clipboard history (`ClipboardHistoryStore`): an index and the copied images.
+    public static func clipboardHistoryDirectoryURL() -> URL {
+        supportDirectory().appendingPathComponent("clipboard", isDirectory: true)
+    }
+
     private static func supportDirectory() -> URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/SmartIMEHost", isDirectory: true)

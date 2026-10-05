@@ -279,6 +279,18 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 10. Press Esc during each step: the overlay closes and the app you were in has the keyboard again
 11. Turn 截图快捷键 off in 设置… › 截图: ⌃⌥A and ⌃⌥O reach the app in front again
 
+## Clipboard History Checklist
+
+1. Copy a few lines of text in Notes, an image in Preview, and a command in Terminal. Press ⌃⌥V: the panel opens centered, newest first, with each entry's app icon; the image row reads 图片：宽×高（大小）
+2. Press ↓ and ↑: the right side previews the text in full, or the image; the caption shows time, app, and size
+3. Type a word: the list narrows to entries containing it; clear it and everything returns
+4. Click into a text field in another app, press ⌃⌥V, then ⏎ (or ⌘2): the panel closes and the text is pasted there. Without Accessibility access the toast says 已复制，按 ⌘V 粘贴
+5. Choose an image into Notes or a chat: the image is pasted
+6. ⌘P pins an entry (pin icon, stays on top); ⌘⌫ deletes the selected one
+7. Copy a password from a password manager: it does not appear in the list
+8. Click outside the panel or press Esc: it closes and the app you were in has the keyboard again
+9. 设置… › 剪贴板: 保留 changes the period, 清空… keeps pinned entries, turning 剪贴板历史 off stops recording and ⌃⌥V reaches the app in front again; 快捷键 can rebind it
+
 ## Known Limits In This Milestone
 
 - This checklist validates both the Chinese `librime` path and the basic English completion path
