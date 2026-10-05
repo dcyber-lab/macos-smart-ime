@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 import SwiftUI
 
 /// What the clipboard panel shows: a search field, the matches, and a preview of the chosen one.
@@ -19,6 +20,29 @@ final class ClipboardPanelModel: ObservableObject {
 
     var selected: ClipboardItem? {
         results.indices.contains(selection) ? results[selection] : nil
+    }
+
+    private let previews = NSCache<NSUUID, NSImage>()
+
+    /// A screen-sized copy of the image, decoded once per entry: decoding the full file on every
+    /// selection change made ↑↓ stutter.
+    func previewImage(for item: ClipboardItem) -> NSImage? {
+        if let cached = previews.object(forKey: item.id as NSUUID) {
+            return cached
+        }
+        guard let url = store.imageURL(for: item),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                  kCGImageSourceCreateThumbnailFromImageAlways: true,
+                  kCGImageSourceCreateThumbnailWithTransform: true,
+                  kCGImageSourceThumbnailMaxPixelSize: 1200,
+              ] as CFDictionary)
+        else {
+            return nil
+        }
+        let image = NSImage(cgImage: cg, size: CGSize(width: cg.width, height: cg.height))
+        previews.setObject(image, forKey: item.id as NSUUID)
+        return image
     }
 
     func reload() {
@@ -264,13 +288,12 @@ private struct ClipboardPreview: View {
                 switch item.kind {
                 case .text:
                     ScrollView {
-                        Text(String((item.text ?? "").prefix(20_000)))
+                        Text(String((item.text ?? "").prefix(4_000)))
                             .font(.system(size: 13))
-                            .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 case .image:
-                    if let url = model.store.imageURL(for: item), let image = NSImage(contentsOf: url) {
+                    if let image = model.previewImage(for: item) {
                         Image(nsImage: image)
                             .resizable()
                             .scaledToFit()
