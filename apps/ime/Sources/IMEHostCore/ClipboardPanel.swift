@@ -232,6 +232,7 @@ private struct ClipboardPanelView: View {
                 LazyVStack(spacing: 2) {
                     ForEach(Array(model.results.enumerated()), id: \.element.id) { index, item in
                         ClipboardRow(item: item, index: index, isSelected: index == model.selection, isPinned: model.store.isPinned(item))
+                            .equatable()
                             .id(item.id)
                             .onTapGesture { model.selection = index }
                             .simultaneousGesture(TapGesture(count: 2).onEnded { model.choose(at: index) })
@@ -248,7 +249,7 @@ private struct ClipboardPanelView: View {
     }
 }
 
-private struct ClipboardRow: View {
+private struct ClipboardRow: View, Equatable {
     let item: ClipboardItem
     let index: Int
     let isSelected: Bool
@@ -311,10 +312,15 @@ private struct ClipboardPreview: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    static func caption(for item: ClipboardItem) -> String {
+    /// Creating a formatter costs milliseconds, and the caption is rebuilt on every arrow key.
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
-        var parts = [formatter.localizedString(for: item.date, relativeTo: Date())]
+        return formatter
+    }()
+
+    static func caption(for item: ClipboardItem) -> String {
+        var parts = [relativeFormatter.localizedString(for: item.date, relativeTo: Date())]
         if let app = item.appBundleID {
             parts.append(AppNames.displayName(for: app))
         }
@@ -340,8 +346,26 @@ private enum AppIcons {
             return cached
         }
         let image = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
-            .map { NSWorkspace.shared.icon(forFile: $0.path) } ?? fallback
+            .map { flattened(NSWorkspace.shared.icon(forFile: $0.path)) } ?? fallback
         cache[bundleID] = image
+        return image
+    }
+
+    /// App icons carry representations up to 1024 px; drawing one at 24 pt on every redraw is slow.
+    /// A 48 px bitmap (sharp on Retina) draws cheaply.
+    private static func flattened(_ icon: NSImage) -> NSImage {
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: 48, pixelsHigh: 48, bitsPerSample: 8, samplesPerPixel: 4,
+            hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        ), let context = NSGraphicsContext(bitmapImageRep: rep) else {
+            return icon
+        }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        icon.draw(in: CGRect(x: 0, y: 0, width: 48, height: 48))
+        NSGraphicsContext.restoreGraphicsState()
+        let image = NSImage(size: CGSize(width: 24, height: 24))
+        image.addRepresentation(rep)
         return image
     }
 }
