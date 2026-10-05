@@ -138,6 +138,39 @@ final class SettingsModel: ObservableObject {
         action.set(hotkey, defaults: defaults).map { "已被「\($0.title)」使用" }
     }
 
+    // MARK: Clipboard
+
+    var isClipboardEnabled: Bool {
+        get { ClipboardSettings(defaults: defaults).isEnabled }
+        set { ClipboardSettings.setEnabled(newValue, defaults: defaults) }
+    }
+
+    var clipboardKeepsImages: Bool {
+        get { ClipboardSettings(defaults: defaults).keepsImages }
+        set { ClipboardSettings.setKeepsImages(newValue, defaults: defaults) }
+    }
+
+    var clipboardRetentionDays: Int {
+        get { ClipboardSettings(defaults: defaults).retentionDays }
+        set { ClipboardSettings.setRetentionDays(newValue, defaults: defaults) }
+    }
+
+    var clipboardCount: Int {
+        ClipboardService.shared.store.items.count
+    }
+
+    func clearClipboardHistory() {
+        let alert = NSAlert()
+        alert.messageText = "清空剪贴板历史？"
+        alert.informativeText = "置顶的条目会保留。"
+        alert.addButton(withTitle: "清空")
+        alert.addButton(withTitle: "取消")
+        if alert.runModal() == .alertFirstButtonReturn {
+            ClipboardService.shared.store.clear()
+            objectWillChange.send()
+        }
+    }
+
     // MARK: Screenshot
 
     var isScreenshotEnabled: Bool {
@@ -182,6 +215,7 @@ private final class SettingsWindowController: NSWindowController, NSWindowDelega
         tabs.addTabViewItem(Self.pane("智能中心", symbol: "brain", LearningPane(model: model)))
         tabs.addTabViewItem(Self.pane("AI 助手", symbol: "wand.and.stars", AIPane(model: model)))
         tabs.addTabViewItem(Self.pane("截图", symbol: "camera.viewfinder", ScreenshotPane(model: model)))
+        tabs.addTabViewItem(Self.pane("剪贴板", symbol: "doc.on.clipboard", ClipboardPane(model: model)))
         tabs.addTabViewItem(Self.pane("快捷键", symbol: "keyboard", HotkeyPane(model: model)))
         let window = SettingsPanelWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable]
@@ -362,6 +396,43 @@ private struct ScreenshotPane: View {
                 } else {
                     LabeledContent("需要授权「屏幕录制」才能截图") {
                         Button("打开系统设置…") { ScreenshotCapture.openPermissionSettings() }
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .scrollDisabled(true)
+    }
+}
+
+private struct ClipboardPane: View {
+    @ObservedObject var model: SettingsModel
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(isOn: $model.isClipboardEnabled) {
+                    SettingLabel("剪贴板历史", "记下复制过的文字和图片，按快捷键搜索、预览、粘贴；只存在这台 Mac 上，快捷键在「快捷键」里设置")
+                }
+                Toggle(isOn: $model.clipboardKeepsImages) {
+                    SettingLabel("记录图片", "截图和复制的图片也进入历史")
+                }
+                .disabled(!model.isClipboardEnabled)
+                Picker("保留", selection: $model.clipboardRetentionDays) {
+                    ForEach(ClipboardSettings.retentionChoices, id: \.self) { Text($0 == 1 ? "1 天" : "\($0) 天").tag($0) }
+                }
+                .disabled(!model.isClipboardEnabled)
+            } footer: {
+                Text("密码管理器里复制的内容、标记为机密的复制不会被记录。选中后按 ⏎ 粘贴到当前应用，需要「辅助功能」授权；没有授权时只复制，自己按 ⌘V。")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                LabeledContent("已记录 \(model.clipboardCount) 条") {
+                    Button("清空…") { model.clearClipboardHistory() }
+                }
+                if !model.isAccessibilityTrusted {
+                    LabeledContent("需要授权「辅助功能」才能直接粘贴") {
+                        Button("打开系统设置…") { WindowTitleReader.requestTrust() }
                     }
                 }
             }

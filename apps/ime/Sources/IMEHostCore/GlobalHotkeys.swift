@@ -11,6 +11,7 @@ final class GlobalHotkeys {
         case aiRead = 1
         case screenshot = 2
         case screenshotOCR = 3
+        case clipboard = 4
     }
 
     private static let signature = OSType(0x534D4149) // 'SMAI'

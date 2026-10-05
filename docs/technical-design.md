@@ -178,6 +178,14 @@ Owns explicit and async workflows:
 - Text recognition (`ScreenshotOCR`) uses Vision `VNRecognizeTextRequest` (accurate, zh-Hans, zh-Hant, en-US) off the main actor on the selection without marks. Lines are ordered top to bottom and pieces on one row left to right; the text goes to the clipboard and `ScreenshotToast` says how many characters.
 - Nothing is kept unless saved. Events (never images or text) go to `ai-assist-events.log`.
 
+## Clipboard History
+
+- `ClipboardService` (installed by `AppDelegate`) polls `NSPasteboard.general.changeCount` every 0.5 s while `ClipboardHistoryEnabled` is on, and owns the ⌃⌥V hotkey (`GlobalHotkeys.ID.clipboard`).
+- Recording rules (`ClipboardSettings.allowsCopy`): skip password managers and pasteboards marked concealed, transient, or auto-generated. Text is preferred over an image; limits are 1 MB of text and 20 MB per image.
+- `ClipboardHistoryStore` is the only owner of the data: `clipboard/index.json` and `clipboard/images/*.png` under the support directory, private permissions, deduplicated by SHA-256, pruned by age (`ClipboardHistoryRetentionDays`) and count (300), pinned entries exempt.
+- `ClipboardPanel` (non-activating `NSPanel` hosting SwiftUI) shows search, list, and preview. Choosing an entry writes it to the pasteboard and, with Accessibility access, sends ⌘V to the app in front. The re-copy is recorded again and so moves the entry to the top.
+- Stays on this Mac; no network, and nothing from it reaches the IME real-time path.
+
 ## Selection Translation
 
 - While SmartIMEHost is active and nothing is being composed, the translation hotkey (default `⌃⌥T`) reads the client's selection through `IMKTextInput` (`selectedRange`, `attributedSubstring(from:)`) and translates it on-device with Apple's Translation framework (`TranslationSession(installedSource:target:)`, macOS 26; weak-linked). `TranslationPopup` shows the result under a capsule direction badge (英 → 中 / 中 → 英), laid out with explicit constraints so every edge keeps its inset; `Return` replaces the captured range, `Escape` or any other key dismisses.
