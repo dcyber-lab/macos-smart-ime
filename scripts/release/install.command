@@ -10,5 +10,5 @@ xattr -dr com.apple.quarantine . 2>/dev/null || true
 sudo ./install-host.sh --system SmartIMEHost.app
 
 echo
-echo "LinguaType is installed. Select it (灵译输入法) from the input menu and start typing."
+echo "LinguaType is installed. Select LinguaType from the input menu and start typing."
 echo "If it is missing there, add it in System Settings › Keyboard › Input Sources."

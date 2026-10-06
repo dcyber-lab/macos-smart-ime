@@ -491,6 +491,11 @@
 - Settings › Clipboard › "Keep for" is now a stepper (1–365 days) instead of a fixed 1/7/30/90 picker.
 - Age pruning also runs hourly from the pasteboard poll, not only on new copies, so an idle history still expires. Pinned entries are exempt.
 
+## 2026-10-06 — README install section
+
+- Split the README install steps into release-zip and from-source paths, and documented re-granting Accessibility and Screen Recording after each install (ad-hoc signing).
+- `install.command` now ends with an English message.
+
 ### Expected Usage
 
 - Add a new dated section for each meaningful coding session.
