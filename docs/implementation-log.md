@@ -485,6 +485,11 @@
 - Candidate row tags are now `EN`/`TR`; translation badges are `EN → ZH`/`ZH → EN`.
 - Left as-is on purpose: Chinese lexicons, test fixtures, Chinese output of the Explain action, and `LearningInsights` word lists.
 
+## 2026-10-06 — README install section
+
+- Split the README install steps into release-zip and from-source paths, and documented re-granting Accessibility and Screen Recording after each install (ad-hoc signing).
+- `install.command` now ends with an English message.
+
 ### Expected Usage
 
 - Add a new dated section for each meaningful coding session.

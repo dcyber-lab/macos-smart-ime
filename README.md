@@ -14,14 +14,29 @@ GitHub repository:
 
 - `https://github.com/dcyber-lab/macos-smart-ime`
 
-## Install or update
+## Install
+
+**From a release (no Xcode needed)**
+
+1. Download `LinguaType-<version>-macOS-arm64.zip` from [Releases](https://github.com/dcyber-lab/macos-smart-ime/releases). Requires an Apple Silicon Mac on macOS 26 or later.
+2. Unzip it, open Terminal in the unzipped folder, and run `zsh install.command` (asks for the administrator password).
+3. Add LinguaType in System Settings › Keyboard › Input Sources if it is not already listed.
+
+**From source** (needs full Xcode and Homebrew)
 
 ```bash
 ./install.sh          # install, or update an existing install
 ./install.sh --pull   # pull the latest code first
 ```
 
-The first install asks for the administrator password once; updates need none. See `docs/ime-manual-validation.md` for details and the manual checklist.
+The first install asks for the administrator password once; source updates need none. See `docs/ime-manual-validation.md` for details and the manual checklist.
+
+### After installing or updating
+
+The app is ad-hoc signed, so macOS treats every new build as a different app. After each install, grant these again if you use the features:
+
+- **Accessibility** (clipboard paste on Return, window titles, selection reading): Settings… › Clipboard or Intelligence › Open System Settings…, then turn LinguaType on. If a stale entry is there, remove it with `−` first.
+- **Screen Recording** (screenshots): press the screenshot shortcut and follow the prompt, then quit and reopen when asked.
 
 ## Release package
 
