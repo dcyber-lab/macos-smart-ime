@@ -182,7 +182,7 @@ Owns explicit and async workflows:
 
 - `ClipboardService` (installed by `AppDelegate`) polls `NSPasteboard.general.changeCount` every 0.5 s while `ClipboardHistoryEnabled` is on, and owns the ⌃⌥V hotkey (`GlobalHotkeys.ID.clipboard`).
 - Recording rules (`ClipboardSettings.allowsCopy`): skip password managers and pasteboards marked concealed, transient, or auto-generated. Text is preferred over an image; limits are 1 MB of text and 20 MB per image.
-- `ClipboardHistoryStore` is the only owner of the data: `clipboard/index.json` and `clipboard/images/*.png` under the support directory, private permissions, deduplicated by SHA-256, pruned by age (`ClipboardHistoryRetentionDays`) and count (300), pinned entries exempt.
+- `ClipboardHistoryStore` is the only owner of the data: `clipboard/index.json` and `clipboard/images/*.png` under the support directory, private permissions, deduplicated by SHA-256, pruned by age (`ClipboardHistoryRetentionDays`, default 7, checked on each copy and hourly) and count (300), pinned entries exempt.
 - `ClipboardPanel` (`NSPanel`, AppKit: search field, `NSTableView`, one preview view for the panel's life) shows search, list, and preview. While it shows, the input method is the active app (a non-activating panel left the keyboard with the app in front); closing reactivates the previous app. Choosing an entry writes it to the pasteboard and, with Accessibility access, sends ⌘V to the app in front. The re-copy is recorded again and so moves the entry to the top.
 - Stays on this Mac; no network, and nothing from it reaches the IME real-time path.
 

@@ -10,6 +10,7 @@ public final class ClipboardService {
     let store = ClipboardHistoryStore(directory: IMEHostConfiguration.clipboardHistoryDirectoryURL())
     private var timer: Timer?
     private var lastChangeCount = NSPasteboard.general.changeCount
+    private var lastPrune = Date()
     private var registered: TranslationHotkey?
     private var panel: ClipboardPanel?
 
@@ -40,6 +41,7 @@ public final class ClipboardService {
             timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
                 MainActor.assumeIsolated { ClipboardService.shared.poll() }
             }
+            lastPrune = Date()
             store.prune()
         }
         if registered != settings.hotkey {
@@ -53,6 +55,11 @@ public final class ClipboardService {
     // MARK: Recording
 
     private func poll() {
+        // Entries also age out while nothing is being copied.
+        if Date().timeIntervalSince(lastPrune) >= 3600 {
+            lastPrune = Date()
+            store.prune()
+        }
         let board = NSPasteboard.general
         guard board.changeCount != lastChangeCount else {
             return

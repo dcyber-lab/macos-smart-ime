@@ -19,6 +19,8 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         static let eight: UInt16 = 28
         static let nine: UInt16 = 25
         static let escape: UInt16 = 53
+        static let pageUp: UInt16 = 116
+        static let pageDown: UInt16 = 121
         static let downArrow: UInt16 = 125
         static let upArrow: UInt16 = 126
     }
@@ -167,6 +169,18 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
 
             if let highlightedIndex = highlightedCandidateIndexDelta(for: event.keyCode) {
                 let targetIndex = nextHighlightedCandidateIndex(offset: highlightedIndex)
+                // At the page edge, ↓/↑ flip the page like Page_Down/Page_Up instead of stopping.
+                if targetIndex == (sessionStore.state.selectedCandidateIndex ?? 0),
+                   sessionStore.state.mode == .chinese {
+                    let state = sessionStore.state
+                    let pageKey: UInt16? = highlightedIndex > 0
+                        ? (state.isLastCandidatePage ? nil : KeyCode.pageDown)
+                        : (state.candidatePageIndex > 0 ? KeyCode.pageUp : nil)
+                    if let pageKey {
+                        let pageEvent = InputKeyEvent(keyCode: pageKey, characters: "", charactersIgnoringModifiers: "", modifierFlags: 0)
+                        return apply(chineseEngine?.process(pageEvent), sender: sender)
+                    }
+                }
                 if let targetIndex {
                     if sessionStore.state.mode == .chinese {
                         return apply(chineseEngine?.highlightCandidate(at: targetIndex), sender: sender)
