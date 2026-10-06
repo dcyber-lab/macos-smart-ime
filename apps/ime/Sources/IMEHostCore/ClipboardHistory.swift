@@ -58,7 +58,7 @@ final class ClipboardHistoryStore {
         var pinned: [UUID]
     }
 
-    init(directory: URL, maxItems: Int = 300, retentionDays: Int = 30) {
+    init(directory: URL, maxItems: Int = 300, retentionDays: Int = ClipboardSettings.defaultRetentionDays) {
         self.directory = directory
         self.maxItems = maxItems
         self.retentionDays = retentionDays

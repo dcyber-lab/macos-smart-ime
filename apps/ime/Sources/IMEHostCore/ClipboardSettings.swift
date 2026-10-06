@@ -9,7 +9,7 @@ struct ClipboardSettings: Equatable {
     /// ⌃⌥V (V is ANSI key code 9): open the history.
     static let defaultHotkey = TranslationHotkey(keyCode: 9, modifiers: [.control, .option])
     static let retentionChoices = [1, 7, 30, 90]
-    static let defaultRetentionDays = 30
+    static let defaultRetentionDays = 7
 
     /// Password managers: what they put on the clipboard is a secret, so it is never kept. Terminals are
     /// kept, since commands are among the things worth finding again.
