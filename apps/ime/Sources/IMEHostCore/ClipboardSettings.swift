@@ -8,7 +8,7 @@ struct ClipboardSettings: Equatable {
     static let imagesKey = "ClipboardHistoryImages"
     /// ⌃⌥V (V is ANSI key code 9): open the history.
     static let defaultHotkey = TranslationHotkey(keyCode: 9, modifiers: [.control, .option])
-    static let retentionChoices = [1, 7, 30, 90]
+    static let retentionRange = 1...365
     static let defaultRetentionDays = 7
 
     /// Password managers: what they put on the clipboard is a secret, so it is never kept. Terminals are
@@ -38,7 +38,7 @@ struct ClipboardSettings: Equatable {
         isEnabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
         hotkey = defaults.string(forKey: Self.hotkeyKey).flatMap(TranslationHotkey.init(string:)) ?? Self.defaultHotkey
         let days = defaults.integer(forKey: Self.retentionKey)
-        retentionDays = days > 0 ? days : Self.defaultRetentionDays
+        retentionDays = days > 0 ? min(days, Self.retentionRange.upperBound) : Self.defaultRetentionDays
         keepsImages = defaults.object(forKey: Self.imagesKey) as? Bool ?? true
     }
 
@@ -47,7 +47,7 @@ struct ClipboardSettings: Equatable {
     }
 
     static func setRetentionDays(_ days: Int, defaults: UserDefaults = .standard) {
-        defaults.set(days, forKey: retentionKey)
+        defaults.set(min(max(days, retentionRange.lowerBound), retentionRange.upperBound), forKey: retentionKey)
     }
 
     static func setKeepsImages(_ keeps: Bool, defaults: UserDefaults = .standard) {

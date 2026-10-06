@@ -418,8 +418,8 @@ private struct ClipboardPane: View {
                     SettingLabel("Record images", "Screenshots and copied images are added to the history too")
                 }
                 .disabled(!model.isClipboardEnabled)
-                Picker("Keep for", selection: $model.clipboardRetentionDays) {
-                    ForEach(ClipboardSettings.retentionChoices, id: \.self) { Text($0 == 1 ? "1 day" : "\($0) days").tag($0) }
+                Stepper(value: $model.clipboardRetentionDays, in: ClipboardSettings.retentionRange) {
+                    SettingLabel("Keep for", "Older items are deleted automatically, except pinned ones. Currently \(model.clipboardRetentionDays) \(model.clipboardRetentionDays == 1 ? "day" : "days")")
                 }
                 .disabled(!model.isClipboardEnabled)
             } footer: {

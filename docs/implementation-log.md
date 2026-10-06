@@ -488,6 +488,7 @@
 ## 2026-10-06 — Clipboard auto-prune
 
 - Clipboard retention now defaults to 7 days (was 30; 1/7/30/90 still selectable). Existing explicit choices are kept.
+- Settings › Clipboard › "Keep for" is now a stepper (1–365 days) instead of a fixed 1/7/30/90 picker.
 - Age pruning also runs hourly from the pasteboard poll, not only on new copies, so an idle history still expires. Pinned entries are exempt.
 
 ### Expected Usage
