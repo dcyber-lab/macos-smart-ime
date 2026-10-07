@@ -30,10 +30,18 @@ struct ScreenRecordingRequest: Sendable, Equatable {
 }
 
 /// Records one display area to an MP4 file: ScreenCaptureKit delivers frames, AVAssetWriter encodes them
-/// with H.264. Frames are handled on a private queue and never touch the main actor. The file is not
-/// written in fragments: once a fragmented file's header is out, frames whose color tags change (as live
-/// frames do) fail the next fragment (AVFoundation -11800, MovieHeaderMaker -16341).
+/// with H.264. Frames are handled on a private queue and never touch the main actor. The file is written
+/// in 2-second fragments, so a recording cut off by a crash or a write error still plays up to the last
+/// fragment. Fragments need the encoder to keep frames in order (no B-frames): with reordering on, the
+/// writer failed at a fragment now and then (AVFoundation -11800, MovieHeaderMaker -16341).
 final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
+    /// How a recording ended.
+    enum Ending: Equatable {
+        case complete
+        /// The writer failed; the file keeps what was written up to its last fragment.
+        case cutShort(String)
+    }
+
     /// Called once, on a private queue, when the stream stops on its own (display gone, access revoked)
     /// or the file cannot be written. `stop()` still has to be called to finish the file.
     private let onInterrupt: (@Sendable (Error) -> Void)?
@@ -63,6 +71,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
         }
         input = AVAssetWriterInput(mediaType: .video, outputSettings: Self.videoSettings(for: request))
         input.expectsMediaDataInRealTime = true
+        writer.movieFragmentInterval = CMTime(seconds: 2, preferredTimescale: 600)
         guard writer.canAdd(input) else {
             throw ScreenRecorderError.cannotWrite("the video settings were refused")
         }
@@ -128,30 +137,42 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
     }
 
     /// Stops capturing and completes the file. The last frame lasts until the moment of the stop, so a
-    /// still screen at the end is kept.
-    func stop() async throws {
+    /// still screen at the end is kept. After a write error the file is kept if it plays; it throws when
+    /// nothing usable was written.
+    @discardableResult
+    func stop() async throws -> Ending {
         if let stream {
             self.stream = nil
             try? await stream.stopCapture()
         }
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        let ending = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Ending, Error>) in
             queue.async {
                 self.finish(continuation)
             }
         }
+        if case .cutShort(let reason) = ending, await !Self.isPlayable(request.url) {
+            try? FileManager.default.removeItem(at: request.url)
+            throw ScreenRecorderError.cannotWrite(reason)
+        }
+        return ending
     }
 
-    private func finish(_ continuation: CheckedContinuation<Void, Error>) {
+    private func finish(_ continuation: CheckedContinuation<Ending, Error>) {
         guard !finished else {
-            continuation.resume()
+            continuation.resume(returning: .complete)
             return
         }
         finished = true
-        guard sessionStarted, writer.status == .writing else {
+        guard sessionStarted else {
             let error = writer.error
             writer.cancelWriting()
             try? FileManager.default.removeItem(at: request.url)
             continuation.resume(throwing: error.map { ScreenRecorderError.cannotWrite(Self.describe($0)) } ?? ScreenRecorderError.noFrames)
+            return
+        }
+        guard writer.status == .writing else {
+            // The fragments written before the failure stay in the file.
+            continuation.resume(returning: .cutShort(Self.describe(writer.error)))
             return
         }
         input.markAsFinished()
@@ -161,9 +182,9 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
         writer.endSession(atSourceTime: CMTimeAdd(lastTime, CMTimeMaximum(sinceLast, .zero)))
         writer.finishWriting {
             if self.writer.status == .completed {
-                continuation.resume()
+                continuation.resume(returning: .complete)
             } else {
-                continuation.resume(throwing: ScreenRecorderError.cannotWrite(Self.describe(self.writer.error)))
+                continuation.resume(returning: .cutShort(Self.describe(self.writer.error)))
             }
         }
     }
@@ -217,6 +238,16 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
 
     // MARK: Helpers
 
+    /// Whether AVFoundation reads a video track with some duration from `url`.
+    static func isPlayable(_ url: URL) async -> Bool {
+        let asset = AVURLAsset(url: url)
+        guard let tracks = try? await asset.loadTracks(withMediaType: .video), !tracks.isEmpty,
+              let duration = try? await asset.load(.duration) else {
+            return false
+        }
+        return duration.seconds > 0
+    }
+
     /// Only complete frames carry a new image; idle frames (nothing changed) are skipped.
     private static func isCompleteFrame(_ sampleBuffer: CMSampleBuffer) -> Bool {
         guard let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
@@ -251,7 +282,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
         return Int(min(max(estimate, 2_000_000), 24_000_000))
     }
 
-    private static func videoSettings(for request: ScreenRecordingRequest) -> [String: Any] {
+    static func videoSettings(for request: ScreenRecordingRequest) -> [String: Any] {
         [
             AVVideoCodecKey: AVVideoCodecType.h264,
             AVVideoWidthKey: request.width,
@@ -266,6 +297,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
                 AVVideoExpectedSourceFrameRateKey: request.frameRate,
                 AVVideoMaxKeyFrameIntervalKey: request.frameRate * 2,
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+                AVVideoAllowFrameReorderingKey: false,
             ],
         ]
     }

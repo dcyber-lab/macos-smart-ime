@@ -119,7 +119,9 @@ final class ScreenRecordingSession {
         let duration = Date().timeIntervalSince(startedAt)
         Task { @MainActor in
             do {
-                try await recorder.stop()
+                if case .cutShort(let reason) = try await recorder.stop(), self.interruption == nil {
+                    self.interruption = reason
+                }
                 self.onFinish(.success(Outcome(
                     url: self.url, duration: duration, width: self.request.width, height: self.request.height,
                     interruption: self.interruption

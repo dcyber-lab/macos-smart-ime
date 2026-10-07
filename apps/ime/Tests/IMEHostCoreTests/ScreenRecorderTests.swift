@@ -14,23 +14,39 @@ final class ScreenRecorderTests: XCTestCase {
         super.tearDown()
     }
 
-    /// Live recordings stopped after a few seconds (AVFoundation -11800, MovieHeaderMaker -16341) when
-    /// the frames' color tags changed mid-stream.
-    func testColorTagsChangingMidStreamStillMakeAPlayableFile() async throws {
+    /// Live recordings stopped after a few seconds (AVFoundation -11800, MovieHeaderMaker -16341): with
+    /// B-frames on, a fragmented writer failed at a fragment in about two of three 5-second runs.
+    func testEncoderKeepsFramesInOrderForFragments() throws {
+        let settings = ScreenRecorder.videoSettings(for: request(width: 320, height: 180))
+        let compression = try XCTUnwrap(settings[AVVideoCompressionPropertiesKey] as? [String: Any])
+        XCTAssertEqual(compression[AVVideoAllowFrameReorderingKey] as? Bool, false)
+    }
+
+    /// A live-paced stream whose color tags change after the first fragment completes, and the file
+    /// plays before the stop, so a crash keeps what was recorded.
+    func testLiveStreamPlaysWhileRecordingAndCompletes() async throws {
         let recorder = try ScreenRecorder(request: request(width: 320, height: 180))
-        // Paced like a live stream, with the change after the first 2 seconds: a fragmented writer had
-        // written the file header by then and failed on the next fragment.
         for index in 0..<150 {
             let time = CMClockGetTime(CMClockGetHostTimeClock())
             recorder.append(Self.frame(width: 320, height: 180, time: time, displayP3: index >= 75))
             try await Task.sleep(nanoseconds: 33_000_000)
         }
-        try await recorder.stop()
+        let playsBeforeStop = await ScreenRecorder.isPlayable(url)
+        XCTAssertTrue(playsBeforeStop, "fragments are written while recording")
+        let ending = try await recorder.stop()
+        XCTAssertEqual(ending, .complete)
         let tracks = try await AVURLAsset(url: url).loadTracks(withMediaType: .video)
         let track = try XCTUnwrap(tracks.first)
         let size = try await track.load(.naturalSize)
         XCTAssertEqual(size, CGSize(width: 320, height: 180))
         XCTAssertGreaterThan(recorder.frameCount, 75)
+    }
+
+    /// After a write error the file is kept only if it plays.
+    func testUnreadableFileIsNotPlayable() async throws {
+        try Data("not a movie".utf8).write(to: url)
+        let playable = await ScreenRecorder.isPlayable(url)
+        XCTAssertFalse(playable)
     }
 
     func testIdleFramesAreSkippedAndAStopWithoutFramesLeavesNoFile() async throws {
