@@ -291,6 +291,8 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 8. Record the whole screen on a Retina display: the video is at full pixel size (scaled to 4K at most), and the bar sits inside the area but is not in the video
 9. Settings… › Screenshot › Recording frame rate 60: a new recording plays at 60 fps (QuickTime › Window › Show Movie Inspector)
 10. Unplug the second display while recording on it: recording stops, the toast says why, and what was recorded plays
+11. Record for 30 minutes with normal work in the area: the bar keeps counting, typing stays smooth, and the file plays to the end
+12. Start a recording, wait 10 seconds, then run `killall SmartIMEHost` in Terminal: the file in the save folder plays up to about 2 seconds before the kill
 
 ## Clipboard History Checklist
 

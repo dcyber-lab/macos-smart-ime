@@ -23,6 +23,16 @@
 - `ScreenRecorder` no longer sets `movieFragmentInterval`, so a recording cut off by a crash is lost (the earlier kill test no longer applies). Writer errors now carry their domain, code, and underlying status (`ScreenRecorder.describe`).
 - `ScreenRecorderTests` (2 cases) drive the writer with ScreenCaptureKit-shaped frames: color tags change at 2.5 s in a 5 s live-paced stream (it failed with fragments, passes now), and idle frames plus a stop with no frames. 235 host tests pass locally.
 
+### Correction: B-frames, not color tags; fragments back for long recordings
+
+- The user asked about half-hour recordings. Without fragments a crash or a write error lost the whole file, so fragments were tried again, first with every frame's color tags rewritten.
+- That test then failed on one run and passed on another. Repeated runs showed the color-tag diagnosis above was wrong: 5-second live-paced streams with fragments failed 4 of 6 times with or without a color change. The earlier "reproduction" was this flakiness.
+- Cause: H.264 frame reordering (B-frames) with a fragmented writer. With `AVVideoAllowFrameReorderingKey: false`: 0 of 24 runs failed (12 with a color change), with plain sample buffers and no tag rewriting, which was dropped. The non-fragmented build had 0 of 12.
+- Fragments are back (2 s). Killed after 9 s, 266 of 270 frames play.
+- A write error now keeps the file when it plays (`Ending.cutShort`, toast says why), else deletes it. Checked on a 16 MB disk image: Disk Full (-11807) after 3.4 s kept a 2.0 s playable file; on a 4 MB image the disk filled before the first fragment, so nothing playable was left and the file was deleted.
+- Cost with synthetic noise frames (harder to encode than a screen), 60 s at 30 fps: 1920×1080 about 2.3% and 3456×2234 about 2.9% of one core in the process, the system encoder about 1%, memory flat, stop 0.01–0.02 s. File size at the bit-rate target: about 37 MB/min (1080p) to 139 MB/min (full Retina).
+- Tests: `ScreenRecorderTests` now checks the encoder settings (no frame reordering), a live-paced stream that plays before the stop, and that an unreadable file is not playable. 237 host tests pass locally.
+
 ## 2026-10-05
 
 ### Clipboard history panel (⌃⌥V)
