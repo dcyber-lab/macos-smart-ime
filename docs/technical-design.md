@@ -161,10 +161,11 @@ Owns explicit and async workflows:
 
 ## Screenshot and OCR
 
-- Two system hotkeys, registered at launch by `ScreenshotService` (`AppDelegate` calls `install()`), work in every app and with any input source:
-  - ⌃⌥A (`ScreenshotHotkey`): capture an area, then mark it up, copy, save, pin, or recognize its text.
+- Three system hotkeys, registered at launch by `ScreenshotService` (`AppDelegate` calls `install()`), work in every app and with any input source:
+  - ⌃⌥A (`ScreenshotHotkey`): capture an area, then mark it up, copy, save, pin, recognize its text, or record it.
   - ⌃⌥O (`ScreenshotOCRHotkey`): capture an area and copy its text at once.
-- `GlobalHotkeys` owns every Carbon hotkey (`RegisterEventHotKey`, no permission) and dispatches by `EventHotKeyID`; ⌃⌥E (`GlobalSelectionAssist`) uses it too. Screenshot hotkeys are re-registered when `ScreenshotEnabled` or a hotkey changes in this process, and so is ⌃⌥E. All five hotkeys (translate, rewrite, read, screenshot, OCR) are set in the settings window's 快捷键 pane through `HotkeyAction`; recording calls `GlobalHotkeys.suspend()` so registered combinations reach the window.
+  - ⌃⌥⇧A (`ScreenRecordingHotkey`): choose an area and record it (see Screen Recording); pressed again while recording, it stops.
+- `GlobalHotkeys` owns every Carbon hotkey (`RegisterEventHotKey`, no permission) and dispatches by `EventHotKeyID`; ⌃⌥E (`GlobalSelectionAssist`) uses it too. Screenshot hotkeys are re-registered when `ScreenshotEnabled` or a hotkey changes in this process, and so is ⌃⌥E. All seven hotkeys (translate, rewrite, read, screenshot, OCR, recording, clipboard) are set in the settings window's 快捷键 pane through `HotkeyAction`; recording calls `GlobalHotkeys.suspend()` so registered combinations reach the window.
 - Capture (`ScreenshotCapture`) needs Screen Recording access (`CGPreflightScreenCaptureAccess`). It freezes every display with `SCScreenshotManager` at full resolution, and reads normal window bounds (`CGWindowListCopyWindowInfo`, layer 0) before any overlay shows.
 - `ScreenshotOverlay` shows one `.screenSaver`-level window per display: the frozen image in a layer, and `ScreenshotOverlayView` on top.
   - Choosing: the window under the pointer is highlighted, with a magnifier (pixel grid, position, color); a click takes the window, a drag takes a rectangle. Selections snap to whole pixels and stay on one display.
@@ -177,6 +178,19 @@ Owns explicit and async workflows:
   - Pin (`ScreenshotPin`) floats the image where it was taken: drag to move, scroll or pinch to zoom, double-click or `Esc` to close, right click for copy, save, recognize, close.
 - Text recognition (`ScreenshotOCR`) uses Vision `VNRecognizeTextRequest` (accurate, zh-Hans, zh-Hant, en-US) off the main actor on the selection without marks. Lines are ordered top to bottom and pieces on one row left to right; the text goes to the clipboard and `ScreenshotToast` says how many characters.
 - Nothing is kept unless saved. Events (never images or text) go to `ai-assist-events.log`.
+
+## Screen Recording
+
+- Entry: ⌃⌥⇧A opens the overlay in `.record` mode (toolbar: cancel and start, `Return` or double-click starts), or the record button in the ⌃⌥A toolbar takes the current selection (its marks are not recorded). Both end in `ScreenshotOverlay.Action.record` with the selection in global coordinates.
+- `ScreenRecordingSession` (main actor) maps the area to its display (`ScreenRecordingGeometry.source`: display points, top-left origin, whole and even pixels) and the encoded size (`outputSize`: full resolution, scaled down to at most 3840×2160 pixels by area and 4096 per side, the H.264 limit).
+- It shows two windows that are left out of the video (`SCContentFilter(display:excludingWindows:)`): a red frame 3 pt outside the area that clicks pass through, and a non-activating bar with the elapsed time and a stop button below the area (above or inside when there is no room).
+- `ScreenRecorder` (not main actor) runs `SCStream` with `sourceRect`, the pointer shown, no audio, 420v frames at the chosen rate (`ScreenRecordingFrameRate`: 15, 30 or 60, default 30), and appends complete frames to `AVAssetWriter` (MP4, H.264 High without B-frames, BT.709, about 0.08 bits per pixel per frame within 2–24 Mbit/s) on a private queue.
+  - Idle frames (no change on screen) are skipped; on stop the last frame lasts until the stop, so a still ending is kept.
+  - The file is written in 2-second fragments (`movieFragmentInterval`), so a crash or a write error keeps everything up to the last fragment. Fragments need `AVVideoAllowFrameReorderingKey: false`: with B-frames the writer failed at a fragment in about two of three 5-second runs (AVFoundation -11800, MovieHeaderMaker -16341).
+  - A stream that stops on its own (display gone, access revoked) finishes the file. After a write error (`ScreenRecorder.Ending.cutShort`, e.g. disk full) the file is kept if AVFoundation can play it, else deleted; either way the toast says why.
+  - Cost measured with synthetic 3456×2234 frames at 30 fps for 60 s: about 3% of one core in the process, about 1% in the system encoder, flat memory, stop in 0.02 s. ScreenCaptureKit's own capture cost is not measured.
+- Stop: the bar's button or ⌃⌥⇧A. The file is `Screen Recording yyyy-MM-dd HH.mm.ss.mp4` in the screenshot save folder; its URL goes to the pasteboard (pastes as a file; clipboard history skips it, having no text or image). While recording, ⌃⌥A and ⌃⌥O only show a toast, since the overlay would freeze the video.
+- Same Screen Recording permission as screenshots; no microphone. The recording runs in the input method process on its own queue and hardware encoder, never in the typing path.
 
 ## Clipboard History
 
@@ -221,7 +235,7 @@ Owns explicit and async workflows:
 - Sensitive fields must not use context enhancement.
 - Password, secure text, and OTP-like fields are no-context zones.
 - Default processing is local.
-- Screenshots and recognized text stay on the Mac: captures live in memory until copied, saved, or pinned, and text recognition runs on-device.
+- Screenshots, recordings, and recognized text stay on the Mac: captures live in memory until copied, saved, or pinned, recordings are written only to the chosen folder, and text recognition runs on-device.
 - Chinese text is stored only by librime's user dictionary and by translation learning (committed 2–6 character words that have no translation, local and bounded; `TranslationLearningEnabled` turns it off).
 - Any future AI processing must be explicit and must stay outside the IME real-time path.
 - Intelligence hub (`docs/intelligence-hub.md`):

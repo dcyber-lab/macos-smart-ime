@@ -2,6 +2,37 @@
 
 ## 2026-10-07
 
+### Screen recording (⌃⌥⇧A)
+
+- The user asked for screen recording next to screenshots. Options weighed: `SCStream` + `AVAssetWriter` (macOS 14, chosen), `SCRecordingOutput` (less code, macOS 15 only, no pause), `screencapture -v` (no area control). First version: one area, video only, MP4; sound, pause and GIF are left for later.
+- Entry: ⌃⌥⇧A (`ScreenRecordingHotkey`, `HotkeyAction.screenRecording`, `GlobalHotkeys.ID.screenRecording`) opens the overlay in a new `.record` mode, or the new record button in the ⌃⌥A toolbar. Pressing ⌃⌥⇧A again stops; ⌃⌥A and ⌃⌥O only toast while recording.
+- New: `ScreenRecorder` (stream → writer, private queue), `ScreenRecordingSession` (frame window, time-and-stop bar, timer), `ScreenRecordingGeometry` (source rect, even sizes, 4K cap, elapsed text). `ScreenshotSettings` gains the hotkey, `ScreenRecordingFrameRate` (15/30/60) and a file-name prefix and extension; the 截图 pane gains the frame rate picker.
+- Output: `Screen Recording <date time>.mp4` in the screenshot save folder, file URL copied to the pasteboard. The frame and the bar are excluded from the video by window ID.
+- Tests: 8 new cases (source rect across screens, even trimming, encoder cap, elapsed text, bit rate, settings, file name). 233 host tests pass locally through the harness.
+- Checked outside the tests:
+  - This terminal has no Screen Recording access (`SCStreamErrorDomain -3801`), so the ScreenCaptureKit half was not run.
+  - The writer half was driven with synthetic 420v frames through `ScreenRecorder.append`. 1282×718 and 3840×2160 both encode. 20 frames over 0.63 s plus a 1 s still ending gave a 1.68 s file with 20 samples; out-of-order and idle frames were dropped; stopping with no frames throws and leaves no file.
+  - A process killed after 5 s of frames left a playable file with the first 4 s (120 frames), from the 2-second fragments.
+  - The record toolbar, the new capture toolbar button, and the bar were rendered offscreen. The bar first measured 21 pt tall (a horizontal stack ignores vertical insets); it now has a fixed 32 pt height.
+- Not verified yet: a live recording in the installed input method (Screen Recording Checklist), multiple displays, and whether ScreenCaptureKit finds the frame and bar windows right after they are ordered in (they sit outside the area unless the area fills the screen).
+
+### Fix: recordings stopped after a few seconds
+
+- Live finding by the user with the CI build of PR #25: recordings ended on their own after 4–16 s. The event log said only `cannotWrite("The operation could not be completed")`; the unified log showed `MovieHeaderMaker signalled err=-16341` (AVFoundation -11800) when the writer flushed a 2-second fragment.
+- Reproduced with synthetic frames: a fragmented writer fails once frames change their color tags after the first fragment (the file header) is written; a still screen, gaps, or frame durations do not trigger it. The same frames without fragments give a playable file with one BT.709 format description.
+- `ScreenRecorder` no longer sets `movieFragmentInterval`, so a recording cut off by a crash is lost (the earlier kill test no longer applies). Writer errors now carry their domain, code, and underlying status (`ScreenRecorder.describe`).
+- `ScreenRecorderTests` (2 cases) drive the writer with ScreenCaptureKit-shaped frames: color tags change at 2.5 s in a 5 s live-paced stream (it failed with fragments, passes now), and idle frames plus a stop with no frames. 235 host tests pass locally.
+
+### Correction: B-frames, not color tags; fragments back for long recordings
+
+- The user asked about half-hour recordings. Without fragments a crash or a write error lost the whole file, so fragments were tried again, first with every frame's color tags rewritten.
+- That test then failed on one run and passed on another. Repeated runs showed the color-tag diagnosis above was wrong: 5-second live-paced streams with fragments failed 4 of 6 times with or without a color change. The earlier "reproduction" was this flakiness.
+- Cause: H.264 frame reordering (B-frames) with a fragmented writer. With `AVVideoAllowFrameReorderingKey: false`: 0 of 24 runs failed (12 with a color change), with plain sample buffers and no tag rewriting, which was dropped. The non-fragmented build had 0 of 12.
+- Fragments are back (2 s). Killed after 9 s, 266 of 270 frames play.
+- A write error now keeps the file when it plays (`Ending.cutShort`, toast says why), else deletes it. Checked on a 16 MB disk image: Disk Full (-11807) after 3.4 s kept a 2.0 s playable file; on a 4 MB image the disk filled before the first fragment, so nothing playable was left and the file was deleted.
+- Cost with synthetic noise frames (harder to encode than a screen), 60 s at 30 fps: 1920×1080 about 2.3% and 3456×2234 about 2.9% of one core in the process, the system encoder about 1%, memory flat, stop 0.01–0.02 s. File size at the bit-rate target: about 37 MB/min (1080p) to 139 MB/min (full Retina).
+- Tests: `ScreenRecorderTests` now checks the encoder settings (no frame reordering), a live-paced stream that plays before the stop, and that an unreadable file is not playable. 237 host tests pass locally.
+
 ### Flaky CI tests
 
 - CI on the screen recording PR (#25) failed four times out of six on two tests that the PR does not touch.

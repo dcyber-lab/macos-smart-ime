@@ -1,9 +1,10 @@
 import AppKit
 
-/// Screenshots from anywhere: ⌃⌥A captures an area and offers marks, copy, save, pin, and text
-/// recognition; ⌃⌥O captures an area and copies its text. Both are system hotkeys registered when the
-/// input method starts, so they work in every app and with any input source. Capturing needs Screen
-/// Recording access; recognition runs on the Mac (Vision).
+/// Screenshots from anywhere: ⌃⌥A captures an area and offers marks, copy, save, pin, text recognition,
+/// and recording; ⌃⌥O captures an area and copies its text; ⌃⌥⇧A records an area to an MP4 file and,
+/// pressed again, stops. All are system hotkeys registered when the input method starts, so they work in
+/// every app and with any input source. Capturing needs Screen Recording access; recognition runs on the
+/// Mac (Vision).
 @MainActor
 public final class ScreenshotService {
     public static let shared = ScreenshotService()
@@ -14,6 +15,9 @@ public final class ScreenshotService {
     private var starting = false
     private var askedForPermission = false
     private var previousApp: NSRunningApplication?
+    private var recording: ScreenRecordingSession?
+    /// Between choosing the area and the first frame; the hotkey does nothing then.
+    private var startingRecording = false
 
     private init() {}
 
@@ -28,7 +32,7 @@ public final class ScreenshotService {
     func refreshHotkeys() {
         // Runs on every defaults change in the process, so the system screenshot domain is not read.
         let settings = ScreenshotSettings(systemDefaults: nil)
-        let wanted = settings.isEnabled ? [settings.hotkey, settings.ocrHotkey] : []
+        let wanted = settings.isEnabled ? [settings.hotkey, settings.ocrHotkey, settings.recordHotkey] : []
         guard wanted != registered else {
             return
         }
@@ -36,6 +40,7 @@ public final class ScreenshotService {
         guard settings.isEnabled else {
             GlobalHotkeys.shared.unregister(.screenshot)
             GlobalHotkeys.shared.unregister(.screenshotOCR)
+            GlobalHotkeys.shared.unregister(.screenRecording)
             log("screenshot hotkeys: off")
             return
         }
@@ -45,11 +50,27 @@ public final class ScreenshotService {
         let recognize = GlobalHotkeys.shared.register(settings.ocrHotkey, id: .screenshotOCR) {
             ScreenshotService.shared.start(.recognizeText)
         }
-        log("screenshot hotkeys: \(settings.hotkey.displayString) status \(capture), \(settings.ocrHotkey.displayString) status \(recognize)")
+        let record = GlobalHotkeys.shared.register(settings.recordHotkey, id: .screenRecording) {
+            ScreenshotService.shared.toggleRecording()
+        }
+        log("screenshot hotkeys: \(settings.hotkey.displayString) status \(capture), \(settings.ocrHotkey.displayString) status \(recognize), \(settings.recordHotkey.displayString) status \(record)")
+    }
+
+    func toggleRecording() {
+        if let recording {
+            recording.stop()
+        } else {
+            start(.record)
+        }
     }
 
     func start(_ mode: ScreenshotOverlay.Mode) {
-        guard overlay == nil, !starting else {
+        guard overlay == nil, !starting, !startingRecording else {
+            return
+        }
+        // The overlay would freeze the screen in the middle of the video.
+        if recording != nil {
+            ScreenshotToast.show("Stop the recording first (\(ScreenshotSettings(systemDefaults: nil).recordHotkey.displayString))")
             return
         }
         guard ScreenshotCapture.hasPermission else {
@@ -109,8 +130,60 @@ public final class ScreenshotService {
             ScreenshotPin.show(image: output.image, scale: output.scale, screenRect: output.screenRect)
         case .recognizeText:
             recognizeAndCopy(output.plainImage)
+        case .record:
+            startRecording(output.screenRect)
         case .cancel:
             break
+        }
+    }
+
+    // MARK: Recording
+
+    private func startRecording(_ area: CGRect) {
+        let settings = ScreenshotSettings()
+        let folder = settings.saveFolder
+        let name = ScreenshotSettings.fileName(at: Date(), prefix: "Screen Recording", fileExtension: "mp4") { name in
+            FileManager.default.fileExists(atPath: folder.appendingPathComponent(name).path)
+        }
+        let url = folder.appendingPathComponent(name)
+        startingRecording = true
+        Task { @MainActor in
+            defer { self.startingRecording = false }
+            do {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                self.recording = try await ScreenRecordingSession.start(
+                    area: area, frameRate: settings.frameRate, url: url, stopHint: settings.recordHotkey.displayString
+                ) { [weak self] result in
+                    self?.recordingFinished(result)
+                }
+                self.log("screen recording: started at \(settings.frameRate) fps")
+            } catch {
+                self.log("screen recording: start failed \(error)")
+                ScreenshotToast.show("Recording failed: \(error.localizedDescription)", duration: 4)
+            }
+        }
+    }
+
+    /// Copies the file, so it can be pasted into a chat or a mail, and says where it was saved.
+    private func recordingFinished(_ result: Result<ScreenRecordingSession.Outcome, Error>) {
+        recording = nil
+        switch result {
+        case .success(let outcome):
+            let size = (try? outcome.url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map {
+                ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file)
+            } ?? "?"
+            log("screen recording: saved \(outcome.width)×\(outcome.height), \(Int(outcome.duration)) s, \(size)\(outcome.interruption.map { ", stopped by \($0)" } ?? "")")
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.writeObjects([outcome.url as NSURL])
+            let folder = FileManager.default.displayName(atPath: outcome.url.deletingLastPathComponent().path)
+            let prefix = outcome.interruption.map { "Recording stopped: \($0). " } ?? ""
+            ScreenshotToast.show(
+                "\(prefix)Saved to \"\(folder)\" and copied: \(outcome.url.lastPathComponent) (\(ScreenRecordingGeometry.elapsedText(outcome.duration)), \(size))",
+                duration: outcome.interruption == nil ? 3 : 6
+            )
+        case .failure(let error):
+            log("screen recording: failed \(error)")
+            ScreenshotToast.show("Recording failed: \(error.localizedDescription)", duration: 4)
         }
     }
 

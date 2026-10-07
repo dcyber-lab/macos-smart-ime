@@ -36,7 +36,7 @@ The first install asks for the administrator password once; source updates need 
 The app is ad-hoc signed, so macOS treats every new build as a different app. After each install, grant these again if you use the features:
 
 - **Accessibility** (clipboard paste on Return, window titles, selection reading): Settings… › Clipboard or Intelligence › Open System Settings…, then turn LinguaType on. If a stale entry is there, remove it with `−` first.
-- **Screen Recording** (screenshots): press the screenshot shortcut and follow the prompt, then quit and reopen when asked.
+- **Screen Recording** (screenshots and screen recordings): press the screenshot shortcut and follow the prompt, then quit and reopen when asked.
 
 ## Release package
 

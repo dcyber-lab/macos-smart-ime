@@ -2,16 +2,21 @@ import AppKit
 
 /// The capture overlay: every display frozen under a dimmed layer. Hovering highlights the window under
 /// the pointer and a click takes it; a drag takes a rectangle. The selection can then be moved, resized,
-/// and marked up from the toolbar. In text recognition mode the overlay closes as soon as an area is chosen.
+/// and marked up from the toolbar. In text recognition mode the overlay closes as soon as an area is chosen;
+/// in recording mode the toolbar only starts the recording or cancels.
 @MainActor
 final class ScreenshotOverlay {
     enum Mode {
         case capture
         case recognizeText
+        case record
+
+        /// Whether a chosen area stays on screen to be adjusted before the overlay closes.
+        var keepsSelection: Bool { self != .recognizeText }
     }
 
     enum Action {
-        case copy, save, pin, recognizeText, cancel
+        case copy, save, pin, recognizeText, record, cancel
     }
 
     /// What the selection produced: the image with annotations, the plain image for text recognition,
@@ -28,7 +33,7 @@ final class ScreenshotOverlay {
     private let finishHandler: @MainActor (Action, Output?) -> Void
     private var windows: [ScreenshotOverlayWindow] = []
     private var views: [ScreenshotOverlayView] = []
-    private let toolbar = ScreenshotToolbar()
+    private let toolbar: ScreenshotToolbar
 
     /// The view that holds the selection; only one screen has a selection at a time.
     private(set) weak var selectionView: ScreenshotOverlayView?
@@ -41,6 +46,7 @@ final class ScreenshotOverlay {
         self.snapshots = snapshots
         self.mode = mode
         self.finishHandler = finish
+        toolbar = ScreenshotToolbar(recording: mode == .record)
         toolbar.onTool = { [weak self] in self?.choose(tool: $0) }
         toolbar.onStyle = { [weak self] in self?.choose(style: $0) }
         toolbar.onUndo = { [weak self] in self?.undo() }
@@ -140,7 +146,7 @@ final class ScreenshotOverlay {
     }
 
     private func placeToolbar() {
-        guard let view = selectionView, mode == .capture else {
+        guard let view = selectionView, mode.keepsSelection else {
             return
         }
         toolbar.update(tool: tool, style: style, canUndo: !annotations.isEmpty)
@@ -186,15 +192,27 @@ final class ScreenshotOverlay {
 
     // MARK: Finishing
 
+    /// What `Return` and a double-click do.
+    var defaultAction: Action {
+        switch mode {
+        case .capture: .copy
+        case .recognizeText: .recognizeText
+        case .record: .record
+        }
+    }
+
     func finish(_ action: Action) {
         selectionView?.endTextEditing(commit: true)
         guard action != .cancel else {
             finishHandler(.cancel, nil)
             return
         }
+        // A recording only needs where the area is; the frozen image is not drawn again for it.
         guard let view = selectionView, hasSelection,
-              let image = ScreenshotRenderer.image(canvas: view.snapshot.canvas, selection: selection, annotations: annotations),
-              let plain = ScreenshotRenderer.plainImage(canvas: view.snapshot.canvas, selection: selection) else {
+              let plain = ScreenshotRenderer.plainImage(canvas: view.snapshot.canvas, selection: selection),
+              let image = action == .record
+                ? plain
+                : ScreenshotRenderer.image(canvas: view.snapshot.canvas, selection: selection, annotations: annotations) else {
             return
         }
         let aligned = ScreenshotGeometry.pixelAligned(selection, scale: view.snapshot.canvas.scale)
@@ -368,7 +386,7 @@ final class ScreenshotOverlayView: NSView, NSTextViewDelegate {
             return
         }
         if event.clickCount == 2, selection.contains(p) {
-            overlay.finish(.copy)
+            overlay.finish(overlay.defaultAction)
             return
         }
         if let handle = ScreenshotGeometry.handle(at: p, in: selection) {
@@ -452,7 +470,7 @@ final class ScreenshotOverlayView: NSView, NSTextViewDelegate {
         guard let overlay else {
             return
         }
-        if overlay.hasSelection, overlay.mode == .capture {
+        if overlay.hasSelection, overlay.mode.keepsSelection {
             overlay.clearSelection()
             pointerMoved(to: convert(event.locationInWindow, from: nil))
         } else {
@@ -508,7 +526,7 @@ final class ScreenshotOverlayView: NSView, NSTextViewDelegate {
             overlay.finish(.cancel)
         case 36, 76:
             if overlay.hasSelection {
-                overlay.finish(overlay.mode == .recognizeText ? .recognizeText : .copy)
+                overlay.finish(overlay.defaultAction)
             }
         default:
             break
@@ -647,7 +665,7 @@ final class ScreenshotOverlayView: NSView, NSTextViewDelegate {
             ctx.setStrokeColor(accent)
             ctx.setLineWidth(1.5)
             ctx.stroke(selection.insetBy(dx: -0.75, dy: -0.75))
-            if ownsSelection, overlay.mode == .capture, case .none = drag {
+            if ownsSelection, overlay.mode.keepsSelection, case .none = drag {
                 drawHandles(selection, in: ctx, accent: accent)
             }
             drawSizeLabel(for: selection)
@@ -659,8 +677,12 @@ final class ScreenshotOverlayView: NSView, NSTextViewDelegate {
             ctx.stroke(editor.frame.insetBy(dx: -4, dy: -3))
             ctx.setLineDash(phase: 0, lengths: [])
         }
-        if overlay.mode == .recognizeText, choosing {
-            drawHint("Drag to select the text to recognize, or click to pick a window · Esc Cancel")
+        if choosing {
+            switch overlay.mode {
+            case .capture: break
+            case .recognizeText: drawHint("Drag to select the text to recognize, or click to pick a window · Esc Cancel")
+            case .record: drawHint("Drag to select the area to record, or click to pick a window · Esc Cancel")
+            }
         }
         let showsMagnifier: Bool
         switch drag {
@@ -798,7 +820,8 @@ final class ScreenshotToolbar: NSView {
     private var undoButton: NSButton?
     private var style = ScreenshotStyle()
 
-    init() {
+    /// With `recording`, only cancel and start recording; otherwise the marking tools and every action.
+    init(recording: Bool = false) {
         super.init(frame: .zero)
         background.material = .popover
         background.blendingMode = .withinWindow
@@ -807,35 +830,17 @@ final class ScreenshotToolbar: NSView {
         background.translatesAutoresizingMaskIntoConstraints = false
         addSubview(background)
 
-        for tool in ScreenshotTool.allCases {
-            let button = Self.button(symbol: tool.symbolName, tip: tool.title, target: self, action: #selector(toolClicked(_:)))
-            toolButtons.append((tool, button))
-            mainRow.addArrangedSubview(button)
+        if recording {
+            let cancel = Self.button(symbol: "xmark", tip: "Cancel Esc", target: self, action: #selector(actionClicked(_:)))
+            cancel.tag = Self.tag(for: .cancel)
+            mainRow.addArrangedSubview(cancel)
+            let start = Self.button(symbol: "record.circle", tip: "Start recording ⏎", target: self, action: #selector(actionClicked(_:)))
+            start.tag = Self.tag(for: .record)
+            start.contentTintColor = .systemRed
+            mainRow.addArrangedSubview(start)
+        } else {
+            addCaptureButtons()
         }
-        mainRow.addArrangedSubview(Self.separator())
-        let undo = Self.button(symbol: "arrow.uturn.backward", tip: "Undo ⌘Z", target: self, action: #selector(undoClicked))
-        undoButton = undo
-        mainRow.addArrangedSubview(undo)
-        mainRow.addArrangedSubview(Self.separator())
-        let actions: [(String, String, ScreenshotOverlay.Action)] = [
-            ("text.viewfinder", "Recognize text and copy", .recognizeText),
-            ("pin", "Pin to screen", .pin),
-            ("square.and.arrow.down", "Save ⌘S", .save),
-        ]
-        for (symbol, tip, action) in actions {
-            let button = Self.button(symbol: symbol, tip: tip, target: self, action: #selector(actionClicked(_:)))
-            button.tag = Self.tag(for: action)
-            mainRow.addArrangedSubview(button)
-        }
-        mainRow.addArrangedSubview(Self.separator())
-        let cancel = Self.button(symbol: "xmark", tip: "Cancel Esc", target: self, action: #selector(actionClicked(_:)))
-        cancel.tag = Self.tag(for: .cancel)
-        cancel.contentTintColor = .systemRed
-        mainRow.addArrangedSubview(cancel)
-        let done = Self.button(symbol: "checkmark", tip: "Copy ⏎ / ⌘C", target: self, action: #selector(actionClicked(_:)))
-        done.tag = Self.tag(for: .copy)
-        done.contentTintColor = .systemGreen
-        mainRow.addArrangedSubview(done)
 
         for size in ScreenshotStrokeSize.allCases {
             let button = Self.button(image: Self.dotImage(diameter: 3 + CGFloat(sizeIndex(size)) * 4), tip: "Size", target: self, action: #selector(sizeClicked(_:)))
@@ -879,6 +884,39 @@ final class ScreenshotToolbar: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not used")
+    }
+
+    private func addCaptureButtons() {
+        for tool in ScreenshotTool.allCases {
+            let button = Self.button(symbol: tool.symbolName, tip: tool.title, target: self, action: #selector(toolClicked(_:)))
+            toolButtons.append((tool, button))
+            mainRow.addArrangedSubview(button)
+        }
+        mainRow.addArrangedSubview(Self.separator())
+        let undo = Self.button(symbol: "arrow.uturn.backward", tip: "Undo ⌘Z", target: self, action: #selector(undoClicked))
+        undoButton = undo
+        mainRow.addArrangedSubview(undo)
+        mainRow.addArrangedSubview(Self.separator())
+        let actions: [(String, String, ScreenshotOverlay.Action)] = [
+            ("text.viewfinder", "Recognize text and copy", .recognizeText),
+            ("pin", "Pin to screen", .pin),
+            ("record.circle", "Record this area (marks are not recorded)", .record),
+            ("square.and.arrow.down", "Save ⌘S", .save),
+        ]
+        for (symbol, tip, action) in actions {
+            let button = Self.button(symbol: symbol, tip: tip, target: self, action: #selector(actionClicked(_:)))
+            button.tag = Self.tag(for: action)
+            mainRow.addArrangedSubview(button)
+        }
+        mainRow.addArrangedSubview(Self.separator())
+        let cancel = Self.button(symbol: "xmark", tip: "Cancel Esc", target: self, action: #selector(actionClicked(_:)))
+        cancel.tag = Self.tag(for: .cancel)
+        cancel.contentTintColor = .systemRed
+        mainRow.addArrangedSubview(cancel)
+        let done = Self.button(symbol: "checkmark", tip: "Copy ⏎ / ⌘C", target: self, action: #selector(actionClicked(_:)))
+        done.tag = Self.tag(for: .copy)
+        done.contentTintColor = .systemGreen
+        mainRow.addArrangedSubview(done)
     }
 
     /// Clicks on the toolbar must not reach the overlay under it.
@@ -944,7 +982,7 @@ final class ScreenshotToolbar: NSView {
         onStyle?(next)
     }
 
-    private static let actionOrder: [ScreenshotOverlay.Action] = [.copy, .save, .pin, .recognizeText, .cancel]
+    private static let actionOrder: [ScreenshotOverlay.Action] = [.copy, .save, .pin, .recognizeText, .record, .cancel]
 
     private static func tag(for action: ScreenshotOverlay.Action) -> Int {
         (actionOrder.firstIndex(of: action) ?? 0) + 1
