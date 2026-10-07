@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 
 /// The eight grips on a selection's border.
 enum ScreenshotHandle: CaseIterable {
@@ -128,5 +129,51 @@ enum ScreenshotGeometry {
             return CGPoint(x: x, y: selection.maxY + gap)
         }
         return CGPoint(x: x + gap, y: selection.maxY - gap - size.height)
+    }
+}
+
+/// Where a recording comes from on its display and how large it is encoded.
+enum ScreenRecordingGeometry {
+    /// The H.264 encoder takes frames up to 4K UHD by area and 4096 pixels on the long side reliably.
+    static let maxPixels = 3840 * 2160
+    static let maxSide = 4096
+
+    /// `area` (global Cocoa coordinates) on the screen with frame `screenFrame`, as ScreenCaptureKit's
+    /// source rectangle (display points, origin at the top left) and its size in pixels. The area is
+    /// trimmed to the screen and to an even number of pixels each way; nil when under 2×2 pixels.
+    static func source(of area: CGRect, screenFrame: CGRect, scale: CGFloat) -> (rect: CGRect, pixelWidth: Int, pixelHeight: Int)? {
+        let local = area.offsetBy(dx: -screenFrame.minX, dy: -screenFrame.minY)
+            .intersection(CGRect(origin: .zero, size: screenFrame.size))
+        guard !local.isNull else {
+            return nil
+        }
+        let left = Int((local.minX * scale).rounded())
+        let right = Int((local.maxX * scale).rounded())
+        let top = Int(((screenFrame.height - local.maxY) * scale).rounded())
+        let bottom = Int(((screenFrame.height - local.minY) * scale).rounded())
+        let width = (right - left) / 2 * 2
+        let height = (bottom - top) / 2 * 2
+        guard width >= 2, height >= 2 else {
+            return nil
+        }
+        let rect = CGRect(x: CGFloat(left) / scale, y: CGFloat(top) / scale, width: CGFloat(width) / scale, height: CGFloat(height) / scale)
+        return (rect, width, height)
+    }
+
+    /// The encoded size: the source's pixels, scaled down to fit the encoder, both sides even.
+    static func outputSize(pixelWidth: Int, pixelHeight: Int) -> (width: Int, height: Int) {
+        let w = Double(pixelWidth), h = Double(pixelHeight)
+        let factor = min(1, (Double(maxPixels) / (w * h)).squareRoot(), Double(maxSide) / max(w, h))
+        let even = { (value: Double) in max(2, Int(value * factor) / 2 * 2) }
+        return (even(w), even(h))
+    }
+
+    /// "0:07", "12:34", "1:02:03".
+    static func elapsedText(_ seconds: TimeInterval) -> String {
+        let total = max(0, Int(seconds))
+        let (hours, minutes, secs) = (total / 3600, total / 60 % 60, total % 60)
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, secs)
+            : String(format: "%d:%02d", minutes, secs)
     }
 }

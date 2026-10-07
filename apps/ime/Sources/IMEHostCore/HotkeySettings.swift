@@ -3,7 +3,7 @@ import Foundation
 /// Every hotkey the input method has, with the defaults key each one is stored under. The settings
 /// structs of each feature read the same keys, so a change here applies where the feature reads it.
 enum HotkeyAction: CaseIterable {
-    case translate, rewrite, read, screenshot, screenshotOCR, clipboard
+    case translate, rewrite, read, screenshot, screenshotOCR, screenRecording, clipboard
 
     var title: String {
         switch self {
@@ -12,6 +12,7 @@ enum HotkeyAction: CaseIterable {
         case .read: return "Read text selected elsewhere"
         case .screenshot: return "Screenshot and annotate"
         case .screenshotOCR: return "Screenshot OCR"
+        case .screenRecording: return "Record screen"
         case .clipboard: return "Clipboard history"
         }
     }
@@ -23,6 +24,7 @@ enum HotkeyAction: CaseIterable {
         case .read: return AIAssistSettings.readHotkeyKey
         case .screenshot: return ScreenshotSettings.hotkeyKey
         case .screenshotOCR: return ScreenshotSettings.ocrHotkeyKey
+        case .screenRecording: return ScreenshotSettings.recordHotkeyKey
         case .clipboard: return ClipboardSettings.hotkeyKey
         }
     }
@@ -34,6 +36,7 @@ enum HotkeyAction: CaseIterable {
         case .read: return AIAssistSettings.defaultReadHotkey
         case .screenshot: return ScreenshotSettings.defaultHotkey
         case .screenshotOCR: return ScreenshotSettings.defaultOCRHotkey
+        case .screenRecording: return ScreenshotSettings.defaultRecordHotkey
         case .clipboard: return ClipboardSettings.defaultHotkey
         }
     }

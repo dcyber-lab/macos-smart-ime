@@ -263,5 +263,79 @@ final class ScreenshotSettingsTests: XCTestCase {
         XCTAssertEqual(ScreenshotSettings.fileName(at: date) { _ in false }, "Screenshot 2026-10-05 09.03.07.png")
         let taken: Set = ["Screenshot 2026-10-05 09.03.07.png", "Screenshot 2026-10-05 09.03.07 (2).png"]
         XCTAssertEqual(ScreenshotSettings.fileName(at: date) { taken.contains($0) }, "Screenshot 2026-10-05 09.03.07 (3).png")
+        XCTAssertEqual(
+            ScreenshotSettings.fileName(at: date, prefix: "Screen Recording", fileExtension: "mp4") { _ in false },
+            "Screen Recording 2026-10-05 09.03.07.mp4"
+        )
+    }
+
+    func testRecordingDefaultsAndFrameRate() {
+        var settings = ScreenshotSettings(defaults: defaults, systemDefaults: system)
+        XCTAssertEqual(settings.recordHotkey.displayString, "⌃⌥⇧A")
+        XCTAssertEqual(settings.frameRate, 30)
+        ScreenshotSettings.setFrameRate(60, defaults: defaults)
+        settings = ScreenshotSettings(defaults: defaults, systemDefaults: system)
+        XCTAssertEqual(settings.frameRate, 60)
+        defaults.set(24, forKey: ScreenshotSettings.frameRateKey)
+        XCTAssertEqual(ScreenshotSettings(defaults: defaults, systemDefaults: system).frameRate, 30)
+    }
+}
+
+final class ScreenRecordingGeometryTests: XCTestCase {
+    func testSourceIsTopLeftInDisplayPoints() throws {
+        let screen = CGRect(x: 0, y: 0, width: 1000, height: 600)
+        let source = try XCTUnwrap(ScreenRecordingGeometry.source(of: CGRect(x: 100, y: 50, width: 300, height: 200), screenFrame: screen, scale: 2))
+        XCTAssertEqual(source.rect, CGRect(x: 100, y: 350, width: 300, height: 200))
+        XCTAssertEqual(source.pixelWidth, 600)
+        XCTAssertEqual(source.pixelHeight, 400)
+    }
+
+    func testSourceIsRelativeToItsScreen() throws {
+        // A second display to the right of and above the first one, in global Cocoa coordinates.
+        let screen = CGRect(x: 1000, y: 200, width: 800, height: 500)
+        let source = try XCTUnwrap(ScreenRecordingGeometry.source(of: CGRect(x: 1100, y: 300, width: 100, height: 100), screenFrame: screen, scale: 1))
+        XCTAssertEqual(source.rect, CGRect(x: 100, y: 300, width: 100, height: 100))
+    }
+
+    func testSourceIsTrimmedToEvenPixelsAndToTheScreen() throws {
+        let screen = CGRect(x: 0, y: 0, width: 1000, height: 600)
+        let odd = try XCTUnwrap(ScreenRecordingGeometry.source(of: CGRect(x: 10, y: 10, width: 101, height: 51), screenFrame: screen, scale: 1))
+        XCTAssertEqual(odd.pixelWidth, 100)
+        XCTAssertEqual(odd.pixelHeight, 50)
+        XCTAssertEqual(odd.rect.size, CGSize(width: 100, height: 50))
+        let outside = try XCTUnwrap(ScreenRecordingGeometry.source(of: CGRect(x: 900, y: -20, width: 300, height: 120), screenFrame: screen, scale: 1))
+        XCTAssertEqual(outside.rect, CGRect(x: 900, y: 500, width: 100, height: 100))
+        XCTAssertNil(ScreenRecordingGeometry.source(of: CGRect(x: 5, y: 5, width: 1, height: 40), screenFrame: screen, scale: 1))
+        XCTAssertNil(ScreenRecordingGeometry.source(of: CGRect(x: 2000, y: 5, width: 100, height: 40), screenFrame: screen, scale: 1))
+    }
+
+    func testOutputKeepsSizeUnderTheEncoderLimit() {
+        XCTAssertTrue(ScreenRecordingGeometry.outputSize(pixelWidth: 1920, pixelHeight: 1080) == (1920, 1080))
+        XCTAssertTrue(ScreenRecordingGeometry.outputSize(pixelWidth: 3840, pixelHeight: 2160) == (3840, 2160))
+    }
+
+    func testOutputScalesLargeScreensDownToEvenSizes() {
+        let fiveK = ScreenRecordingGeometry.outputSize(pixelWidth: 5120, pixelHeight: 2880)
+        XCTAssertLessThanOrEqual(fiveK.width * fiveK.height, ScreenRecordingGeometry.maxPixels)
+        XCTAssertEqual(Double(fiveK.width) / Double(fiveK.height), 16.0 / 9.0, accuracy: 0.01)
+        let wide = ScreenRecordingGeometry.outputSize(pixelWidth: 6880, pixelHeight: 1000)
+        XCTAssertLessThanOrEqual(wide.width, ScreenRecordingGeometry.maxSide)
+        for size in [fiveK, wide] {
+            XCTAssertEqual(size.width % 2, 0)
+            XCTAssertEqual(size.height % 2, 0)
+        }
+    }
+
+    func testElapsedText() {
+        XCTAssertEqual(ScreenRecordingGeometry.elapsedText(7.9), "0:07")
+        XCTAssertEqual(ScreenRecordingGeometry.elapsedText(754), "12:34")
+        XCTAssertEqual(ScreenRecordingGeometry.elapsedText(3723), "1:02:03")
+        XCTAssertEqual(ScreenRecordingGeometry.elapsedText(-1), "0:00")
+    }
+
+    func testBitRateScalesWithinBounds() {
+        XCTAssertEqual(ScreenRecorder.bitRate(width: 1920, height: 1080, frameRate: 30), 4_976_640)
+        XCTAssertEqual(ScreenRecorder.bitRate(width: 200, height: 100, frameRate: 15), 2_000_000)
+        XCTAssertEqual(ScreenRecorder.bitRate(width: 3840, height: 2160, frameRate: 60), 24_000_000)
     }
 }

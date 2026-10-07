@@ -178,6 +178,11 @@ final class SettingsModel: ObservableObject {
         set { ScreenshotSettings.setEnabled(newValue, defaults: defaults) }
     }
 
+    var recordingFrameRate: Int {
+        get { ScreenshotSettings(defaults: defaults, systemDefaults: nil).frameRate }
+        set { ScreenshotSettings.setFrameRate(newValue, defaults: defaults) }
+    }
+
     var screenshotFolder: String {
         FileManager.default.displayName(atPath: ScreenshotSettings(defaults: defaults).saveFolder.path)
     }
@@ -378,10 +383,18 @@ private struct ScreenshotPane: View {
         Form {
             Section {
                 Toggle(isOn: $model.isScreenshotEnabled) {
-                    SettingLabel("Screenshot shortcut", "Works in any app, regardless of the current input method. Set the keys in Shortcuts")
+                    SettingLabel("Screenshot and recording shortcuts", "Work in any app, regardless of the current input method. Set the keys in Shortcuts")
                 }
             } footer: {
-                Text("Drag to select an area, or click to pick a whole window. Then annotate, copy (⏎), save (⌘S), pin to the screen, or recognize text; right-click to reselect, Esc to cancel. Text recognition runs on this Mac.")
+                Text("Drag to select an area, or click to pick a whole window. Then annotate, copy (⏎), save (⌘S), pin to the screen, recognize text, or record it; right-click to reselect, Esc to cancel. Text recognition runs on this Mac.")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                Picker("Recording frame rate", selection: $model.recordingFrameRate) {
+                    ForEach(ScreenshotSettings.frameRates, id: \.self) { Text("\($0) fps").tag($0) }
+                }
+            } footer: {
+                Text("Recordings are saved as MP4 (H.264, no sound) to the folder below and copied, ready to paste. Stop with the stop button or the recording shortcut again.")
                     .foregroundStyle(.secondary)
             }
             Section {
