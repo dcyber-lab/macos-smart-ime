@@ -4,17 +4,45 @@ import Foundation
 import XCTest
 @testable import IMEHostCore
 
+/// Rewrites run off the main actor, and the chip starts one per offer, so several can run at once. The
+/// state is behind a lock: unguarded, concurrent appends to `calls` (three offers in a row in
+/// `testOffersAreAtLeastFiveSecondsApartPerApp`) corrupted memory and crashed the next test now and then
+/// (signal 11 in CI; Thread Sanitizer reports the race).
 private final class FakeRewriter: AIRewriter, @unchecked Sendable {
-    var reply: Result<String, AIError> = .success("This feature ships next week.")
-    var delay: TimeInterval = 0
-    private(set) var calls: [String] = []
+    private let lock = NSLock()
+    private var storedReply: Result<String, AIError> = .success("This feature ships next week.")
+    private var storedDelay: TimeInterval = 0
+    private var storedCalls: [String] = []
+
+    var reply: Result<String, AIError> {
+        get { locked { storedReply } }
+        set { locked { storedReply = newValue } }
+    }
+
+    var delay: TimeInterval {
+        get { locked { storedDelay } }
+        set { locked { storedDelay = newValue } }
+    }
+
+    var calls: [String] {
+        locked { storedCalls }
+    }
 
     func rewrite(_ text: String, action: AIAction) async throws -> String {
-        calls.append(text)
+        let delay = locked {
+            storedCalls.append(text)
+            return storedDelay
+        }
         if delay > 0 {
             try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
         }
         return try reply.get()
+    }
+
+    private func locked<T>(_ body: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
     }
 }
 
