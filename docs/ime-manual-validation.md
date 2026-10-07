@@ -277,7 +277,20 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 8. Press ⌃⌥O, drag over a paragraph with Chinese and English: the overlay closes and the toast says 已复制识别的文字（N 字）. Paste: the lines read in order
 9. With two displays, press ⌃⌥A and select on the second display; with a full-screen app in front, press ⌃⌥A: the overlay covers it
 10. Press Esc during each step: the overlay closes and the app you were in has the keyboard again
-11. Turn Screenshot shortcut off in Settings… › Screenshot: ⌃⌥A and ⌃⌥O reach the app in front again
+11. Turn Screenshot shortcut off in Settings… › Screenshot: ⌃⌥A, ⌃⌥O and ⌃⌥⇧A reach the app in front again
+
+## Screen Recording Checklist
+
+1. Press ⌃⌥⇧A: the overlay says to select the area to record. Click a window: the toolbar shows only cancel and a red record button
+2. Press Return: the overlay closes, the app you were in has the keyboard, a red frame surrounds the area, and the bar below it counts up
+3. Type, scroll, and move windows in the area for about 10 seconds, then leave the screen still for 5 seconds
+4. Click the bar's stop button: the toast says the file was saved and copied. The file `Screen Recording <date time>.mp4` is in the save folder; paste it into a chat or Finder
+5. Play it in QuickTime: about 15 seconds, the pointer is visible, the frame and the bar are not, the still ending is kept, the size matches the area
+6. Record again and stop with ⌃⌥⇧A; while recording, press ⌃⌥A: only a toast, no overlay
+7. Press ⌃⌥A, select an area, click the record button in the toolbar: the same area is recorded
+8. Record the whole screen on a Retina display: the video is at full pixel size (scaled to 4K at most), and the bar sits inside the area but is not in the video
+9. Settings… › Screenshot › Recording frame rate 60: a new recording plays at 60 fps (QuickTime › Window › Show Movie Inspector)
+10. Unplug the second display while recording on it: recording stops, the toast says why, and what was recorded plays
 
 ## Clipboard History Checklist
 

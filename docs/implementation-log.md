@@ -1,5 +1,21 @@
 # Implementation Log
 
+## 2026-10-07
+
+### Screen recording (⌃⌥⇧A)
+
+- The user asked for screen recording next to screenshots. Options weighed: `SCStream` + `AVAssetWriter` (macOS 14, chosen), `SCRecordingOutput` (less code, macOS 15 only, no pause), `screencapture -v` (no area control). First version: one area, video only, MP4; sound, pause and GIF are left for later.
+- Entry: ⌃⌥⇧A (`ScreenRecordingHotkey`, `HotkeyAction.screenRecording`, `GlobalHotkeys.ID.screenRecording`) opens the overlay in a new `.record` mode, or the new record button in the ⌃⌥A toolbar. Pressing ⌃⌥⇧A again stops; ⌃⌥A and ⌃⌥O only toast while recording.
+- New: `ScreenRecorder` (stream → writer, private queue), `ScreenRecordingSession` (frame window, time-and-stop bar, timer), `ScreenRecordingGeometry` (source rect, even sizes, 4K cap, elapsed text). `ScreenshotSettings` gains the hotkey, `ScreenRecordingFrameRate` (15/30/60) and a file-name prefix and extension; the 截图 pane gains the frame rate picker.
+- Output: `Screen Recording <date time>.mp4` in the screenshot save folder, file URL copied to the pasteboard. The frame and the bar are excluded from the video by window ID.
+- Tests: 8 new cases (source rect across screens, even trimming, encoder cap, elapsed text, bit rate, settings, file name). 233 host tests pass locally through the harness.
+- Checked outside the tests:
+  - This terminal has no Screen Recording access (`SCStreamErrorDomain -3801`), so the ScreenCaptureKit half was not run.
+  - The writer half was driven with synthetic 420v frames through `ScreenRecorder.append`. 1282×718 and 3840×2160 both encode. 20 frames over 0.63 s plus a 1 s still ending gave a 1.68 s file with 20 samples; out-of-order and idle frames were dropped; stopping with no frames throws and leaves no file.
+  - A process killed after 5 s of frames left a playable file with the first 4 s (120 frames), from the 2-second fragments.
+  - The record toolbar, the new capture toolbar button, and the bar were rendered offscreen. The bar first measured 21 pt tall (a horizontal stack ignores vertical insets); it now has a fixed 32 pt height.
+- Not verified yet: a live recording in the installed input method (Screen Recording Checklist), multiple displays, and whether ScreenCaptureKit finds the frame and bar windows right after they are ordered in (they sit outside the area unless the area fills the screen).
+
 ## 2026-10-05
 
 ### Clipboard history panel (⌃⌥V)
