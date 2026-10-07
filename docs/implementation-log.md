@@ -16,6 +16,13 @@
   - The record toolbar, the new capture toolbar button, and the bar were rendered offscreen. The bar first measured 21 pt tall (a horizontal stack ignores vertical insets); it now has a fixed 32 pt height.
 - Not verified yet: a live recording in the installed input method (Screen Recording Checklist), multiple displays, and whether ScreenCaptureKit finds the frame and bar windows right after they are ordered in (they sit outside the area unless the area fills the screen).
 
+### Fix: recordings stopped after a few seconds
+
+- Live finding by the user with the CI build of PR #25: recordings ended on their own after 4–16 s. The event log said only `cannotWrite("The operation could not be completed")`; the unified log showed `MovieHeaderMaker signalled err=-16341` (AVFoundation -11800) when the writer flushed a 2-second fragment.
+- Reproduced with synthetic frames: a fragmented writer fails once frames change their color tags after the first fragment (the file header) is written; a still screen, gaps, or frame durations do not trigger it. The same frames without fragments give a playable file with one BT.709 format description.
+- `ScreenRecorder` no longer sets `movieFragmentInterval`, so a recording cut off by a crash is lost (the earlier kill test no longer applies). Writer errors now carry their domain, code, and underlying status (`ScreenRecorder.describe`).
+- `ScreenRecorderTests` (2 cases) drive the writer with ScreenCaptureKit-shaped frames: color tags change at 2.5 s in a 5 s live-paced stream (it failed with fragments, passes now), and idle frames plus a stop with no frames. 235 host tests pass locally.
+
 ## 2026-10-05
 
 ### Clipboard history panel (⌃⌥V)
