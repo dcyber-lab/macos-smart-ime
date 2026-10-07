@@ -1,5 +1,14 @@
 # Implementation Log
 
+## 2026-10-07
+
+### Flaky CI tests
+
+- CI on the screen recording PR (#25) failed four times out of six on two tests that the PR does not touch.
+- `xctest` crashed with signal 11 at `AIAssistChipTests.testQualifyingSentences`, both times right after `testOffersAreAtLeastFiveSecondsApartPerApp`. That test makes three offers in a row; each starts a rewrite off the main actor on the same `FakeRewriter`, which appended to `calls` without a lock. Thread Sanitizer (harness built with `-sanitize=thread`) reported the race in `FakeRewriter.rewrite`. Its state is now behind an `NSLock`; with that, all 225 host tests and 120 data tests run clean under Thread Sanitizer.
+- `EnglishLexiconTests.testBundledLexiconLoadsQuickly` measured wall time against 1 s and failed on CI at 1.05 and 1.6 s; this machine takes 0.33 s. It now measures the thread's CPU time against 3 s, which still catches a loader many times slower.
+- Not verified: how often CI passes now; the crash was intermittent, so a few green runs are the evidence to look for.
+
 ## 2026-10-05
 
 ### Clipboard history panel (⌃⌥V)
