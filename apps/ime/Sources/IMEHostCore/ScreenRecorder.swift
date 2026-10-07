@@ -30,8 +30,9 @@ struct ScreenRecordingRequest: Sendable, Equatable {
 }
 
 /// Records one display area to an MP4 file: ScreenCaptureKit delivers frames, AVAssetWriter encodes them
-/// with H.264. Frames are handled on a private queue and never touch the main actor. The file is written
-/// in fragments every 2 seconds, so what was recorded stays playable if the process ends mid-recording.
+/// with H.264. Frames are handled on a private queue and never touch the main actor. The file is not
+/// written in fragments: once a fragmented file's header is out, frames whose color tags change (as live
+/// frames do) fail the next fragment (AVFoundation -11800, MovieHeaderMaker -16341).
 final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     /// Called once, on a private queue, when the stream stops on its own (display gone, access revoked)
     /// or the file cannot be written. `stop()` still has to be called to finish the file.
@@ -58,9 +59,8 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
         do {
             writer = try AVAssetWriter(outputURL: request.url, fileType: .mp4)
         } catch {
-            throw ScreenRecorderError.cannotWrite(error.localizedDescription)
+            throw ScreenRecorderError.cannotWrite(Self.describe(error))
         }
-        writer.movieFragmentInterval = CMTime(seconds: 2, preferredTimescale: 600)
         input = AVAssetWriterInput(mediaType: .video, outputSettings: Self.videoSettings(for: request))
         input.expectsMediaDataInRealTime = true
         guard writer.canAdd(input) else {
@@ -68,7 +68,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
         }
         writer.add(input)
         guard writer.startWriting() else {
-            throw ScreenRecorderError.cannotWrite(writer.error?.localizedDescription ?? "unknown error")
+            throw ScreenRecorderError.cannotWrite(Self.describe(writer.error))
         }
         super.init()
     }
@@ -151,7 +151,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
             let error = writer.error
             writer.cancelWriting()
             try? FileManager.default.removeItem(at: request.url)
-            continuation.resume(throwing: error.map { ScreenRecorderError.cannotWrite($0.localizedDescription) } ?? ScreenRecorderError.noFrames)
+            continuation.resume(throwing: error.map { ScreenRecorderError.cannotWrite(Self.describe($0)) } ?? ScreenRecorderError.noFrames)
             return
         }
         input.markAsFinished()
@@ -163,7 +163,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
             if self.writer.status == .completed {
                 continuation.resume()
             } else {
-                continuation.resume(throwing: ScreenRecorderError.cannotWrite(self.writer.error?.localizedDescription ?? "unknown error"))
+                continuation.resume(throwing: ScreenRecorderError.cannotWrite(Self.describe(self.writer.error)))
             }
         }
     }
@@ -182,7 +182,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
             return
         }
         guard writer.status == .writing else {
-            interrupt(ScreenRecorderError.cannotWrite(writer.error?.localizedDescription ?? "unknown error"))
+            interrupt(ScreenRecorderError.cannotWrite(Self.describe(writer.error)))
             return
         }
         let time = sampleBuffer.presentationTimeStamp
@@ -225,6 +225,19 @@ final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @uncheck
             return false
         }
         return status == .complete
+    }
+
+    /// The message with its domain and code, and the underlying status, which says more than AVFoundation's
+    /// "The operation could not be completed".
+    static func describe(_ error: Error?) -> String {
+        guard let error = error as NSError? else {
+            return "unknown error"
+        }
+        var text = "\(error.localizedDescription) (\(error.domain) \(error.code)"
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            text += ", \(underlying.domain) \(underlying.code)"
+        }
+        return text + ")"
     }
 
     private static func hostTime() -> CMTime {
