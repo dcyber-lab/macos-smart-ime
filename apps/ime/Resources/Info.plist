@@ -28,6 +28,8 @@
 	<string>IMEHostCore.IMEInputController</string>
 	<key>LSUIElement</key>
 	<string>1</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>LinguaType records your voice into screen recordings when Record microphone is on in Settings › Screenshot.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>TICapsLockLanguageSwitchCapable</key>

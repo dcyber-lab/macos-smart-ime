@@ -40,6 +40,45 @@ final class ScreenRecorderTests: XCTestCase {
         let size = try await track.load(.naturalSize)
         XCTAssertEqual(size, CGSize(width: 320, height: 180))
         XCTAssertGreaterThan(recorder.frameCount, 75)
+        let audioTracks = try await AVURLAsset(url: url).loadTracks(withMediaType: .audio)
+        XCTAssertTrue(audioTracks.isEmpty, "no sound unless asked for")
+    }
+
+    /// A meeting tone (system audio, 48 kHz stereo) and a voice tone (a headset microphone, 24 kHz mono)
+    /// end up summed in one AAC track. The screen goes still halfway (no new frames, as with a shared
+    /// slide), and the sound keeps going to the end.
+    func testSoundIsMixedIntoOneAACTrack() async throws {
+        var request = request(width: 320, height: 180)
+        request.systemAudio = true
+        request.microphone = true
+        let recorder = try ScreenRecorder(request: request)
+        let start = CMClockGetTime(CMClockGetHostTimeClock())
+        recorder.append(Self.frame(width: 320, height: 180, time: start))
+        for index in 0..<60 {
+            if index > 0, index < 30 {
+                recorder.append(Self.frame(width: 320, height: 180, time: CMClockGetTime(CMClockGetHostTimeClock())))
+            }
+            let time = CMTimeAdd(start, CMTime(value: CMTimeValue(index), timescale: 30))
+            recorder.appendAudio(Self.tone(hertz: 440, rate: 48_000, channels: 2, frames: 1_600, offset: index * 1_600, time: time), from: .system)
+            recorder.appendAudio(Self.tone(hertz: 300, rate: 24_000, channels: 1, frames: 800, offset: index * 800, time: time), from: .microphone)
+            try await Task.sleep(nanoseconds: 33_000_000)
+        }
+        let ending = try await recorder.stop()
+        XCTAssertEqual(ending, .complete)
+        XCTAssertGreaterThan(recorder.audioFrameCount, 48_000 * 19 / 10)
+
+        let asset = AVURLAsset(url: url)
+        let tracks = try await asset.loadTracks(withMediaType: .audio)
+        XCTAssertEqual(tracks.count, 1)
+        let track = try XCTUnwrap(tracks.first)
+        let formats = try await track.load(.formatDescriptions)
+        XCTAssertEqual(formats.first?.mediaSubType, .mpeg4AAC)
+        let range = try await track.load(.timeRange)
+        XCTAssertEqual(range.duration.seconds, 2, accuracy: 0.2)
+        // Each tone peaks at 0.25; only their sum gets above 0.3.
+        let peak = try Self.peak(of: track, in: asset)
+        XCTAssertGreaterThan(peak, 0.3)
+        XCTAssertLessThan(peak, 0.6)
     }
 
     /// After a write error the file is kept only if it plays.
@@ -59,6 +98,45 @@ final class ScreenRecorderTests: XCTestCase {
         } catch {
             XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
         }
+    }
+
+    /// A sine at a quarter of full scale, shaped like ScreenCaptureKit's audio (float, non-interleaved).
+    private static func tone(hertz: Double, rate: Double, channels: AVAudioChannelCount, frames: Int, offset: Int, time: CMTime) -> CMSampleBuffer {
+        let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: rate, channels: channels, interleaved: false)!
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames))!
+        buffer.frameLength = AVAudioFrameCount(frames)
+        for channel in 0..<Int(channels) {
+            for frame in 0..<frames {
+                buffer.floatChannelData![channel][frame] = Float(sin(Double(offset + frame) * 2 * .pi * hertz / rate) * 0.25)
+            }
+        }
+        return ScreenRecordingAudio.sampleBuffer(buffer, at: time)!
+    }
+
+    /// The loudest sample of the decoded track.
+    private static func peak(of track: AVAssetTrack, in asset: AVAsset) throws -> Float {
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false,
+        ])
+        reader.add(output)
+        XCTAssertTrue(reader.startReading())
+        var peak: Float = 0
+        while let sample = output.copyNextSampleBuffer() {
+            guard let block = sample.dataBuffer, let data = try? block.dataBytes() else {
+                continue
+            }
+            data.withUnsafeBytes { raw in
+                for value in raw.bindMemory(to: Float.self) {
+                    peak = max(peak, abs(value))
+                }
+            }
+        }
+        return peak
     }
 
     private func request(width: Int, height: Int) -> ScreenRecordingRequest {
