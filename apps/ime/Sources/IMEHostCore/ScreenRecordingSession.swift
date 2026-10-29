@@ -9,6 +9,7 @@ final class ScreenRecordingSession {
         let duration: TimeInterval
         let width: Int
         let height: Int
+        let audioSources: [ScreenRecordingAudio.Source]
         /// Why the recording stopped on its own, if it did.
         let interruption: String?
     }
@@ -26,8 +27,10 @@ final class ScreenRecordingSession {
 
     /// Shows the frame and the controls, then starts capturing `area` (global Cocoa coordinates, on one
     /// screen). Throws when the area is too small, its display is gone, or the file cannot be written.
+    /// `microphoneBlocked` marks the bar when the microphone was asked for but cannot be recorded.
     static func start(
-        area: CGRect, frameRate: Int, url: URL, stopHint: String,
+        area: CGRect, frameRate: Int, systemAudio: Bool, microphone: Bool, microphoneBlocked: Bool,
+        url: URL, stopHint: String,
         onFinish: @escaping @MainActor (Result<Outcome, Error>) -> Void
     ) async throws -> ScreenRecordingSession {
         let center = CGPoint(x: area.midX, y: area.midY)
@@ -42,7 +45,10 @@ final class ScreenRecordingSession {
             width: source.rect.width, height: source.rect.height
         )
         let frameWindow = ScreenRecordingFrameWindow(around: recorded)
-        let controls = ScreenRecordingControls(stopHint: stopHint)
+        let controls = ScreenRecordingControls(
+            stopHint: stopHint, systemAudio: systemAudio,
+            microphone: microphoneBlocked ? .blocked : (microphone ? .on : .off)
+        )
         controls.place(near: frameWindow.frame, on: screen.frame)
         frameWindow.orderFrontRegardless()
         controls.orderFrontRegardless()
@@ -51,7 +57,7 @@ final class ScreenRecordingSession {
             displayID: number.uint32Value, sourceRect: source.rect, width: output.width, height: output.height,
             frameRate: frameRate,
             excludedWindowIDs: [CGWindowID(frameWindow.windowNumber), CGWindowID(controls.windowNumber)],
-            url: url
+            url: url, systemAudio: systemAudio, microphone: microphone
         )
         let session = ScreenRecordingSession(request: request, frameWindow: frameWindow, controls: controls, onFinish: onFinish)
         do {
@@ -124,7 +130,7 @@ final class ScreenRecordingSession {
                 }
                 self.onFinish(.success(Outcome(
                     url: self.url, duration: duration, width: self.request.width, height: self.request.height,
-                    interruption: self.interruption
+                    audioSources: self.request.audioSources, interruption: self.interruption
                 )))
             } catch {
                 self.onFinish(.failure(error))
@@ -162,13 +168,20 @@ final class ScreenRecordingFrameWindow: NSWindow {
     }
 }
 
-/// The elapsed time and a stop button, below the recorded area (above it, or inside it, when there is
-/// no room). Drag it anywhere; it never takes focus from the app being recorded.
+/// The elapsed time, what sound is recorded, and a stop button, below the recorded area (above it, or
+/// inside it, when there is no room). Drag it anywhere; it never takes focus from the app being recorded.
 final class ScreenRecordingControls: NSPanel {
+    enum Microphone {
+        case off
+        case on
+        /// Asked for, but there is no access (or no macOS 15).
+        case blocked
+    }
+
     var onStop: (() -> Void)?
     private let timeLabel = NSTextField(labelWithString: "0:00")
 
-    init(stopHint: String) {
+    init(stopHint: String, systemAudio: Bool = false, microphone: Microphone = .off) {
         super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         level = .statusBar
         isOpaque = false
@@ -202,7 +215,20 @@ final class ScreenRecordingControls: NSPanel {
         stop.target = self
         stop.action = #selector(stopClicked)
 
-        let row = NSStackView(views: [dot, timeLabel, stop])
+        var views: [NSView] = [dot, timeLabel]
+        if systemAudio {
+            views.append(Self.symbol("speaker.wave.2.fill", tint: .secondaryLabelColor, tip: "Recording system audio"))
+        }
+        switch microphone {
+        case .off:
+            break
+        case .on:
+            views.append(Self.symbol("mic.fill", tint: .secondaryLabelColor, tip: "Recording the microphone"))
+        case .blocked:
+            views.append(Self.symbol("mic.slash.fill", tint: .systemOrange, tip: "The microphone is not recorded: no microphone access"))
+        }
+        views.append(stop)
+        let row = NSStackView(views: views)
         row.orientation = .horizontal
         row.spacing = 8
         row.edgeInsets = NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
@@ -217,6 +243,14 @@ final class ScreenRecordingControls: NSPanel {
         ])
         contentView = background
         setContentSize(background.fittingSize)
+    }
+
+    private static func symbol(_ name: String, tint: NSColor, tip: String) -> NSImageView {
+        let view = NSImageView(image: NSImage(systemSymbolName: name, accessibilityDescription: tip)?
+            .withSymbolConfiguration(.init(pointSize: 12, weight: .medium)) ?? NSImage())
+        view.contentTintColor = tint
+        view.toolTip = tip
+        return view
     }
 
     func place(near frame: CGRect, on screenFrame: CGRect) {

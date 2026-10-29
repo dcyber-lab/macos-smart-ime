@@ -8,6 +8,8 @@ struct ScreenshotSettings: Equatable {
     static let ocrHotkeyKey = "ScreenshotOCRHotkey"
     static let recordHotkeyKey = "ScreenRecordingHotkey"
     static let frameRateKey = "ScreenRecordingFrameRate"
+    static let systemAudioKey = "ScreenRecordingSystemAudio"
+    static let microphoneKey = "ScreenRecordingMicrophone"
     static let saveFolderKey = "ScreenshotSaveFolder"
     /// ⌃⌥A (A is ANSI key code 0): capture, then mark up, copy, save, pin, or recognize text.
     static let defaultHotkey = TranslationHotkey(keyCode: 0, modifiers: [.control, .option])
@@ -23,6 +25,10 @@ struct ScreenshotSettings: Equatable {
     let ocrHotkey: TranslationHotkey
     let recordHotkey: TranslationHotkey
     let frameRate: Int
+    /// Record sound from apps (off by default).
+    let recordsSystemAudio: Bool
+    /// Record the microphone (off by default; needs macOS 15 and microphone access).
+    let recordsMicrophone: Bool
     let customSaveFolder: URL?
     /// Where macOS saves its own screenshots (`com.apple.screencapture location`), if set.
     let systemSaveFolder: URL?
@@ -34,6 +40,8 @@ struct ScreenshotSettings: Equatable {
         recordHotkey = defaults.string(forKey: Self.recordHotkeyKey).flatMap(TranslationHotkey.init(string:)) ?? Self.defaultRecordHotkey
         let frameRate = defaults.integer(forKey: Self.frameRateKey)
         self.frameRate = Self.frameRates.contains(frameRate) ? frameRate : Self.defaultFrameRate
+        recordsSystemAudio = defaults.bool(forKey: Self.systemAudioKey)
+        recordsMicrophone = defaults.bool(forKey: Self.microphoneKey)
         customSaveFolder = defaults.string(forKey: Self.saveFolderKey).map(Self.folderURL(_:))
         systemSaveFolder = systemDefaults?.string(forKey: "location").map(Self.folderURL(_:))
     }
@@ -54,6 +62,14 @@ struct ScreenshotSettings: Equatable {
 
     static func setFrameRate(_ frameRate: Int, defaults: UserDefaults = .standard) {
         defaults.set(frameRate, forKey: frameRateKey)
+    }
+
+    static func setRecordsSystemAudio(_ enabled: Bool, defaults: UserDefaults = .standard) {
+        defaults.set(enabled, forKey: systemAudioKey)
+    }
+
+    static func setRecordsMicrophone(_ enabled: Bool, defaults: UserDefaults = .standard) {
+        defaults.set(enabled, forKey: microphoneKey)
     }
 
     /// "Screenshot 2026-10-05 15.03.12.png", with " (2)" and up when the name is taken.
