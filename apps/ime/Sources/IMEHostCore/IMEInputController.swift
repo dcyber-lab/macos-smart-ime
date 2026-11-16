@@ -18,6 +18,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         static let seven: UInt16 = 26
         static let eight: UInt16 = 28
         static let nine: UInt16 = 25
+        static let returnKey: UInt16 = 36
         static let escape: UInt16 = 53
         static let pageUp: UInt16 = 116
         static let pageDown: UInt16 = 121
@@ -120,7 +121,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             guard shiftToggle.flagsChanged(event.modifierFlags) else {
                 return false
             }
-            toggleInputMode()
+            toggleInputMode(client: sender)
             return true
         }
 
@@ -153,7 +154,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
 
         if event.keyCode == KeyCode.escape, sessionStore.hasActiveComposition {
-            resetSession(resetEngine: true)
+            resetSession(resetEngine: true, client: sender)
             return true
         }
 
@@ -217,27 +218,23 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         return apply(update, sender: sender)
     }
 
-    private func toggleInputMode() {
+    private func toggleInputMode(client sender: Any?) {
         let newMode: InputMode = (sessionStore.state.mode == .chinese) ? .english : .chinese
         NSLog("SmartIME: toggling mode from %@ to %@", sessionStore.state.mode.rawValue, newMode.rawValue)
         
         // Reset current session before switching
-        resetSession(resetEngine: true)
+        resetSession(resetEngine: true, client: sender)
         sessionStore.setMode(newMode)
-        syncPresentation()
+        syncPresentation(in: sender)
     }
 
-    public override func composedString(_ sender: Any!) -> Any! {
-        // An empty string (not nil) makes updateComposition() clear the client's marked text, e.g. on Escape.
-        sessionStore.state.compositionText
-    }
-
-    public override func originalString(_ sender: Any!) -> NSAttributedString! {
-        NSAttributedString(string: sessionStore.state.rawInput)
-    }
-
+    /// The client ends the composition itself: the input source changed, focus moved, or the app took Return
+    /// before the input method (a chat box sending the message). Inserts what Return would, the typed letters,
+    /// never the preedit with librime's syllable spaces ("wo men", "t e s t").
     public override func commitComposition(_ sender: Any!) {
-        commit(sessionStore.state.compositionText, using: sender)
+        if sessionStore.hasActiveComposition {
+            commit(Self.forcedCommitText(state: sessionStore.state, chinese: chineseEngine, english: englishEngine), using: sender)
+        }
         chineseEngine?.reset()
         englishEngine?.reset()
         sessionStore.reset()
@@ -280,13 +277,13 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         target?.insertText(committedText, replacementRange: NSRange(location: NSNotFound, length: 0))
     }
 
-    private func resetSession(resetEngine: Bool) {
+    private func resetSession(resetEngine: Bool, client sender: Any?) {
         if resetEngine {
             chineseEngine?.reset()
             englishEngine?.reset()
         }
         sessionStore.reset()
-        syncPresentation()
+        syncPresentation(in: sender)
     }
 
     private func tearDownSession() {
@@ -362,7 +359,7 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             offerAIRewrite(after: committedText, app: app, secureInput: secureInput)
             sessionStore.reset(committedText: committedText)
         }
-        syncPresentation()
+        syncPresentation(in: sender)
         return update.handled || update.commitText != nil || sessionStore.hasActiveComposition
     }
 
@@ -635,19 +632,28 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         super.doCommand(by: aSelector, command: infoDictionary)
     }
 
-    private func syncPresentation() {
-        updateComposition()
-        syncCandidateWindow()
+    /// Sets the marked text on the client the key came from, as Squirrel does. IMK's updateComposition()
+    /// messages the controller's stored client instead, which can already be freed when the app ended the
+    /// input session during insertText (chat apps do on send); SmartIMEHost crashed there, in the
+    /// composedString(_:) thunk.
+    private func syncPresentation(in sender: Any?) {
+        let client = (sender as? IMKTextInput) ?? client()
+        // An empty string clears the client's marked text, e.g. on Escape.
+        let text = sessionStore.state.compositionText
+        let length = (text as NSString).length
+        let marked = NSAttributedString(string: text, attributes: mark(forStyle: kTSMHiliteSelectedRawText, at: NSRange(location: 0, length: length)) as? [NSAttributedString.Key: Any])
+        client?.setMarkedText(marked, selectionRange: NSRange(location: length, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+        syncCandidateWindow(in: client)
     }
 
-    private func syncCandidateWindow() {
+    private func syncCandidateWindow(in client: IMKTextInput?) {
         let state = sessionStore.state
         guard !state.compositionText.isEmpty, !state.candidates.isEmpty else {
             withCandidatePanel { $0.hide() }
             return
         }
 
-        let caretRect = caretRect()
+        let caretRect = caretRect(in: client)
         withCandidatePanel { panel in
             panel.show(state: state, caretRect: caretRect) { [weak self] index in
                 self?.selectCandidateFromPanel(at: index)
@@ -662,9 +668,9 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
         }
     }
 
-    private func caretRect() -> NSRect {
+    private func caretRect(in target: IMKTextInput? = nil) -> NSRect {
         var rect = NSRect.zero
-        _ = client()?.attributes(forCharacterIndex: 0, lineHeightRectangle: &rect)
+        _ = (target ?? client())?.attributes(forCharacterIndex: 0, lineHeightRectangle: &rect)
         return rect
     }
 
@@ -676,6 +682,15 @@ public final class IMEInputController: IMKInputController, @unchecked Sendable {
             update = englishEngine?.selectCandidate(at: index)
         }
         apply(update, sender: client())
+    }
+
+    /// What a commit forced by the client inserts: what Return commits in the current mode (librime's raw
+    /// input, the English buffer), falling back to the raw input. Never the preedit, which librime splits
+    /// into syllables.
+    static func forcedCommitText(state: CompositionState, chinese: ChineseInputEngine?, english: EnglishInputEngine?) -> String {
+        let returnKey = InputKeyEvent(keyCode: KeyCode.returnKey, characters: "\r", charactersIgnoringModifiers: "\r")
+        let update = state.mode == .chinese ? chinese?.process(returnKey) : english?.process(returnKey)
+        return update?.commitText ?? state.rawInput
     }
 
     /// Number keys pick candidates only when pressed alone: Shift+1 is "！", which librime commits after the

@@ -1,5 +1,17 @@
 # Implementation Log
 
+## 2026-11-14
+
+### Forced commits insert the typed letters; marked text set without IMK's stored client
+
+- The user reported two bugs: Return on English text with no English candidate sometimes inserted the letters spaced out ("t e s t"), in chat apps, browsers, and editors; and now and then typing in a field did nothing until they switched to another app and back.
+- Return through `handle` was correct in every client tried, in both modes: an `NSTextView` test client, a Chrome textarea and contenteditable box (throwaway Chrome profile), and VS Code (throwaway profile). librime commits the raw input on Return. "t e s t" is librime's own preedit for non-pinyin input ("a s d f", "go o d"); since 2026-09-27 the marked text shows the raw input instead, but pinyin-shaped words keep it ("wo men", "dan ce", "ma ke").
+- Reproduced: when the client ends the composition itself, IMK calls `commitComposition`, which inserted `compositionText`, the preedit. Typing `women` and then switching input source inserted "wo men". The same happens when focus moves or an app takes Return before the input method. `commitComposition` now commits what Return would (`IMEInputController.forcedCommitText`: the engine's Return commit, else the raw input). After the fix: `women`, `dance`, `shujuku` and English-mode `test` each commit as typed.
+- Typing stopping (not reproduced): traced live, several client styles (one that drops and retakes focus on commit, one that replaces its text view, and a test client after the input method was relaunched) deliver `deactivateServer` inside our `insertText`. The controller then still called `updateComposition()`, which makes IMK call `composedString(_:)` with its stored client. That is where SmartIMEHost crashed twice on 2026-10-05 (freed `sender`). After the process was killed to simulate a crash, a Chrome window never got the input method back (keys went in raw) until it was activated again.
+- Marked text is now set with `setMarkedText` on the client passed to `handle` (as Squirrel does), the caret rectangle is read from it, and the `composedString`/`originalString` overrides are gone, so IMK's stored client is no longer messaged while typing.
+- Tests: `ForcedCommitTests` (3 cases); 360 `swift test` cases pass. Live, with the installed build: the forced-commit and Return cases above in the test client, Chrome, and VS Code; the two session-ending clients commit correctly and the process did not restart; `SmartIMEDriver` 11/14, with the Shift toggle checks failing the same way on the unchanged code (a synthetic Shift tap does not switch modes here).
+- Not verified: that the freeze is gone, since it was never reproduced; crash reports from the machine where it happens would confirm the cause. A test client launched right after the input source was switched away and back sometimes got no input method at all (raw letters); this also happens with the unchanged code and was not investigated further. Candidate order in `SmartIMEDriver` drifted from this session's picks (`huiyi` + 6 gives 灰衣).
+
 ## 2026-10-29
 
 ### Screen recording sound: system audio and microphone

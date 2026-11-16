@@ -82,7 +82,8 @@ Owns explicit and async workflows:
 - Visuals: 14 pt corners with 6 pt padding (the highlight's 8 pt radius stays concentric), 17 pt candidates in 31 pt rows, a solid accent-color highlight with white text, tertiary row numbers, capsule 英/译 tags, and in Chinese mode a header with the Rime preedit above a hairline. On multi-page lists the header shows both page chevrons and dims the unavailable direction (`CompositionState.candidatePageIndex` / `isLastCandidatePage`).
 - `CandidatePanelModel` (header, rows, 英/译 tags, Chinese/English separators, highlight) and `CandidatePanelPlacement` (below caret, flip above, horizontal clamp, empty-caret fallback) are pure and covered by `IMEHostCoreTests`.
 - Keyboard handling stays in `IMEInputController.handle(_:client:)`; the panel only reports row clicks, which go through the same `selectCandidate(at:)` path as number keys.
-- Text reaches the client through `IMKTextInput.insertText`; `composedString` returns an empty string (never nil) so `updateComposition()` clears marked text on cancel.
+- Text reaches the client through `IMKTextInput.insertText`, and marked text through `IMKTextInput.setMarkedText` on the client the key came from (an empty string clears it on cancel). The controller does not use `updateComposition()` or override `composedString`: IMK passes its stored client there, which can already be freed when the app ends the input session during `insertText`.
+- A commit the client forces (`commitComposition`: input source change, focus change, an app taking Return itself) inserts what Return would, the typed letters, never the preedit with librime's syllable spaces.
 
 ## Input Menu and Settings Window
 
