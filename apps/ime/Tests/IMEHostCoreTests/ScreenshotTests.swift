@@ -279,6 +279,17 @@ final class ScreenshotSettingsTests: XCTestCase {
         defaults.set(24, forKey: ScreenshotSettings.frameRateKey)
         XCTAssertEqual(ScreenshotSettings(defaults: defaults, systemDefaults: system).frameRate, 30)
     }
+
+    func testRecordingSoundIsOffUntilTurnedOn() {
+        var settings = ScreenshotSettings(defaults: defaults, systemDefaults: system)
+        XCTAssertFalse(settings.recordsSystemAudio)
+        XCTAssertFalse(settings.recordsMicrophone)
+        ScreenshotSettings.setRecordsSystemAudio(true, defaults: defaults)
+        ScreenshotSettings.setRecordsMicrophone(true, defaults: defaults)
+        settings = ScreenshotSettings(defaults: defaults, systemDefaults: system)
+        XCTAssertTrue(settings.recordsSystemAudio)
+        XCTAssertTrue(settings.recordsMicrophone)
+    }
 }
 
 final class ScreenRecordingGeometryTests: XCTestCase {

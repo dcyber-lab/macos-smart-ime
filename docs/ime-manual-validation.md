@@ -293,6 +293,10 @@ This milestone is not considered complete until steps 1 through 11 are verified 
 10. Unplug the second display while recording on it: recording stops, the toast says why, and what was recorded plays
 11. Record for 30 minutes with normal work in the area: the bar keeps counting, typing stays smooth, and the file plays to the end
 12. Start a recording, wait 10 seconds, then run `killall SmartIMEHost` in Terminal: the file in the save folder plays up to about 2 seconds before the kill
+13. Settings… › Screenshot › turn on Record system audio. Play a video with sound and record it for 10 seconds: the bar shows a speaker; the file plays with the sound in sync with the picture, also with headphones on during the recording
+14. Turn on Record microphone: macOS asks for microphone access once; allow it. Record while speaking with headphones on and a video playing: the bar shows a microphone; the file has your voice and the video's sound together, in one track (QuickTime › Window › Show Movie Inspector)
+15. In a Zoom or Tencent Meeting call with headphones: record a few minutes; both the other side and your voice are heard, and typing stays smooth
+16. Turn microphone access off in System Settings › Privacy & Security › Microphone and record again: the bar shows a crossed-out orange microphone, the toast after stopping says your voice was not recorded, and Settings… › Screenshot offers Open System Settings…
 
 ## Clipboard History Checklist
 

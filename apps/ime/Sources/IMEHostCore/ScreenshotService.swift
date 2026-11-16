@@ -149,14 +149,23 @@ public final class ScreenshotService {
         startingRecording = true
         Task { @MainActor in
             defer { self.startingRecording = false }
+            // The first time, the system asks for microphone access here; the bar shows when it is missing.
+            let microphone = settings.recordsMicrophone ? await ScreenRecordingAudio.requestMicrophoneAccess() : false
             do {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 self.recording = try await ScreenRecordingSession.start(
-                    area: area, frameRate: settings.frameRate, url: url, stopHint: settings.recordHotkey.displayString
+                    area: area, frameRate: settings.frameRate,
+                    systemAudio: settings.recordsSystemAudio, microphone: microphone,
+                    microphoneBlocked: settings.recordsMicrophone && !microphone,
+                    url: url, stopHint: settings.recordHotkey.displayString
                 ) { [weak self] result in
                     self?.recordingFinished(result)
                 }
-                self.log("screen recording: started at \(settings.frameRate) fps")
+                let sound = [
+                    settings.recordsSystemAudio ? "system audio" : nil,
+                    microphone ? "microphone" : (settings.recordsMicrophone ? "no microphone access" : nil),
+                ].compactMap { $0 }
+                self.log("screen recording: started at \(settings.frameRate) fps, sound: \(sound.isEmpty ? "off" : sound.joined(separator: ", "))")
             } catch {
                 self.log("screen recording: start failed \(error)")
                 ScreenshotToast.show("Recording failed: \(error.localizedDescription)", duration: 4)
@@ -176,10 +185,13 @@ public final class ScreenshotService {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.writeObjects([outcome.url as NSURL])
             let folder = FileManager.default.displayName(atPath: outcome.url.deletingLastPathComponent().path)
-            let prefix = outcome.interruption.map { "Recording stopped: \($0). " } ?? ""
+            var prefix = outcome.interruption.map { "Recording stopped: \($0). " } ?? ""
+            if ScreenshotSettings().recordsMicrophone, !outcome.audioSources.contains(.microphone) {
+                prefix += "Your voice was not recorded: no microphone access. "
+            }
             ScreenshotToast.show(
                 "\(prefix)Saved to \"\(folder)\" and copied: \(outcome.url.lastPathComponent) (\(ScreenRecordingGeometry.elapsedText(outcome.duration)), \(size))",
-                duration: outcome.interruption == nil ? 3 : 6
+                duration: prefix.isEmpty ? 3 : 6
             )
         case .failure(let error):
             log("screen recording: failed \(error)")

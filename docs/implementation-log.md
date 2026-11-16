@@ -12,6 +12,18 @@
 - Tests: `ForcedCommitTests` (3 cases); 360 `swift test` cases pass. Live, with the installed build: the forced-commit and Return cases above in the test client, Chrome, and VS Code; the two session-ending clients commit correctly and the process did not restart; `SmartIMEDriver` 11/14, with the Shift toggle checks failing the same way on the unchanged code (a synthetic Shift tap does not switch modes here).
 - Not verified: that the freeze is gone, since it was never reproduced; crash reports from the machine where it happens would confirm the cause. A test client launched right after the input source was switched away and back sometimes got no input method at all (raw letters); this also happens with the unchanged code and was not investigated further. Candidate order in `SmartIMEDriver` drifted from this session's picks (`huiyi` + 6 gives 灰衣).
 
+## 2026-10-29
+
+### Screen recording sound: system audio and microphone
+
+- The user records meetings with headphones and needs both the other side and their own voice. Two settings in Settings › Screenshot, both off by default: Record system audio (`ScreenRecordingSystemAudio`) and Record microphone (`ScreenRecordingMicrophone`, macOS 15+).
+- New `ScreenRecordingAudio.swift`: microphone access, AAC writer settings, sample-buffer copies in and out, `ScreenRecordingAudioConverter` (any PCM to 48 kHz float, mono into both channels, new converter when the device changes) and `ScreenRecordingAudioMixer` (one timeline from the first video frame, 50 ms join tolerance, silence for gaps, sum and clip, at most 0.25 s wait for the slower source).
+- `ScreenRecorder` adds the `.audio` and `.microphone` stream outputs on its queue and one AAC track; the rest of the mix is written before the file is finished. One mixed track rather than two, because chat previews and most players play only the first audio track.
+- A source whose first buffer is more than 1 s off the host clock is lined up by its arrival time instead of being dropped; ScreenCaptureKit is expected to use the host clock, but this is not verified on a live stream.
+- `Info.plist` gains `NSMicrophoneUsageDescription`. The bar shows a speaker and a microphone (or a crossed-out orange microphone when access is missing); the final toast says when the voice was not recorded.
+- Tests: 10 new cases. The mixer (one source, sum of two, a silent source, jitter and gaps, sound before the start, clipping), a 24 kHz mono microphone resampled into both channels, sample-buffer round trip, a 2 s recording whose single AAC track holds the sum of two tones (peak above either tone alone), and the settings. 247 host tests pass locally through the harness.
+- Not verified: a live recording with ScreenCaptureKit sound (this terminal has no Screen Recording access), the microphone prompt from the input method process, Bluetooth headsets, and a real meeting (Screen Recording Checklist 13–16). Microphone access, like Screen Recording, needs granting again after each ad-hoc-signed install.
+
 ## 2026-10-07
 
 ### Screen recording (⌃⌥⇧A)

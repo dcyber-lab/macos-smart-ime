@@ -37,6 +37,7 @@ The app is ad-hoc signed, so macOS treats every new build as a different app. Af
 
 - **Accessibility** (clipboard paste on Return, window titles, selection reading): Settings… › Clipboard or Intelligence › Open System Settings…, then turn LinguaType on. If a stale entry is there, remove it with `−` first.
 - **Screen Recording** (screenshots and screen recordings): press the screenshot shortcut and follow the prompt, then quit and reopen when asked.
+- **Microphone** (your voice in screen recordings, when Record microphone is on): Settings… › Screenshot › Record microphone asks for it; if it was refused, use Open System Settings… there.
 
 ## Release package
 

@@ -183,6 +183,29 @@ final class SettingsModel: ObservableObject {
         set { ScreenshotSettings.setFrameRate(newValue, defaults: defaults) }
     }
 
+    var recordsSystemAudio: Bool {
+        get { ScreenshotSettings(defaults: defaults, systemDefaults: nil).recordsSystemAudio }
+        set { ScreenshotSettings.setRecordsSystemAudio(newValue, defaults: defaults) }
+    }
+
+    /// Turning it on asks for microphone access right away, rather than at the start of a recording.
+    var recordsMicrophone: Bool {
+        get { ScreenshotSettings(defaults: defaults, systemDefaults: nil).recordsMicrophone }
+        set {
+            ScreenshotSettings.setRecordsMicrophone(newValue, defaults: defaults)
+            if newValue, ScreenRecordingAudio.microphoneAccess == .notDetermined {
+                Task { @MainActor in
+                    _ = await ScreenRecordingAudio.requestMicrophoneAccess()
+                    self.objectWillChange.send()
+                }
+            }
+        }
+    }
+
+    var microphoneAccess: ScreenRecordingAudio.MicrophoneAccess {
+        ScreenRecordingAudio.microphoneAccess
+    }
+
     var screenshotFolder: String {
         FileManager.default.displayName(atPath: ScreenshotSettings(defaults: defaults).saveFolder.path)
     }
@@ -393,8 +416,25 @@ private struct ScreenshotPane: View {
                 Picker("Recording frame rate", selection: $model.recordingFrameRate) {
                     ForEach(ScreenshotSettings.frameRates, id: \.self) { Text("\($0) fps").tag($0) }
                 }
+                Toggle(isOn: $model.recordsSystemAudio) {
+                    SettingLabel("Record system audio", "Sound from apps, such as the other people in a meeting")
+                }
+                Toggle(isOn: $model.recordsMicrophone) {
+                    SettingLabel(
+                        "Record microphone",
+                        model.microphoneAccess == .unsupported
+                            ? "Needs macOS 15 or later"
+                            : "Your voice. Wear headphones, or sound from the speakers is recorded twice"
+                    )
+                }
+                .disabled(model.microphoneAccess == .unsupported)
+                if model.recordsMicrophone, model.microphoneAccess == .denied {
+                    LabeledContent("Microphone permission is required to record your voice") {
+                        Button("Open System Settings…") { ScreenRecordingAudio.openMicrophoneSettings() }
+                    }
+                }
             } footer: {
-                Text("Recordings are saved as MP4 (H.264, no sound) to the folder below and copied, ready to paste. Stop with the stop button or the recording shortcut again.")
+                Text("Recordings are saved as MP4 (H.264, with AAC sound when recording audio) to the folder below and copied, ready to paste. Stop with the stop button or the recording shortcut again.")
                     .foregroundStyle(.secondary)
             }
             Section {
