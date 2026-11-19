@@ -1,5 +1,16 @@
 # Implementation Log
 
+## 2026-11-19
+
+### Clipboard panel: no scroll animation, row views reused
+
+- The user reported the panel still stuttering. Searching is not the cost: 300 entries hold 28,000 characters in total, and filtering plus `reloadData` took about 6 ms over a whole 15 s session.
+- `sample` of the installed input method during live use (76 arrows, some typing): main thread 94% idle, about 730 ms busy. `ClipboardPanel.handle` took 73 ms in total; Core Animation commits and row text drawing about 390 ms; scroll-animation callbacks about 62 ms. `NSTableView.scrollRowToVisible` animates, and the `NSAnimation` threads were active for about 870 ms. The log line for that session: work per arrow p50 11.1 / p90 20.7 ms, key to last commit max 245 ms, longest turn 136 ms.
+- The list now scrolls with `NSClipView.scroll(to:)` (`reveal(row:)`), without animation, and `ClipboardRowView` is reused through `makeView(withIdentifier:)` instead of created for every row that scrolls into view.
+- Seen in the same sample, not changed: Caps Lock switching waits about 23 ms in `commitComposition` on an XPC reply from this same process, and `IMEInputController.menu()` spends about 12 ms in `AIAssistSettings.activeProvider` (FoundationModels).
+- Not verified: that the stutter the user sees is gone. The cause is inferred from the sample; the next live check should compare the `clipboard panel:` log line.
+- Version 0.2.1.
+
 ## 2026-11-14
 
 ### Forced commits insert the typed letters; marked text set without IMK's stored client

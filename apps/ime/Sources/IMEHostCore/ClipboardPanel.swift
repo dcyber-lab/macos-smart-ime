@@ -474,7 +474,7 @@ private final class ClipboardPanelContentView: NSView, NSTableViewDataSource, NS
         }
         if !isEmpty, table.selectedRow != model.selection {
             table.selectRowIndexes(IndexSet(integer: model.selection), byExtendingSelection: false)
-            table.scrollRowToVisible(model.selection)
+            reveal(row: model.selection)
         }
         let item = model.selected
         if preview.itemID != item?.id {
@@ -485,6 +485,26 @@ private final class ClipboardPanelContentView: NSView, NSTableViewDataSource, NS
             let image = model.previewImage(for: item)
             preview.showImage(image, missing: image == nil && model.store.imageURL(for: item).map { FileManager.default.fileExists(atPath: $0.path) } != true)
         }
+    }
+
+    /// Scrolls just far enough to show the row, at once. `scrollRowToVisible` animates: holding ↓ past the
+    /// last visible row started a smooth scroll per key, each redrawing the rows every frame, and the
+    /// highlight trailed the keys (sampled live: 870 ms of scroll animation for 76 arrows).
+    private func reveal(row: Int) {
+        let clip = listScroll.contentView
+        let rowRect = table.rect(ofRow: row)
+        let visible = clip.bounds
+        var y = visible.minY
+        if rowRect.minY < visible.minY {
+            y = rowRect.minY
+        } else if rowRect.maxY > visible.maxY {
+            y = rowRect.maxY - visible.height
+        } else {
+            return
+        }
+        y = max(0, min(y, table.frame.height - visible.height))
+        clip.scroll(to: CGPoint(x: visible.minX, y: y))
+        listScroll.reflectScrolledClipView(clip)
     }
 
     @objc private func chooseClickedRow() {
@@ -528,7 +548,13 @@ private final class ClipboardPanelContentView: NSView, NSTableViewDataSource, NS
     }
 
     func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
-        ClipboardRowView()
+        // Reused like the cells: scrolling used to create a row view for every row that came into view.
+        if let reused = tableView.makeView(withIdentifier: ClipboardRowView.identifier, owner: nil) as? ClipboardRowView {
+            return reused
+        }
+        let view = ClipboardRowView()
+        view.identifier = ClipboardRowView.identifier
+        return view
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) {
@@ -547,6 +573,8 @@ private final class ClipboardPanelContentView: NSView, NSTableViewDataSource, NS
 
 /// An accent-filled rounded selection, also while the input method is not the active app (it never is).
 private final class ClipboardRowView: NSTableRowView {
+    static let identifier = NSUserInterfaceItemIdentifier("ClipboardRow")
+
     override var isEmphasized: Bool {
         get { true }
         set {}
