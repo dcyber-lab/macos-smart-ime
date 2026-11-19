@@ -21,7 +21,6 @@
 /* Begin PBXFileReference section */
 		03CD576684F40B7BC672D2D0 /* SmartIMEHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartIMEHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4877725FEE1CF1BF6882F463 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		4A4E848FC278873C6D04B85C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		5C73C82D96C75CAF3E217E3D /* InputSourceInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputSourceInstaller.swift; sourceTree = "<group>"; };
 		5DFD060CC7612A55C0E8B0AC /* LinguaType.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = LinguaType.tiff; sourceTree = "<group>"; };
 		5FCF1D93B2F93306B555A9B6 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -148,7 +147,6 @@
 			knownRegions = (
 				Base,
 				en,
-				"zh-Hans",
 			);
 			mainGroup = 9BE21AF2592A6825DD50AB95;
 			minimizedProjectReferenceProxies = 1;
@@ -196,7 +194,6 @@
 			isa = PBXVariantGroup;
 			children = (
 				5FCF1D93B2F93306B555A9B6 /* en */,
-				4A4E848FC278873C6D04B85C /* zh-Hans */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -295,7 +292,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = lab.dcyber.inputmethod.smartime;
@@ -362,7 +359,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
